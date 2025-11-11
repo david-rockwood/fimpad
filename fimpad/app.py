@@ -1043,69 +1043,76 @@ class FIMPad(tk.Tk):
                     mark = item["mark"]
                     piece = item["text"]
 
-                    if not item.get("allow_stream_cancelled"):
-                        after_stops = st.get("stops_after", [])
-                        if after_stops:
-                            tail = st.get("stream_tail", "")
-                            combined = tail + piece
-                            match_index = None
-                            match_stop = ""
-                            for stop in after_stops:
-                                idx = combined.find(stop)
-                                if idx == -1:
-                                    continue
-                                if (
-                                    match_index is None
-                                    or idx < match_index
-                                    or (idx == match_index and len(stop) > len(match_stop))
-                                ):
-                                    match_index = idx
-                                    match_stop = stop
+                    if item.get("allow_stream_cancelled"):
+                        st["stream_tail"] = ""
+                        st["stream_buffer"].append(piece)
+                        st["stream_mark"] = mark
+                        self._schedule_stream_flush(frame, mark)
+                        continue
 
-                            if match_index is not None:
-                                pre_len = max(0, match_index - len(tail))
-                                pre_piece = piece[:pre_len]
-                                if pre_piece:
-                                    st["stream_buffer"].append(pre_piece)
-                                flush_mark = st.get("stream_mark") or mark or "stream_here"
-                                self._force_flush_stream_buffer(frame, flush_mark)
-                                stop_mark = st.get("stream_mark") or flush_mark
-                                self._result_queue.put(
-                                    {
-                                        "ok": True,
-                                        "kind": "stream_append",
-                                        "tab": tab_id,
-                                        "mark": stop_mark,
-                                        "text": match_stop,
-                                        "allow_stream_cancelled": True,
-                                    }
-                                )
-                                st["stream_cancelled"] = True
-                                st["stops_after"] = []
-                                st["stops_after_maxlen"] = 0
-                                st["stream_tail"] = ""
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "stream_done", "tab": tab_id}
-                                )
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
-                                )
-                                continue
+                    tail = st.get("stream_tail", "")
+                    stops_after = st.get("stops_after", [])
 
-                            maxlen = st.get("stops_after_maxlen", 0)
-                            if maxlen > 0:
-                                keep = maxlen - 1
-                                st["stream_tail"] = combined[-keep:] if keep > 0 else ""
-                            else:
-                                st["stream_tail"] = ""
+                    if not stops_after:
+                        st["stream_tail"] = ""
+                        st["stream_buffer"].append(piece)
+                        st["stream_mark"] = mark
+                        self._schedule_stream_flush(frame, mark)
+                        continue
+
+                    combined = tail + piece
+                    match_index = None
+                    match_stop = ""
+                    for stop in stops_after:
+                        idx = combined.find(stop)
+                        if idx == -1:
+                            continue
+                        if (
+                            match_index is None
+                            or idx < match_index
+                            or (idx == match_index and len(stop) > len(match_stop))
+                        ):
+                            match_index = idx
+                            match_stop = stop
+
+                    if match_index is None:
+                        maxlen = st.get("stops_after_maxlen", 0)
+                        if maxlen > 0:
+                            keep = maxlen - 1
+                            st["stream_tail"] = combined[-keep:] if keep > 0 else ""
                         else:
                             st["stream_tail"] = ""
-                    else:
-                        st["stream_tail"] = ""
+                        st["stream_buffer"].append(piece)
+                        st["stream_mark"] = mark
+                        self._schedule_stream_flush(frame, mark)
+                        continue
 
-                    st["stream_buffer"].append(piece)
-                    st["stream_mark"] = mark
-                    self._schedule_stream_flush(frame, mark)
+                    pre_len = max(0, match_index - len(tail))
+                    pre_piece = piece[:pre_len]
+                    if pre_piece:
+                        st["stream_buffer"].append(pre_piece)
+                    flush_mark = st.get("stream_mark") or mark or "stream_here"
+                    self._force_flush_stream_buffer(frame, flush_mark)
+                    insert_mark = flush_mark
+                    self._result_queue.put(
+                        {
+                            "ok": True,
+                            "kind": "stream_append",
+                            "tab": tab_id,
+                            "mark": insert_mark,
+                            "text": match_stop,
+                            "allow_stream_cancelled": True,
+                        }
+                    )
+                    st["stream_cancelled"] = True
+                    st["stops_after"] = []
+                    st["stops_after_maxlen"] = 0
+                    st["stream_tail"] = ""
+                    self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
+                    self._result_queue.put(
+                        {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                    )
+                    continue
 
                 elif kind == "stream_done":
                     mark = st.get("stream_mark") or item.get("mark") or "stream_here"
