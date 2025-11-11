@@ -261,6 +261,12 @@ class FIMPad(tk.Tk):
             if options:
                 text.tag_configure(tag, **options)
 
+    def _index_visible(self, text_widget, idx):
+        try:
+            return text_widget.dlineinfo(idx) is not None
+        except Exception:
+            return False
+
     def _ensure_overscroll_window(self, st: dict) -> tk.Frame:
         text = st["text"]
         spacer = getattr(text, "_overscroll_spacer", None)
@@ -308,25 +314,20 @@ class FIMPad(tk.Tk):
         if not spacer:
             return
         text = st["text"]
+        try:
+            last_line = int(text.index("end-1c").split(".")[0])
+        except (tk.TclError, ValueError):
+            last_line = 1
+        if last_line < 2:
+            self._remove_stale_overscroll_windows(text, spacer)
+            return
         self._remove_stale_overscroll_windows(text, spacer)
         try:
             height = max(0, text.winfo_height() // 2)
         except Exception:
             height = 0
         spacer.configure(height=height, width=1)
-
-        try:
-            insert_index = text.index("end-1c")
-        except tk.TclError:
-            return
-
-        if text.compare(insert_index, "<=", "1.0"):
-            return
-
-        with contextlib.suppress(tk.TclError):
-            if text.dlineinfo(insert_index) is None:
-                return
-
+        insert_index = "end"
         with contextlib.suppress(tk.TclError):
             text.window_create(insert_index, window=spacer)
 
@@ -708,12 +709,18 @@ class FIMPad(tk.Tk):
 
     # ---------- Generate (streaming) ----------
 
-    def _should_follow(self, text_widget: tk.Text) -> bool:
+    def _should_follow(self, text_widget: tk.Text, mark=None) -> bool:
+        probe = mark or "insert"
         try:
-            _first, last = text_widget.yview()
+            if self._index_visible(text_widget, probe) is True:
+                try:
+                    _first, last = text_widget.yview()
+                    return last >= 0.98
+                except Exception:
+                    return True
+            return True
         except Exception:
             return True
-        return last >= 0.999
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -752,7 +759,7 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        should_follow = self._should_follow(text)
+        should_follow = not self._index_visible(text, mark)
         text.insert(cur, piece)
         text.mark_set(mark, f"{cur}+{len(piece)}c")
         if should_follow:
@@ -828,12 +835,9 @@ class FIMPad(tk.Tk):
         self._set_busy(True)
 
         # Prepare streaming mark
-        follow = self._should_follow(text)
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
         text.delete(start_index, end_index)
-        if follow:
-            text.see("stream_here")
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
@@ -943,12 +947,9 @@ class FIMPad(tk.Tk):
         self._set_busy(True)
 
         # Append opening assistant tag and set stream mark
-        follow = self._should_follow(text)
         text.insert(tk.END, f"[[[{arole}]]]")
-        text.mark_set("stream_here", tk.END)
+        text.mark_set("stream_here", "end-1c")
         text.mark_gravity("stream_here", tk.RIGHT)
-        if follow:
-            text.see("stream_here")
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
