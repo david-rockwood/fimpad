@@ -20,6 +20,10 @@ from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .utils import offset_to_tkindex
 
 
+PREFIX_TAG_RE = re.compile(r"\[\[\[\s*prefix\s*\]\]\]", re.IGNORECASE)
+SUFFIX_TAG_RE = re.compile(r"\[\[\[\s*suffix\s*\]\]\]", re.IGNORECASE)
+
+
 class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -718,16 +722,33 @@ class FIMPad(tk.Tk):
         except Exception:
             max_tokens = cfg["default_n"]
 
-        before = content[:mstart]
-        after = content[mend:]
-        safe_suffix = MARKER_REGEX.sub("", after)
-        use_completion = after.strip() == ""
+        pfx_match = None
+        for m in PREFIX_TAG_RE.finditer(content, 0, mstart):
+            pfx_match = m
+
+        if pfx_match is not None:
+            pfx_used_start = pfx_match.start()
+            pfx_used_end = pfx_match.end()
+            before_region = content[pfx_used_end:mstart]
+        else:
+            before_region = content[:mstart]
+
+        sfx_match = SUFFIX_TAG_RE.search(content, mend)
+        if sfx_match is not None:
+            sfx_used_start = sfx_match.start()
+            sfx_used_end = sfx_match.end()
+            after_region = content[mend:sfx_used_start]
+        else:
+            after_region = content[mend:]
+
+        safe_suffix = MARKER_REGEX.sub("", after_region)
+        use_completion = after_region.strip() == ""
 
         if use_completion:
-            prompt = before
+            prompt = before_region
         else:
             prompt = (
-                f"{cfg['fim_prefix']}{before}{cfg['fim_suffix']}{safe_suffix}{cfg['fim_middle']}"
+                f"{cfg['fim_prefix']}{before_region}{cfg['fim_suffix']}{safe_suffix}{cfg['fim_middle']}"
             )
 
         payload = {
@@ -748,12 +769,23 @@ class FIMPad(tk.Tk):
         self._set_busy(True)
 
         # Prepare streaming mark
-        follow = self._should_follow(text)
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
+        if sfx_match is not None:
+            s_s = offset_to_tkindex(content, sfx_used_start)
+            s_e = offset_to_tkindex(content, sfx_used_end)
+            with contextlib.suppress(tk.TclError):
+                text.delete(s_s, s_e)
+        if pfx_match is not None:
+            p_s = offset_to_tkindex(content, pfx_used_start)
+            p_e = offset_to_tkindex(content, pfx_used_end)
+            with contextlib.suppress(tk.TclError):
+                text.delete(p_s, p_e)
+
+        marker_len = mend - mstart
+        start_index = text.index("stream_here")
+        end_index = text.index(f"{start_index}+{marker_len}c")
         text.delete(start_index, end_index)
-        if follow:
-            text.see("stream_here")
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
