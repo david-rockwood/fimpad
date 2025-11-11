@@ -1065,21 +1065,15 @@ class FIMPad(tk.Tk):
                             if match_index is not None:
                                 pre_len = max(0, match_index - len(tail))
                                 pre_piece = piece[:pre_len]
+                                tail_overlap = max(0, len(tail) - match_index)
+                                stop_remaining = match_stop[tail_overlap:]
                                 if pre_piece:
                                     st["stream_buffer"].append(pre_piece)
-                                flush_mark = st.get("stream_mark") or mark or "stream_here"
+                                if stop_remaining:
+                                    st["stream_buffer"].append(stop_remaining)
+                                st["stream_mark"] = mark
+                                flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
-                                stop_mark = st.get("stream_mark") or flush_mark
-                                self._result_queue.put(
-                                    {
-                                        "ok": True,
-                                        "kind": "stream_append",
-                                        "tab": tab_id,
-                                        "mark": stop_mark,
-                                        "text": match_stop,
-                                        "allow_stream_cancelled": True,
-                                    }
-                                )
                                 st["stream_cancelled"] = True
                                 st["stops_after"] = []
                                 st["stops_after_maxlen"] = 0
