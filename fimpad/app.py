@@ -715,11 +715,49 @@ class FIMPad(tk.Tk):
 
     def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
         cfg = self.cfg
-        token_str = marker_match.group(1) or str(cfg["default_n"])
+        n_str = marker_match.group("n")
+        token_str = n_str or str(cfg["default_n"])
         try:
             max_tokens = max(1, min(4096, int(token_str)))
         except Exception:
             max_tokens = cfg["default_n"]
+
+        stop_raw = marker_match.group("stop")
+
+        def _unescape_stop(s: str) -> str:
+            out: list[str] = []
+            i = 0
+            while i < len(s):
+                c = s[i]
+                if c != "\\":
+                    out.append(c)
+                    i += 1
+                    continue
+                i += 1
+                if i >= len(s):
+                    out.append("\\")
+                    break
+                esc = s[i]
+                i += 1
+                if esc == "n":
+                    out.append("\n")
+                elif esc == "t":
+                    out.append("\t")
+                elif esc == "r":
+                    out.append("\r")
+                elif esc == '"':
+                    out.append('"')
+                elif esc == "\\":
+                    out.append("\\")
+                else:
+                    out.append(esc)
+            return "".join(out)
+
+        stop_seq = None
+        if stop_raw is not None:
+            stop_seq = _unescape_stop(stop_raw)
+            if stop_seq == "":
+                stop_seq = None
 
         pfx_match = None
         for m in PREFIX_TAG_RE.finditer(content, 0, mstart):
@@ -758,6 +796,8 @@ class FIMPad(tk.Tk):
             "top_p": cfg["top_p"],
             "stream": True,
         }
+        if stop_seq is not None:
+            payload["stop"] = stop_seq
 
         text = st["text"]
         start_index = offset_to_tkindex(content, mstart)
