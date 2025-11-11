@@ -19,7 +19,6 @@ from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .utils import offset_to_tkindex
 
-
 PREFIX_TAG_RE = re.compile(r"\[\[\[\s*prefix\s*\]\]\]", re.IGNORECASE)
 SUFFIX_TAG_RE = re.compile(r"\[\[\[\s*suffix\s*\]\]\]", re.IGNORECASE)
 
