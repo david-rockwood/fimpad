@@ -88,7 +88,6 @@ class FIMPad(tk.Tk):
         )
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
         self._clear_line_spacing(text)
-        text.bind("<Configure>", lambda e, fr=frame: self._on_text_configure(fr), add="+")
 
         # Spellcheck tag + bindings
         text.tag_configure("misspelled", underline=True, foreground="#ff6666")
@@ -130,7 +129,6 @@ class FIMPad(tk.Tk):
 
         # Initial spellcheck (debounced)
         self._schedule_spellcheck_for_frame(frame, delay_ms=250)
-        self._rebuild_overscroll_spacer(st)
 
     def _current_tab_state(self):
         tab = self.nb.select()
@@ -261,81 +259,6 @@ class FIMPad(tk.Tk):
             if options:
                 text.tag_configure(tag, **options)
 
-    def _ensure_overscroll_window(self, st: dict) -> tk.Frame:
-        text = st["text"]
-        spacer = getattr(text, "_overscroll_spacer", None)
-        if spacer is None or not spacer.winfo_exists():
-            spacer = tk.Frame(
-                text,
-                height=0,
-                width=1,
-                background=self.cfg["bg"],
-                borderwidth=0,
-                highlightthickness=0,
-            )
-            text._overscroll_spacer = spacer
-        else:
-            spacer.configure(background=self.cfg["bg"])
-        return spacer
-
-    def _remove_stale_overscroll_windows(self, text: tk.Text, spacer: tk.Frame) -> None:
-        spacer_path = str(spacer)
-        indices = set()
-
-        with contextlib.suppress(tk.TclError):
-            for kind, index, _value in text.dump("1.0", "2.0", window=True):
-                if kind == "window":
-                    indices.add(index)
-
-        try:
-            tail_start = text.index("end-3l")
-        except tk.TclError:
-            tail_start = "1.0"
-
-        with contextlib.suppress(tk.TclError):
-            for kind, index, value in text.dump(tail_start, tk.END, window=True):
-                if kind != "window":
-                    continue
-                if value == spacer_path:
-                    indices.add(index)
-
-        for index in indices:
-            with contextlib.suppress(tk.TclError):
-                text.tk.call(text._w, "window", "delete", index)
-
-    def _rebuild_overscroll_spacer(self, st: dict) -> None:
-        spacer = self._ensure_overscroll_window(st)
-        if not spacer:
-            return
-        text = st["text"]
-        self._remove_stale_overscroll_windows(text, spacer)
-        try:
-            height = max(0, text.winfo_height() // 2)
-        except Exception:
-            height = 0
-        spacer.configure(height=height, width=1)
-
-        try:
-            insert_index = text.index("end-1c")
-        except tk.TclError:
-            return
-
-        if text.compare(insert_index, "<=", "1.0"):
-            return
-
-        with contextlib.suppress(tk.TclError):
-            if text.dlineinfo(insert_index) is None:
-                return
-
-        with contextlib.suppress(tk.TclError):
-            text.window_create(insert_index, window=spacer)
-
-    def _on_text_configure(self, frame) -> None:
-        st = self.tabs.get(frame)
-        if not st:
-            return
-        self._rebuild_overscroll_spacer(st)
-
     def _cur_text(self) -> ScrolledText:
         st = self._current_tab_state()
         return st["text"]
@@ -353,7 +276,6 @@ class FIMPad(tk.Tk):
             text.config(wrap=tk.WORD)
         self.wrap_label.config(text=f"Wrap: {st['wrap']}")
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
-        self._rebuild_overscroll_spacer(st)
 
     def _select_all_current(self):
         st = self._current_tab_state()
@@ -385,7 +307,6 @@ class FIMPad(tk.Tk):
             st["suppress_modified"] = False
             st["path"] = path
             self._set_dirty(st, False)
-            self._rebuild_overscroll_spacer(st)
             self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=200)
         except Exception as e:
             messagebox.showerror("Open Error", str(e))
@@ -694,7 +615,6 @@ class FIMPad(tk.Tk):
                 )
                 self._apply_editor_padding(t, self.cfg["editor_padding_px"])
                 self._clear_line_spacing(t)
-                self._rebuild_overscroll_spacer(st)
                 # refresh spellcheck state
                 if not self.cfg["spellcheck_enabled"]:
                     t.tag_remove("misspelled", "1.0", "end")
