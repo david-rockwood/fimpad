@@ -261,6 +261,12 @@ class FIMPad(tk.Tk):
             if options:
                 text.tag_configure(tag, **options)
 
+    def _index_visible(self, text_widget, idx):
+        try:
+            return text_widget.dlineinfo(idx) is not None
+        except Exception:
+            return False
+
     def _ensure_overscroll_window(self, st: dict) -> tk.Frame:
         text = st["text"]
         spacer = getattr(text, "_overscroll_spacer", None)
@@ -708,12 +714,15 @@ class FIMPad(tk.Tk):
 
     # ---------- Generate (streaming) ----------
 
-    def _should_follow(self, text_widget: tk.Text) -> bool:
+    def _should_follow(self, text_widget: tk.Text, mark: str | None = None) -> bool:
+        probe = mark or "insert"
         try:
-            _first, last = text_widget.yview()
+            if self._index_visible(text_widget, probe):
+                _first, last = text_widget.yview()
+                return last >= 0.98
+            return True
         except Exception:
             return True
-        return last >= 0.999
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -752,7 +761,7 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        should_follow = self._should_follow(text)
+        should_follow = not self._index_visible(text, mark)
         text.insert(cur, piece)
         text.mark_set(mark, f"{cur}+{len(piece)}c")
         if should_follow:
@@ -828,12 +837,9 @@ class FIMPad(tk.Tk):
         self._set_busy(True)
 
         # Prepare streaming mark
-        follow = self._should_follow(text)
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
         text.delete(start_index, end_index)
-        if follow:
-            text.see("stream_here")
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
@@ -943,12 +949,9 @@ class FIMPad(tk.Tk):
         self._set_busy(True)
 
         # Append opening assistant tag and set stream mark
-        follow = self._should_follow(text)
         text.insert(tk.END, f"[[[{arole}]]]")
         text.mark_set("stream_here", tk.END)
         text.mark_gravity("stream_here", tk.RIGHT)
-        if follow:
-            text.see("stream_here")
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
