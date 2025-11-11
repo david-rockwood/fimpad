@@ -315,17 +315,10 @@ class FIMPad(tk.Tk):
             height = 0
         spacer.configure(height=height, width=1)
 
-        try:
-            insert_index = text.index("end-1c")
-        except tk.TclError:
-            return
+        insert_index = "end"
 
         if text.compare(insert_index, "<=", "1.0"):
             return
-
-        with contextlib.suppress(tk.TclError):
-            if text.dlineinfo(insert_index) is None:
-                return
 
         with contextlib.suppress(tk.TclError):
             text.window_create(insert_index, window=spacer)
@@ -945,7 +938,9 @@ class FIMPad(tk.Tk):
         # Append opening assistant tag and set stream mark
         follow = self._should_follow(text)
         text.insert(tk.END, f"[[[{arole}]]]")
-        text.mark_set("stream_here", tk.END)
+        if text.compare("end-1c", "<=", "1.0"):
+            text.insert("end-1c", "\n")
+        text.mark_set("stream_here", "end-1c")
         text.mark_gravity("stream_here", tk.RIGHT)
         if follow:
             text.see("stream_here")
