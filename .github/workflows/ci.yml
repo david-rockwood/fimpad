@@ -1,85 +1,86 @@
 name: CI
 
 on:
-push:
-branches: [ main ]
-tags:
-- "v*"
-paths-ignore:
-- "/*.md"
-- "/.png"
-- "**/.jpg"
-- "/*.gif"
-- "/.svg"
-- "LICENSE"
-- "CONTRIBUTING.md"
-pull_request:
-branches: [ main ]
-paths-ignore:
-- "**/.md"
-- "/*.png"
-- "/.jpg"
-- "**/.gif"
-- "**/*.svg"
-- "LICENSE"
-- "CONTRIBUTING.md"
-workflow_dispatch: {}
+  push:
+    branches: [ main ]
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.gif"
+      - "**/*.svg"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.gif"
+      - "**/*.svg"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+  workflow_dispatch: {}
 
 jobs:
-test-and-build:
-runs-on: ubuntu-latest
-steps:
-  - name: Check out
-    uses: actions/checkout@v4
+  test-and-build:
+    runs-on: ubuntu-latest
 
-  - name: Set up Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.11"
-      cache: "pip"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
 
-  - name: System deps for Tkinter
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y python3-tk xvfb
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-  - name: Install project (dev)
-    run: |
-      python -m pip install --upgrade pip
-      pip install -e .[dev]
-      pip install pyinstaller
+      - name: System deps for Tkinter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb
 
-  - name: Ruff (auto-fix) and verify clean tree
-    run: |
-      ruff check . --fix
-      git diff --exit-code || (echo "::error::Ruff made changes. Commit them locally." && exit 1)
+      - name: Install project (dev)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+          pip install pyinstaller
 
-  - name: Run tests (headless-friendly)
-    run: |
-      xvfb-run -a pytest -q
+      - name: Ruff (auto-fix) and verify clean tree
+        run: |
+          ruff check . --fix
+          git diff --exit-code || (echo "::error::Ruff made changes. Commit them locally." && exit 1)
 
-  - name: Build (PyInstaller) — only when asked
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.ref, 'refs/tags/') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
-    run: |
-      pyinstaller --onefile --windowed \
-        --name fimpad \
-        --hidden-import tkinter \
-        --hidden-import tkinter.scrolledtext \
-        fimpad/__main__.py
-      ls -lh dist/
+      - name: Run tests (headless-friendly)
+        run: |
+          xvfb-run -a pytest -q
 
-  - name: Upload binary artifact
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.ref, 'refs/tags/') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
-    uses: actions/upload-artifact@v4
-    with:
-      name: fimpad-linux-${{ github.sha }}
-      path: dist/fimpad
-      if-no-files-found: error
+      - name: Build (PyInstaller) — only when asked
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
+        run: |
+          pyinstaller --onefile --windowed \
+            --name fimpad \
+            --hidden-import tkinter \
+            --hidden-import tkinter.scrolledtext \
+            fimpad/__main__.py
+          ls -lh dist/
+
+      - name: Upload binary artifact
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: fimpad-linux-${{ github.sha }}
+          path: dist/fimpad
+          if-no-files-found: error
