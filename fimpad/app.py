@@ -109,6 +109,10 @@ class FIMPad(tk.Tk):
             "stream_buffer": [],
             "stream_flush_job": None,
             "stream_mark": None,
+            "stops_after": [],
+            "stops_after_maxlen": 0,
+            "stream_tail": "",
+            "stream_cancelled": False,
         }
 
         def on_modified(event=None):
@@ -646,6 +650,10 @@ class FIMPad(tk.Tk):
         st["stream_flush_job"] = None
         st["stream_buffer"].clear()
         st["stream_mark"] = None
+        st["stops_after"] = []
+        st["stops_after_maxlen"] = 0
+        st["stream_tail"] = ""
+        st["stream_cancelled"] = False
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -715,14 +723,27 @@ class FIMPad(tk.Tk):
 
     def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
         cfg = self.cfg
-        n_str = marker_match.group("n")
-        token_str = n_str or str(cfg["default_n"])
+        body = (marker_match.group("body") or "").strip()
+
+        remainder = body
+        token_value: int | str | None = None
+        if remainder:
+            n_match = re.match(r"(\d+)", remainder)
+            if n_match:
+                token_value = n_match.group(1)
+                remainder = remainder[n_match.end() :].strip()
+            else:
+                remainder = remainder.strip()
+        else:
+            remainder = ""
+
+        if token_value is None:
+            token_value = cfg["default_n"]
+
         try:
-            max_tokens = max(1, min(4096, int(token_str)))
+            max_tokens = max(1, min(4096, int(token_value)))
         except Exception:
             max_tokens = cfg["default_n"]
-
-        stop_raw = marker_match.group("stop")
 
         def _unescape_stop(s: str) -> str:
             out: list[str] = []
@@ -747,17 +768,28 @@ class FIMPad(tk.Tk):
                     out.append("\r")
                 elif esc == '"':
                     out.append('"')
+                elif esc == "'":
+                    out.append("'")
                 elif esc == "\\":
                     out.append("\\")
                 else:
                     out.append(esc)
             return "".join(out)
 
-        stop_seq = None
-        if stop_raw is not None:
-            stop_seq = _unescape_stop(stop_raw)
-            if stop_seq == "":
-                stop_seq = None
+        stops_before: list[str] = []
+        stops_after: list[str] = []
+        quote_re = re.compile(r"\"((?:\\.|[^\"\\])*)\"|'((?:\\.|[^'\\])*)'")
+        for qmatch in quote_re.finditer(remainder):
+            double_val = qmatch.group(1)
+            single_val = qmatch.group(2)
+            if double_val is not None:
+                unescaped = _unescape_stop(double_val)
+                if unescaped:
+                    stops_before.append(unescaped)
+            elif single_val is not None:
+                unescaped = _unescape_stop(single_val)
+                if unescaped:
+                    stops_after.append(unescaped)
 
         pfx_match = None
         for m in PREFIX_TAG_RE.finditer(content, 0, mstart):
@@ -796,14 +828,19 @@ class FIMPad(tk.Tk):
             "top_p": cfg["top_p"],
             "stream": True,
         }
-        if stop_seq is not None:
-            payload["stop"] = stop_seq
+        if stops_before:
+            payload["stop"] = stops_before
 
         text = st["text"]
         start_index = offset_to_tkindex(content, mstart)
         end_index = offset_to_tkindex(content, mend)
 
         self._reset_stream_state(st)
+
+        st["stops_after"] = stops_after
+        st["stops_after_maxlen"] = max((len(s) for s in stops_after), default=0)
+        st["stream_tail"] = ""
+        st["stream_cancelled"] = False
 
         self._set_busy(True)
 
@@ -1000,8 +1037,67 @@ class FIMPad(tk.Tk):
                 text = st["text"]
 
                 if kind == "stream_append":
+                    if st.get("stream_cancelled") and not item.get("internal_stop"):
+                        continue
+
                     mark = item["mark"]
                     piece = item["text"]
+
+                    if not item.get("internal_stop") and st.get("stops_after"):
+                        tail = st.get("stream_tail", "")
+                        combined = tail + piece
+                        match_index = None
+                        match_stop = ""
+                        for stop in st["stops_after"]:
+                            idx = combined.find(stop)
+                            if idx == -1:
+                                continue
+                            if (
+                                match_index is None
+                                or idx < match_index
+                                or (idx == match_index and len(stop) > len(match_stop))
+                            ):
+                                match_index = idx
+                                match_stop = stop
+
+                        if match_index is not None:
+                            pre_len = max(0, match_index - len(tail))
+                            pre_piece = piece[:pre_len]
+                            if pre_piece:
+                                st["stream_buffer"].append(pre_piece)
+                            st["stream_mark"] = mark
+                            self._force_flush_stream_buffer(frame, mark)
+                            st["stops_after"] = []
+                            st["stops_after_maxlen"] = 0
+                            st["stream_tail"] = ""
+                            st["stream_cancelled"] = True
+                            self._result_queue.put(
+                                {
+                                    "ok": True,
+                                    "kind": "stream_append",
+                                    "tab": tab_id,
+                                    "mark": mark,
+                                    "text": match_stop,
+                                    "internal_stop": True,
+                                }
+                            )
+                            self._result_queue.put(
+                                {"ok": True, "kind": "stream_done", "tab": tab_id, "mark": mark}
+                            )
+                            self._result_queue.put(
+                                {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                            )
+                            continue
+
+                        maxlen = st.get("stops_after_maxlen", 0)
+                        if maxlen > 0:
+                            keep = maxlen - 1
+                            st["stream_tail"] = combined[-keep:] if keep > 0 else ""
+                        else:
+                            st["stream_tail"] = ""
+                    else:
+                        st["stream_tail"] = ""
+
                     st["stream_buffer"].append(piece)
                     st["stream_mark"] = mark
                     self._schedule_stream_flush(frame, mark)
@@ -1009,6 +1105,9 @@ class FIMPad(tk.Tk):
                 elif kind == "stream_done":
                     mark = st.get("stream_mark") or item.get("mark") or "stream_here"
                     self._force_flush_stream_buffer(frame, mark)
+                    st["stops_after"] = []
+                    st["stops_after_maxlen"] = 0
+                    st["stream_tail"] = ""
                     self._set_busy(False)
 
                 elif kind == "spellcheck_now":

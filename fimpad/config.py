@@ -32,17 +32,12 @@ DEFAULTS = {
 # Reuse your existing patterns
 MARKER_REGEX = re.compile(
     r"""
-    \[\[\[\s*                # opening marker with optional whitespace
-    (?:(?P<n>\d+)\s*)?         # optional integer specifying max tokens
-    (?:
-        "                      # optional quoted stop sequence
-        (?P<stop>(?:\\.|[^"\\])*)
-        "
-    )?
-    \s*\]\]\]                 # closing marker
+    \[\[\[\s*
+    (?P<body>.*?)
+    \s*\]\]\]
     """,
-    re.VERBOSE | re.IGNORECASE,
-)  # [[[N"stop"]]]
+    re.VERBOSE | re.DOTALL,
+)
 WORD_RE = re.compile(r"\b[^\W\d_']+\b", re.UNICODE)
 
 
