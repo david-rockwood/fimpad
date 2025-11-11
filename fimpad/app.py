@@ -1,0 +1,1260 @@
+#!/usr/bin/env python3
+"""
+FIMpad — Tabbed Tkinter editor for llama-server
+with FIM + Chat, streaming, dirty tracking, and aspell spellcheck.
+"""
+
+import contextlib
+import os
+import queue
+import re
+import subprocess
+import threading
+import tkinter as tk
+import tkinter.font as tkfont
+from tkinter import colorchooser, filedialog, messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
+
+from .client import stream_chat, stream_completion
+from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
+from .utils import offset_to_tkindex
+
+
+class FIMPad(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("FIMpad")
+        self.geometry("1100x750")
+
+        self.cfg = load_config()
+        self.app_font = tkfont.Font(family=self.cfg["font_family"], size=self.cfg["font_size"])
+
+        try:
+            self.style = ttk.Style(self)
+            if "clam" in self.style.theme_names():
+                self.style.theme_use("clam")
+        except Exception:
+            pass
+
+        self._build_menu()
+        self._build_toolbar()
+        self._build_notebook()
+        self.nb.bind(
+            "<<NotebookTabChanged>>",
+            lambda e: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=80),
+        )
+
+        self._result_queue = queue.Queue()
+        self.after(60, self._poll_queue)
+
+        self._aspell_available = self._probe_aspell()
+        self._spell_ignore = set()  # session-level ignores
+
+        self._new_tab()
+        self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
+
+        # Keys
+        self.bind_all("<Control-n>", lambda e: self._new_tab())
+        self.bind_all("<Control-o>", lambda e: self._open_file_into_current())
+        self.bind_all("<Control-s>", lambda e: self._save_file_current())
+        self.bind_all("<Control-Shift-S>", lambda e: self._save_file_as_current())
+        self.bind_all("<Control-q>", lambda e: self._on_close())
+        self.bind_all("<Control-Return>", lambda e: self.generate())
+        self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
+        self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
+        self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
+        self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
+        self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
+
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ---------- Notebook / Tabs ----------
+
+    def _build_notebook(self):
+        self.nb = ttk.Notebook(self)
+        self.nb.pack(fill=tk.BOTH, expand=True)
+        self.nb.enable_traversal()
+        self.tabs = {}  # frame -> state dict
+
+    def _new_tab(self, content: str = "", title: str = "Untitled"):
+        frame = ttk.Frame(self.nb)
+        text = ScrolledText(frame, undo=True, maxundo=-1, wrap=tk.WORD)
+        text.pack(fill=tk.BOTH, expand=True)
+        text.configure(
+            font=self.app_font,
+            fg=self.cfg["fg"],
+            bg=self.cfg["bg"],
+            insertbackground=self.cfg["fg"],
+        )
+        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+        self._clear_line_spacing(text)
+        text.bind("<Configure>", lambda e, fr=frame: self._on_text_configure(fr), add="+")
+
+        # Spellcheck tag + bindings
+        text.tag_configure("misspelled", underline=True, foreground="#ff6666")
+        text.bind(
+            "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
+        )  # right-click menu
+        text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
+
+        st = {
+            "path": None,
+            "text": text,
+            "wrap": "word",  # "word" or "none"
+            "dirty": False,
+            "suppress_modified": False,
+            "_spell_timer": None,
+            "stream_buffer": [],
+            "stream_flush_job": None,
+            "stream_mark": None,
+        }
+
+        def on_modified(event=None):
+            if st["suppress_modified"]:
+                text.edit_modified(False)
+                return
+            if text.edit_modified():
+                self._set_dirty(st, True)
+                text.edit_modified(False)
+
+        text.bind("<<Modified>>", on_modified)
+
+        st["suppress_modified"] = True
+        text.insert("1.0", content)
+        text.edit_modified(False)
+        st["suppress_modified"] = False
+
+        self.tabs[frame] = st
+        self.nb.add(frame, text=title)
+        self.nb.select(frame)
+
+        # Initial spellcheck (debounced)
+        self._schedule_spellcheck_for_frame(frame, delay_ms=250)
+        self._rebuild_overscroll_spacer(st)
+
+    def _current_tab_state(self):
+        tab = self.nb.select()
+        if not tab:
+            return None
+        frame = self.nametowidget(tab)
+        return self.tabs.get(frame)
+
+    def _update_tab_title(self, st):
+        tab = self.nb.select()
+        if not tab:
+            return
+        title = os.path.basename(st["path"]) if st["path"] else "Untitled"
+        if st.get("dirty"):
+            title = f"• {title}"
+        self.nb.tab(tab, text=title)
+
+    def _set_dirty(self, st, dirty: bool):
+        st["dirty"] = dirty
+        self._update_tab_title(st)
+
+    def _close_current_tab(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        if not self._maybe_save(st):
+            return
+        cur = self.nb.select()
+        frame = self.nametowidget(cur)
+        self.nb.forget(cur)
+        self.tabs.pop(frame, None)
+        if not self.tabs:
+            self._new_tab()
+
+    # ---------- Menu / Toolbar ----------
+
+    def _build_menu(self):
+        menubar = tk.Menu(self)
+
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="New Tab", accelerator="Ctrl+N", command=self._new_tab)
+        filemenu.add_command(
+            label="Open…", accelerator="Ctrl+O", command=self._open_file_into_current
+        )
+        filemenu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_file_current)
+        filemenu.add_command(
+            label="Save As…", accelerator="Ctrl+Shift+S", command=self._save_file_as_current
+        )
+        filemenu.add_separator()
+        filemenu.add_command(
+            label="Close Tab", accelerator="Ctrl+W", command=self._close_current_tab
+        )
+        filemenu.add_separator()
+        filemenu.add_command(label="Quit", accelerator="Ctrl+Q", command=self._on_close)
+        menubar.add_cascade(label="File", menu=filemenu)
+
+        editmenu = tk.Menu(menubar, tearoff=0)
+        editmenu.add_command(
+            label="Undo",
+            accelerator="Ctrl+Z",
+            command=lambda: self._cur_text().event_generate("<<Undo>>"),
+        )
+        editmenu.add_command(
+            label="Redo",
+            accelerator="Ctrl+Y",
+            command=lambda: self._cur_text().event_generate("<<Redo>>"),
+        )
+        editmenu.add_separator()
+        editmenu.add_command(label="Find…", accelerator="Ctrl+F", command=self._open_find_dialog)
+        editmenu.add_command(
+            label="Find & Replace…", accelerator="Ctrl+H", command=self._open_replace_dialog
+        )
+        editmenu.add_separator()
+        editmenu.add_command(
+            label="Toggle Wrap", accelerator="Alt+Z", command=self._toggle_wrap_current
+        )
+        editmenu.add_command(
+            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
+        )
+        menubar.add_cascade(label="Edit", menu=editmenu)
+
+        setmenu = tk.Menu(menubar, tearoff=0)
+        setmenu.add_command(label="Settings…", command=self._open_settings)
+        menubar.add_cascade(label="Settings", menu=setmenu)
+
+        self.config(menu=menubar)
+
+    def _build_toolbar(self):
+        bar = ttk.Frame(self)
+        bar.pack(fill=tk.X)
+
+        ttk.Button(bar, text="Generate (Ctrl+Enter)", command=self.generate).pack(
+            side=tk.LEFT, padx=6, pady=6
+        )
+        ttk.Separator(bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
+        ttk.Button(bar, text="New Tab", command=self._new_tab).pack(side=tk.LEFT, padx=6, pady=6)
+        ttk.Button(bar, text="Open…", command=self._open_file_into_current).pack(
+            side=tk.LEFT, padx=6, pady=6
+        )
+        ttk.Button(bar, text="Save", command=self._save_file_current).pack(
+            side=tk.LEFT, padx=6, pady=6
+        )
+
+        self.wrap_label = ttk.Label(bar, text="Wrap: word")
+        self.wrap_label.pack(side=tk.RIGHT, padx=8)
+
+    # ---------- Helpers ----------
+
+    def _apply_editor_padding(self, text: ScrolledText, pad_px: int) -> None:
+        text.configure(padx=max(0, int(pad_px)), pady=0)
+
+    def _clear_line_spacing(self, text: tk.Text) -> None:
+        text.configure(spacing1=0, spacing2=0, spacing3=0)
+        for tag in text.tag_names():
+            options = {}
+            for opt in ("spacing1", "spacing2", "spacing3"):
+                value = text.tag_cget(tag, opt)
+                if not value:
+                    continue
+                if value == "0":
+                    continue
+                try:
+                    if float(value) == 0:
+                        continue
+                except (TypeError, ValueError):
+                    pass
+                options[opt] = 0
+            if options:
+                text.tag_configure(tag, **options)
+
+    def _ensure_overscroll_window(self, st: dict) -> tk.Frame:
+        text = st["text"]
+        spacer = getattr(text, "_overscroll_spacer", None)
+        if spacer is None or not spacer.winfo_exists():
+            spacer = tk.Frame(
+                text,
+                height=0,
+                width=1,
+                background=self.cfg["bg"],
+                borderwidth=0,
+                highlightthickness=0,
+            )
+            text._overscroll_spacer = spacer
+        else:
+            spacer.configure(background=self.cfg["bg"])
+        return spacer
+
+    def _remove_stale_overscroll_windows(self, text: tk.Text, spacer: tk.Frame) -> None:
+        spacer_path = str(spacer)
+        indices = set()
+
+        with contextlib.suppress(tk.TclError):
+            for kind, index, _value in text.dump("1.0", "2.0", window=True):
+                if kind == "window":
+                    indices.add(index)
+
+        try:
+            tail_start = text.index("end-3l")
+        except tk.TclError:
+            tail_start = "1.0"
+
+        with contextlib.suppress(tk.TclError):
+            for kind, index, value in text.dump(tail_start, tk.END, window=True):
+                if kind != "window":
+                    continue
+                if value == spacer_path:
+                    indices.add(index)
+
+        for index in indices:
+            with contextlib.suppress(tk.TclError):
+                text.tk.call(text._w, "window", "delete", index)
+
+    def _rebuild_overscroll_spacer(self, st: dict) -> None:
+        spacer = self._ensure_overscroll_window(st)
+        if not spacer:
+            return
+        text = st["text"]
+        self._remove_stale_overscroll_windows(text, spacer)
+        try:
+            height = max(0, text.winfo_height() // 2)
+        except Exception:
+            height = 0
+        spacer.configure(height=height, width=1)
+
+        try:
+            insert_index = text.index("end-1c")
+        except tk.TclError:
+            return
+
+        if text.compare(insert_index, "<=", "1.0"):
+            return
+
+        with contextlib.suppress(tk.TclError):
+            if text.dlineinfo(insert_index) is None:
+                return
+
+        with contextlib.suppress(tk.TclError):
+            text.window_create(insert_index, window=spacer)
+
+    def _on_text_configure(self, frame) -> None:
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        self._rebuild_overscroll_spacer(st)
+
+    def _cur_text(self) -> ScrolledText:
+        st = self._current_tab_state()
+        return st["text"]
+
+    def _toggle_wrap_current(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        text = st["text"]
+        if st["wrap"] == "word":
+            st["wrap"] = "none"
+            text.config(wrap=tk.NONE)
+        else:
+            st["wrap"] = "word"
+            text.config(wrap=tk.WORD)
+        self.wrap_label.config(text=f"Wrap: {st['wrap']}")
+        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+        self._rebuild_overscroll_spacer(st)
+
+    def _select_all_current(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        t = st["text"]
+        t.tag_add("sel", "1.0", "end-1c")
+        t.mark_set(tk.INSERT, "1.0")
+        t.see("1.0")
+
+    # ---------- File Ops + Dirty ----------
+
+    def _open_file_into_current(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        if not self._maybe_save(st):
+            return
+        path = filedialog.askopenfilename()
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = f.read()
+            st["suppress_modified"] = True
+            st["text"].delete("1.0", tk.END)
+            st["text"].insert("1.0", data)
+            st["text"].edit_modified(False)
+            st["suppress_modified"] = False
+            st["path"] = path
+            self._set_dirty(st, False)
+            self._rebuild_overscroll_spacer(st)
+            self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=200)
+        except Exception as e:
+            messagebox.showerror("Open Error", str(e))
+
+    def _save_file_current(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        path = st["path"]
+        if not path:
+            return self._save_file_as_current()
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(st["text"].get("1.0", tk.END))
+            st["text"].edit_modified(False)
+            self._set_dirty(st, False)
+        except Exception as e:
+            messagebox.showerror("Save Error", str(e))
+
+    def _save_file_as_current(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        path = filedialog.asksaveasfilename(defaultextension=".txt")
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(st["text"].get("1.0", tk.END))
+            st["path"] = path
+            st["text"].edit_modified(False)
+            self._set_dirty(st, False)
+        except Exception as e:
+            messagebox.showerror("Save As Error", str(e))
+
+    def _maybe_save(self, st) -> bool:
+        if not st.get("dirty"):
+            return True
+        title = os.path.basename(st["path"]) if st["path"] else "Untitled"
+        resp = messagebox.askyesnocancel("Unsaved Changes", f"Save changes to '{title}'?")
+        if resp is None:
+            return False
+        if resp:
+            self._save_file_current()
+            if st.get("dirty"):
+                return False
+        return True
+
+    # ---------- Find / Replace ----------
+
+    def _open_find_dialog(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        text = st["text"]
+
+        w = tk.Toplevel(self)
+        w.title("Find")
+        w.resizable(False, False)
+        tk.Label(w, text="Find:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
+        patt_var = tk.StringVar()
+        e = tk.Entry(w, width=40, textvariable=patt_var)
+        e.grid(row=0, column=1, padx=8, pady=8)
+        e.focus_set()
+
+        def find_next():
+            patt = patt_var.get()
+            if not patt:
+                return
+            start = text.index(tk.INSERT)
+            pos = text.search(patt, start, stopindex=tk.END, nocase=False, regexp=False)
+            if not pos:
+                pos = text.search(patt, "1.0", stopindex=tk.END, nocase=False, regexp=False)
+                if not pos:
+                    messagebox.showinfo("Find", "Not found.")
+                    return
+            end = f"{pos}+{len(patt)}c"
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_add("sel", pos, end)
+            text.mark_set(tk.INSERT, end)
+            text.see(pos)
+
+        ttk.Button(w, text="Find Next", command=find_next).grid(
+            row=1, column=1, padx=8, pady=8, sticky="e"
+        )
+
+    def _open_replace_dialog(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        text = st["text"]
+
+        w = tk.Toplevel(self)
+        w.title("Find & Replace")
+        w.resizable(False, False)
+        tk.Label(w, text="Find:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
+        tk.Label(w, text="Replace:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+        find_var = tk.StringVar()
+        repl_var = tk.StringVar()
+        e1 = tk.Entry(w, width=42, textvariable=find_var)
+        e2 = tk.Entry(w, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=8, pady=8)
+        e2.grid(row=1, column=1, padx=8, pady=8)
+        e1.focus_set()
+
+        def replace_next():
+            patt = find_var.get()
+            repl = repl_var.get()
+            if not patt:
+                return
+            start = text.index(tk.INSERT)
+            pos = text.search(patt, start, stopindex=tk.END)
+            if not pos:
+                pos = text.search(patt, "1.0", stopindex=tk.END)
+                if not pos:
+                    messagebox.showinfo("Replace", "No more matches.")
+                    return
+            end = f"{pos}+{len(patt)}c"
+            text.delete(pos, end)
+            text.insert(pos, repl)
+            text.mark_set(tk.INSERT, f"{pos}+{len(repl)}c")
+            text.see(pos)
+
+        def replace_all():
+            patt = find_var.get()
+            repl = repl_var.get()
+            if not patt:
+                return
+            count = 0
+            idx = "1.0"
+            while True:
+                pos = text.search(patt, idx, stopindex=tk.END)
+                if not pos:
+                    break
+                end = f"{pos}+{len(patt)}c"
+                text.delete(pos, end)
+                text.insert(pos, repl)
+                idx = f"{pos}+{len(repl)}c"
+                count += 1
+            messagebox.showinfo("Replace All", f"Replaced {count} occurrences.")
+
+        ttk.Button(w, text="Replace Next", command=replace_next).grid(
+            row=2, column=1, padx=8, pady=6, sticky="w"
+        )
+        ttk.Button(w, text="Replace All", command=replace_all).grid(
+            row=2, column=1, padx=8, pady=6, sticky="e"
+        )
+
+    # ---------- Settings ----------
+
+    def _open_settings(self):
+        cfg = self.cfg
+        w = tk.Toplevel(self)
+        w.title("Settings — FIMpad")
+        w.resizable(False, False)
+
+        def add_row(r, label, var, width=42):
+            tk.Label(w, text=label, anchor="w").grid(row=r, column=0, sticky="w", padx=8, pady=4)
+            e = tk.Entry(w, textvariable=var, width=width)
+            e.grid(row=r, column=1, padx=8, pady=4)
+            return e
+
+        endpoint_var = tk.StringVar(value=cfg["endpoint"])
+        model_var = tk.StringVar(value=cfg["model"])
+        temp_var = tk.StringVar(value=str(cfg["temperature"]))
+        top_p_var = tk.StringVar(value=str(cfg["top_p"]))
+        defN_var = tk.StringVar(value=str(cfg["default_n"]))
+
+        fim_pref_var = tk.StringVar(value=cfg["fim_prefix"])
+        fim_suf_var = tk.StringVar(value=cfg["fim_suffix"])
+        fim_mid_var = tk.StringVar(value=cfg["fim_middle"])
+
+        chat_sys_var = tk.StringVar(value=cfg["chat_system"])
+        chat_usr_var = tk.StringVar(value=cfg["chat_user"])
+        chat_ast_var = tk.StringVar(value=cfg["chat_assistant"])
+
+        fontfam_var = tk.StringVar(value=cfg["font_family"])
+        fontsize_var = tk.StringVar(value=str(cfg["font_size"]))
+        pad_var = tk.StringVar(
+            value=str(cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"]))
+        )
+        fg_var = tk.StringVar(value=cfg["fg"])
+        bg_var = tk.StringVar(value=cfg["bg"])
+
+        spell_on_var = tk.BooleanVar(value=cfg.get("spellcheck_enabled", True))
+        spell_lang_var = tk.StringVar(value=cfg.get("spell_lang", "en_US"))
+
+        row = 0
+        add_row(row, "Endpoint (base, no path):", endpoint_var)
+        row += 1
+        add_row(row, "Model:", model_var)
+        row += 1
+        add_row(row, "Temperature:", temp_var)
+        row += 1
+        add_row(row, "Top-p:", top_p_var)
+        row += 1
+        add_row(row, "Default [[[N]]]:", defN_var)
+        row += 1
+
+        tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
+            row=row, column=0, padx=8, pady=(10, 4), sticky="w"
+        )
+        row += 1
+        add_row(row, "fim_prefix:", fim_pref_var)
+        row += 1
+        add_row(row, "fim_suffix:", fim_suf_var)
+        row += 1
+        add_row(row, "fim_middle:", fim_mid_var)
+        row += 1
+
+        tk.Label(
+            w, text="Chat Roles (inside triple brackets)", font=("TkDefaultFont", 10, "bold")
+        ).grid(row=row, column=0, padx=8, pady=(10, 4), sticky="w")
+        row += 1
+        add_row(row, "[[[system]]]: role name", chat_sys_var)
+        row += 1
+        add_row(row, "[[[user]]]: role name", chat_usr_var)
+        row += 1
+        add_row(row, "[[[assistant]]]: role name", chat_ast_var)
+        row += 1
+
+        tk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
+            row=row, column=0, padx=8, pady=(10, 4), sticky="w"
+        )
+        row += 1
+        add_row(row, "Font family:", fontfam_var)
+        row += 1
+        add_row(row, "Font size:", fontsize_var)
+        row += 1
+        add_row(row, "Editor padding (px):", pad_var)
+        row += 1
+
+        def pick_fg():
+            c = colorchooser.askcolor(color=fg_var.get(), title="Pick text color")
+            if c and c[1]:
+                fg_var.set(c[1])
+
+        def pick_bg():
+            c = colorchooser.askcolor(color=bg_var.get(), title="Pick background color")
+            if c and c[1]:
+                bg_var.set(c[1])
+
+        tk.Label(w, text="Text color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
+        tk.Entry(w, textvariable=fg_var, width=20).grid(
+            row=row, column=1, padx=8, pady=4, sticky="w"
+        )
+        tk.Button(w, text="Pick…", command=pick_fg).grid(
+            row=row, column=1, padx=8, pady=4, sticky="e"
+        )
+        row += 1
+
+        tk.Label(w, text="Background (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
+        tk.Entry(w, textvariable=bg_var, width=20).grid(
+            row=row, column=1, padx=8, pady=4, sticky="w"
+        )
+        tk.Button(w, text="Pick…", command=pick_bg).grid(
+            row=row, column=1, padx=8, pady=4, sticky="e"
+        )
+        row += 1
+
+        # Spellcheck controls
+        ttk.Checkbutton(w, text="Enable spellcheck (aspell)", variable=spell_on_var).grid(
+            row=row, column=0, columnspan=2, padx=8, pady=(10, 0), sticky="w"
+        )
+        row += 1
+        tk.Label(w, text="Spellcheck language (aspell):").grid(
+            row=row, column=0, padx=8, pady=4, sticky="w"
+        )
+        tk.Entry(w, textvariable=spell_lang_var, width=20).grid(
+            row=row, column=1, padx=8, pady=4, sticky="w"
+        )
+        row += 1
+
+        def apply_and_close():
+            try:
+                self.cfg["endpoint"] = endpoint_var.get().strip().rstrip("/")
+                self.cfg["model"] = model_var.get().strip()
+                self.cfg["temperature"] = float(temp_var.get())
+                self.cfg["top_p"] = float(top_p_var.get())
+                self.cfg["default_n"] = max(1, min(4096, int(defN_var.get())))
+                self.cfg["fim_prefix"] = fim_pref_var.get()
+                self.cfg["fim_suffix"] = fim_suf_var.get()
+                self.cfg["fim_middle"] = fim_mid_var.get()
+                self.cfg["chat_system"] = chat_sys_var.get().strip()
+                self.cfg["chat_user"] = chat_usr_var.get().strip()
+                self.cfg["chat_assistant"] = chat_ast_var.get().strip()
+                self.cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
+                self.cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
+                self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
+                self.cfg["fg"] = fg_var.get().strip()
+                self.cfg["bg"] = bg_var.get().strip()
+                self.cfg["spellcheck_enabled"] = bool(spell_on_var.get())
+                self.cfg["spell_lang"] = spell_lang_var.get().strip() or "en_US"
+            except Exception as e:
+                messagebox.showerror("Settings", f"Invalid value: {e}")
+                return
+            save_config(self.cfg)
+            self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
+            for frame, st in self.tabs.items():
+                t = st["text"]
+                t.configure(
+                    font=self.app_font,
+                    fg=self.cfg["fg"],
+                    bg=self.cfg["bg"],
+                    insertbackground=self.cfg["fg"],
+                )
+                self._apply_editor_padding(t, self.cfg["editor_padding_px"])
+                self._clear_line_spacing(t)
+                self._rebuild_overscroll_spacer(st)
+                # refresh spellcheck state
+                if not self.cfg["spellcheck_enabled"]:
+                    t.tag_remove("misspelled", "1.0", "end")
+                else:
+                    self._schedule_spellcheck_for_frame(frame, delay_ms=200)
+            w.destroy()
+
+        tk.Button(w, text="Save", command=apply_and_close).grid(
+            row=row, column=1, padx=8, pady=12, sticky="e"
+        )
+
+    # ---------- Generate (streaming) ----------
+
+    def _should_follow(self, text_widget: tk.Text) -> bool:
+        try:
+            _first, last = text_widget.yview()
+        except Exception:
+            return True
+        return last >= 0.999
+
+    def _reset_stream_state(self, st):
+        job = st.get("stream_flush_job")
+        if job is not None:
+            with contextlib.suppress(Exception):
+                self.after_cancel(job)
+        st["stream_flush_job"] = None
+        st["stream_buffer"].clear()
+        st["stream_mark"] = None
+
+    def _schedule_stream_flush(self, frame, mark):
+        st = self.tabs.get(frame)
+        if not st or st.get("stream_flush_job") is not None:
+            return
+
+        def _cb(fr=frame, mk=mark):
+            st_inner = self.tabs.get(fr)
+            if not st_inner:
+                return
+            st_inner["stream_flush_job"] = None
+            self._flush_stream_buffer(fr, mk)
+
+        st["stream_flush_job"] = self.after(20, _cb)
+
+    def _flush_stream_buffer(self, frame, mark):
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        if not st["stream_buffer"]:
+            return
+
+        text = st["text"]
+        piece = "".join(st["stream_buffer"])
+        st["stream_buffer"].clear()
+        try:
+            cur = text.index(mark)
+        except tk.TclError:
+            cur = text.index(tk.END)
+        should_follow = self._should_follow(text)
+        text.insert(cur, piece)
+        text.mark_set(mark, f"{cur}+{len(piece)}c")
+        if should_follow:
+            text.see(mark)
+        self._set_dirty(st, True)
+
+    def _force_flush_stream_buffer(self, frame, mark):
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        job = st.get("stream_flush_job")
+        if job is not None:
+            with contextlib.suppress(Exception):
+                self.after_cancel(job)
+            st["stream_flush_job"] = None
+        self._flush_stream_buffer(frame, mark)
+        st["stream_mark"] = None
+
+    def generate(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        content = st["text"].get("1.0", tk.END)
+
+        m = MARKER_REGEX.search(content)
+        if m:
+            self._launch_fim_or_completion_stream(st, content, m.start(), m.end(), m)
+            return
+
+        if self._contains_chat_tags(content):
+            self._launch_chat_stream(st, content)
+            return
+
+        messagebox.showinfo("Generate", "No [[[N]]] marker or chat tags found.")
+
+    # ----- FIM/completion streaming -----
+
+    def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
+        cfg = self.cfg
+        token_str = marker_match.group(1) or str(cfg["default_n"])
+        try:
+            max_tokens = max(1, min(4096, int(token_str)))
+        except Exception:
+            max_tokens = cfg["default_n"]
+
+        before = content[:mstart]
+        after = content[mend:]
+        safe_suffix = MARKER_REGEX.sub("", after)
+        use_completion = after.strip() == ""
+
+        if use_completion:
+            prompt = before
+        else:
+            prompt = (
+                f"{cfg['fim_prefix']}{before}{cfg['fim_suffix']}{safe_suffix}{cfg['fim_middle']}"
+            )
+
+        payload = {
+            "model": cfg["model"],
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": cfg["temperature"],
+            "top_p": cfg["top_p"],
+            "stream": True,
+        }
+
+        text = st["text"]
+        start_index = offset_to_tkindex(content, mstart)
+        end_index = offset_to_tkindex(content, mend)
+
+        self._reset_stream_state(st)
+
+        self._set_busy(True)
+
+        # Prepare streaming mark
+        follow = self._should_follow(text)
+        text.mark_set("stream_here", start_index)
+        text.mark_gravity("stream_here", tk.RIGHT)
+        text.delete(start_index, end_index)
+        if follow:
+            text.see("stream_here")
+        self._set_dirty(st, True)
+        st["stream_mark"] = "stream_here"
+
+        def worker(tab_id):
+            try:
+                for piece in stream_completion(cfg["endpoint"], payload):
+                    self._result_queue.put(
+                        {
+                            "ok": True,
+                            "kind": "stream_append",
+                            "tab": tab_id,
+                            "mark": "stream_here",
+                            "text": piece,
+                        }
+                    )
+            except Exception as e:
+                self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
+            finally:
+                # Always emit done; then kick spellcheck
+                self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
+                self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
+
+        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
+
+    # ----- Chat streaming -----
+
+    def _contains_chat_tags(self, content: str) -> bool:
+        sys_t = self.cfg["chat_system"]
+        usr_t = self.cfg["chat_user"]
+        ast_t = self.cfg["chat_assistant"]
+        pat = re.compile(
+            rf"\[\[\[\s*/?\s*(?:{re.escape(sys_t)}|{re.escape(usr_t)}|{re.escape(ast_t)})\s*\]\]\]",
+            re.IGNORECASE,
+        )
+        return bool(pat.search(content))
+
+    def _parse_chat_messages(self, content: str):
+        sys_t = self.cfg["chat_system"]
+        usr_t = self.cfg["chat_user"]
+        ast_t = self.cfg["chat_assistant"]
+        tag_re = re.compile(
+            rf"(\[\[\[\s*(/)?\s*({re.escape(sys_t)}|{re.escape(usr_t)}|{re.escape(ast_t)})\s*\]\]\])",
+            re.IGNORECASE,
+        )
+        tokens = []
+        last_end = 0
+        for m in tag_re.finditer(content):
+            if m.start() > last_end:
+                tokens.append(("TEXT", content[last_end : m.start()]))
+            tokens.append(("TAG", m.group(0), m.group(2) is not None, m.group(3)))
+            last_end = m.end()
+        if last_end < len(content):
+            tokens.append(("TEXT", content[last_end:]))
+
+        messages = []
+        cur_role = None
+        buf = []
+
+        def flush():
+            nonlocal cur_role, buf
+            if cur_role is not None:
+                messages.append({"role": cur_role.lower(), "content": "".join(buf)})
+                cur_role = None
+                buf = []
+
+        for t in tokens:
+            if t[0] == "TEXT":
+                if cur_role is not None:
+                    buf.append(t[1])
+            else:
+                _, _raw, is_close, role = t
+                role = role.lower()
+                if not is_close:
+                    flush()
+                    cur_role = role
+                    buf = []
+                else:
+                    if cur_role == role:
+                        flush()
+                    else:
+                        flush()
+                        cur_role = None
+                        buf = []
+        flush()
+        return messages
+
+    def _launch_chat_stream(self, st, content):
+        cfg = self.cfg
+        messages = self._parse_chat_messages(content)
+        if not messages:
+            messagebox.showinfo("Chat", "No parsed chat messages.")
+            return
+
+        payload = {
+            "model": cfg["model"],
+            "messages": messages,
+            "temperature": cfg["temperature"],
+            "top_p": cfg["top_p"],
+            "stream": True,
+        }
+
+        arole = cfg["chat_assistant"]
+        text = st["text"]
+
+        self._reset_stream_state(st)
+
+        self._set_busy(True)
+
+        # Append opening assistant tag and set stream mark
+        follow = self._should_follow(text)
+        text.insert(tk.END, f"[[[{arole}]]]")
+        text.mark_set("stream_here", tk.END)
+        text.mark_gravity("stream_here", tk.RIGHT)
+        if follow:
+            text.see("stream_here")
+        self._set_dirty(st, True)
+        st["stream_mark"] = "stream_here"
+
+        def worker(tab_id):
+            try:
+                for piece in stream_chat(cfg["endpoint"], payload):
+                    self._result_queue.put(
+                        {
+                            "ok": True,
+                            "kind": "stream_append",
+                            "tab": tab_id,
+                            "mark": "stream_here",
+                            "text": piece,
+                        }
+                    )
+            except Exception as e:
+                self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
+            finally:
+                arole_local = self.cfg["chat_assistant"]
+                self._result_queue.put(
+                    {
+                        "ok": True,
+                        "kind": "stream_append",
+                        "tab": tab_id,
+                        "mark": "stream_here",
+                        "text": f"[[[/{arole_local}]]]",
+                    }
+                )
+                self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
+                self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
+
+        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
+
+    # ---------- Queue handling ----------
+
+    def _poll_queue(self):
+        try:
+            while True:
+                item = self._result_queue.get_nowait()
+
+                if not item.get("ok"):
+                    tab_id = item.get("tab")
+                    frame = self.nametowidget(tab_id) if tab_id else None
+                    if frame in self.tabs:
+                        st_err = self.tabs[frame]
+                        mark = st_err.get("stream_mark") or "stream_here"
+                        self._force_flush_stream_buffer(frame, mark)
+                    self._set_busy(False)
+                    messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
+                    continue
+
+                kind = item.get("kind")
+                tab_id = item.get("tab")
+                frame = self.nametowidget(tab_id) if tab_id else None
+                if not frame or frame not in self.tabs:
+                    continue
+                st = self.tabs[frame]
+                text = st["text"]
+
+                if kind == "stream_append":
+                    mark = item["mark"]
+                    piece = item["text"]
+                    st["stream_buffer"].append(piece)
+                    st["stream_mark"] = mark
+                    self._schedule_stream_flush(frame, mark)
+
+                elif kind == "stream_done":
+                    mark = st.get("stream_mark") or item.get("mark") or "stream_here"
+                    self._force_flush_stream_buffer(frame, mark)
+                    self._set_busy(False)
+
+                elif kind == "spellcheck_now":
+                    self._schedule_spellcheck_for_frame(frame, delay_ms=150)
+
+                elif kind == "spell_result":
+                    # Apply tag updates
+                    text.tag_remove("misspelled", "1.0", "end")
+                    for sidx, eidx in item.get("spans", []):
+                        text.tag_add("misspelled", sidx, eidx)
+
+                else:
+                    pass
+
+        except queue.Empty:
+            pass
+
+        self.after(60, self._poll_queue)
+
+    # ---------- Spellcheck (aspell) ----------
+
+    def _probe_aspell(self) -> bool:
+        try:
+            subprocess.run(
+                ["aspell", "--version"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            return True
+        except Exception:
+            return False
+
+    def _schedule_spellcheck_for_frame(self, frame, delay_ms: int = 350):
+        """
+        Schedule a debounced spellcheck for the given tab/frame.
+        Accepts either a ttk.Frame object or a Notebook tab-id string.
+        """
+        # Respect settings / availability
+        if not self.cfg.get("spellcheck_enabled", True) or not self._aspell_available:
+            return
+
+        # Normalize 'frame' if it's a tab-id string
+        if isinstance(frame, str):
+            try:
+                frame = self.nametowidget(frame)
+            except Exception:
+                return  # invalid id
+
+        if frame not in self.tabs:
+            return
+
+        st = self.tabs[frame]
+
+        # cancel any pending timer for this tab
+        tid = st.get("_spell_timer")
+        if tid:
+            with contextlib.suppress(Exception):
+                self.after_cancel(tid)
+
+        # schedule a new one
+        st["_spell_timer"] = self.after(delay_ms, lambda fr=frame: self._spawn_spellcheck(fr))
+
+    def _spawn_spellcheck(self, frame):
+        if frame not in self.tabs:
+            return
+        st = self.tabs[frame]
+        t = st["text"]
+        # Snapshot text (must be on main thread)
+        txt = t.get("1.0", "end-1c")
+        lang = self.cfg.get("spell_lang", "en_US")
+        ignore = set(self._spell_ignore)  # copy
+
+        def worker(tab_id, text_snapshot, lang_code, ignore_set):
+            try:
+                # Extract words + offsets
+                words = []
+                offsets = []
+                for m in WORD_RE.finditer(text_snapshot):
+                    w = m.group(0)
+                    if not w:
+                        continue
+                    words.append(w)
+                    offsets.append((m.start(), m.end()))
+                if not words:
+                    self._result_queue.put(
+                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                    )
+                    return
+
+                # Ask aspell which are misspelled
+                p = subprocess.run(
+                    ["aspell", "--lang", lang_code, "list"],
+                    input=("\n".join(words)).encode("utf-8"),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+                miss = set(w.strip() for w in p.stdout.decode("utf-8").splitlines() if w.strip())
+
+                # Filter ignores
+                miss = {w for w in miss if w not in ignore_set}
+
+                if not miss:
+                    self._result_queue.put(
+                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                    )
+                    return
+
+                # Map misspelled words back to spans
+                content = text_snapshot
+                out_spans = []
+                for w, (s_off, e_off) in zip(words, offsets, strict=False):
+                    if w in miss:
+                        sidx = offset_to_tkindex(content, s_off)
+                        eidx = offset_to_tkindex(content, e_off)
+                        out_spans.append((sidx, eidx))
+                self._result_queue.put(
+                    {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
+                )
+            except Exception:
+                # swallow spell errors silently
+                self._result_queue.put(
+                    {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                )
+
+        threading.Thread(
+            target=worker, args=(self.nb.select(), txt, lang, ignore), daemon=True
+        ).start()
+
+    def _spell_context_menu(self, event, frame):
+        if not self.cfg.get("spellcheck_enabled", True) or not self._aspell_available:
+            return
+        if frame not in self.tabs:
+            return
+        st = self.tabs[frame]
+        t = st["text"]
+
+        # Index under mouse
+        idx = t.index(f"@{event.x},{event.y}")
+        # Bias inside character so tag lookup works at word start
+        idx_inside = t.index(f"{idx}+1c")
+
+        # Find the misspelled tag range that contains idx_inside
+        hit_start = hit_end = None
+        ranges = list(
+            zip(t.tag_ranges("misspelled")[0::2], t.tag_ranges("misspelled")[1::2], strict=False)
+        )
+        for s, e in ranges:
+            if t.compare(idx_inside, ">=", s) and t.compare(idx_inside, "<", e):
+                hit_start, hit_end = s, e
+                break
+        if not hit_start:
+            return  # not on a misspelled word
+
+        word = t.get(hit_start, hit_end).strip()
+        if not word:
+            return
+
+        menu = tk.Menu(t, tearoff=0)
+        suggs = self._aspell_suggestions(word)
+        if suggs:
+            for s in suggs[:8]:
+                menu.add_command(
+                    label=s,
+                    command=lambda s=s, sidx=hit_start, eidx=hit_end: self._replace_range(
+                        t, sidx, eidx, s
+                    ),
+                )
+            menu.add_separator()
+        menu.add_command(
+            label=f"Ignore '{word}' (session)", command=lambda w=word: self._ignore_word_session(w)
+        )
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _ignore_word_session(self, word):
+        self._spell_ignore.add(word)
+        # re-run spellcheck on current tab
+        frame = self.nb.select()
+        self._schedule_spellcheck_for_frame(frame, delay_ms=50)
+
+    def _replace_range(self, t, sidx, eidx, text):
+        t.delete(sidx, eidx)
+        t.insert(sidx, text)
+
+    def _aspell_suggestions(self, word):
+        if not self._aspell_available:
+            return []
+        try:
+            lang = self.cfg.get("spell_lang", "en_US")
+            p = subprocess.run(
+                ["aspell", "--lang", lang, "-a"],
+                input=(word + "\n").encode("utf-8"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            lines = p.stdout.decode("utf-8", errors="ignore").splitlines()
+            for line in lines[1:]:  # skip header
+                if not line:
+                    continue
+                ch = line[0]
+                if ch in ("*", "+"):  # correct or already root
+                    return []
+                if ch in ("&", "#"):
+                    parts = line.split(":")
+                    if len(parts) > 1:
+                        return [s.strip() for s in parts[1].split(",")]
+            return []
+        except Exception:
+            return []
+
+    # ---------- Utils ----------
+
+    def _set_busy(self, busy: bool):
+        self.config(cursor="watch" if busy else "")
+        self.update_idletasks()
+
+    # ---------- Close / Quit ----------
+
+    def _on_close(self):
+        for frame, st in list(self.tabs.items()):
+            if st.get("dirty"):
+                self.nb.select(frame)
+                if not self._maybe_save(st):
+                    return
+        save_config(self.cfg)
+        self.destroy()
+
+
+def main():
+    app = FIMPad()
+    app.mainloop()
+
+
+if __name__ == "__main__":
+    main()

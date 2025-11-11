@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fimpad"
+version = "0.0.5"
+description = "Lightweight local FIM + chat editor for LLMs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "David K Rockwood" }]
+keywords = ["llm", "fim", "editor"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "requests>=2.32",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "pre-commit>=4",
+  "pyinstaller>=6.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Core rule sets:
+# E/W = pycodestyle, F = pyflakes, I = isort, B = bugbear, UP = pyupgrade, SIM = flake8-simplify
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+# Anything Ruff *can* fix, go ahead and fix it:
+fixable = ["ALL"]
+# Keep this list short; add only rules you truly want to ignore everywhere.
+ignore = []
+
+# Optional: project-wide relaxations for specific paths
+[tool.ruff.lint.per-file-ignores]
+# Tests often use asserts, reimports, etc.
+"tests/**/*" = ["S101", "F401"]
+# Example: allow long lines in docs or CI files
+"README.md" = ["E501"]
+".github/**" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.10"
+pretty = true
+warn_unused_ignores = true
+strict = false

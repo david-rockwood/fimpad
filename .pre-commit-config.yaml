@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      # 1) Lint + fixes (safe + unsafe).
+      # Unsafe fixes rewrite logic in a few cases (e.g., SIM/UP transforms).
+      # They’re usually desirable; remove the flag if you want to review manually.
+      - id: ruff
+        args: [--fix, --unsafe-fixes]
+
+      # 2) Code formatter (Black-compatible) after lint fixes
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
