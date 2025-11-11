@@ -13,7 +13,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m fimpad
 
-## FIM Tags
+**FIM tags**
 
 To do an FIM generation, make an FIM tag like this:
 
