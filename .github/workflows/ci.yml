@@ -1,11 +1,29 @@
-# .github/workflows/ci.yml
 name: CI
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.gif"
+      - "**/*.svg"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.gif"
+      - "**/*.svg"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+  workflow_dispatch: {}
 
 jobs:
   test-and-build:
@@ -24,7 +42,7 @@ jobs:
       - name: System deps for Tkinter
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk
+          sudo apt-get install -y python3-tk xvfb
 
       - name: Install project (dev)
         run: |
@@ -32,13 +50,21 @@ jobs:
           pip install -e .[dev]
           pip install pyinstaller
 
-      - name: Lint
-        run: ruff check .
+      - name: Ruff (auto-fix) and verify clean tree
+        run: |
+          ruff check . --fix
+          git diff --exit-code || (echo "::error::Ruff made changes. Commit them locally." && exit 1)
+
       - name: Run tests (headless-friendly)
         run: |
-          sudo apt-get update && sudo apt-get install -y xvfb
           xvfb-run -a pytest -q
-      - name: Build (PyInstaller)
+
+      - name: Build (PyInstaller) — only when asked
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
         run: |
           pyinstaller --onefile --windowed \
             --name fimpad \
@@ -48,6 +74,11 @@ jobs:
           ls -lh dist/
 
       - name: Upload binary artifact
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]')) ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[build]'))
         uses: actions/upload-artifact@v4
         with:
           name: fimpad-linux-${{ github.sha }}
