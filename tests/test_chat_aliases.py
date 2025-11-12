@@ -1,6 +1,7 @@
 from fimpad.app import FIMPad
 from fimpad.config import DEFAULTS
 
+
 def make_app():
     app = FIMPad.__new__(FIMPad)
     app.cfg = DEFAULTS.copy()
