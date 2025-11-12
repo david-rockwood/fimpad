@@ -733,9 +733,12 @@ class FIMPad(tk.Tk):
 
         match_for_cursor = None
         for marker_match in MARKER_REGEX.finditer(content):
-            if self._cursor_within_span(marker_match.start(), marker_match.end(), cursor_offset):
-                if match_for_cursor is None or marker_match.start() >= match_for_cursor.start():
-                    match_for_cursor = marker_match
+            if not self._cursor_within_span(
+                marker_match.start(), marker_match.end(), cursor_offset
+            ):
+                continue
+            if match_for_cursor is None or marker_match.start() >= match_for_cursor.start():
+                match_for_cursor = marker_match
 
         if match_for_cursor is not None:
             self._launch_fim_or_completion_stream(
@@ -948,11 +951,9 @@ class FIMPad(tk.Tk):
 
     @staticmethod
     def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        if start <= cursor_offset < end:
-            return True
-        if cursor_offset > 0 and start <= cursor_offset - 1 < end:
-            return True
-        return False
+        return start <= cursor_offset < end or (
+            cursor_offset > 0 and start <= cursor_offset - 1 < end
+        )
 
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
