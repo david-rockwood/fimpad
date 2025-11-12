@@ -17,6 +17,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
+from .help import get_help_template
 from .utils import offset_to_tkindex
 
 PREFIX_TAG_RE = re.compile(r"\[\[\[\s*prefix\s*\]\]\]", re.IGNORECASE)
@@ -68,6 +69,13 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
         self.bind_all("<Control-t>", lambda e: self._open_settings())
+
+        def _help_binding(event=None):
+            self._open_help_tab()
+            return "break"
+
+        self.bind_all("<Alt-h>", _help_binding)
+        self.bind_all("<Alt-H>", _help_binding)
 
         for idx in range(1, 10):
             self.bind_all(
@@ -244,9 +252,54 @@ class FIMPad(tk.Tk):
             accelerator="Ctrl+Enter",
             command=self.generate,
         )
+        aimenu.add_command(
+            label="Help",
+            accelerator="Alt+H",
+            command=self._open_help_tab,
+        )
         menubar.add_cascade(label="AI", menu=aimenu)
 
         self.config(menu=menubar)
+
+    def _open_help_tab(self):
+        title = "AI Help"
+        template = get_help_template()
+
+        for tab_id in self.nb.tabs():
+            if self.nb.tab(tab_id, "text") == title:
+                self.nb.select(tab_id)
+                frame = self.nametowidget(tab_id)
+                st = self.tabs.get(frame)
+                if st:
+                    self._focus_help_blank_line(st["text"], template)
+                return
+
+        self._new_tab(content=template, title=title)
+        st = self._current_tab_state()
+        if not st:
+            return
+        self._focus_help_blank_line(st["text"], template)
+
+    def _focus_help_blank_line(self, text_widget: ScrolledText, template: str) -> None:
+        user_open = "[[[user]]]"
+        user_close = "[[[/user]]]"
+        start = template.find(user_open)
+        end = template.find(user_close, start + len(user_open) if start != -1 else 0)
+        if start == -1 or end == -1:
+            insert_offset = 0
+        else:
+            region = template[start + len(user_open) : end]
+            rel = region.find("\n\n")
+            if rel == -1:
+                insert_offset = start + len(user_open)
+            else:
+                insert_offset = start + len(user_open) + rel + 1
+
+        index = offset_to_tkindex(template, insert_offset)
+        text_widget.mark_set(tk.INSERT, index)
+        text_widget.tag_remove("sel", "1.0", tk.END)
+        text_widget.see(tk.INSERT)
+        text_widget.focus_set()
 
     # ---------- Helpers ----------
 
