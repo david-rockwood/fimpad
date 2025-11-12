@@ -68,6 +68,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
+        self.bind_all("<Control-t>", lambda e: self._open_settings())
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -221,8 +222,18 @@ class FIMPad(tk.Tk):
         )
         menubar.add_cascade(label="Edit", menu=editmenu)
 
+        aimenu = tk.Menu(menubar, tearoff=0)
+        aimenu.add_command(
+            label="Generate",
+            accelerator="Ctrl+Enter",
+            command=self.generate,
+        )
+        menubar.add_cascade(label="AI", menu=aimenu)
+
         setmenu = tk.Menu(menubar, tearoff=0)
-        setmenu.add_command(label="Settings…", command=self._open_settings)
+        setmenu.add_command(
+            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
+        )
         menubar.add_cascade(label="Settings", menu=setmenu)
 
         self.config(menu=menubar)
