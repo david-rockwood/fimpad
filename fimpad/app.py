@@ -40,7 +40,6 @@ class FIMPad(tk.Tk):
             pass
 
         self._build_menu()
-        self._build_toolbar()
         self._build_notebook()
         self.nb.bind(
             "<<NotebookTabChanged>>",
@@ -69,6 +68,13 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
         self.bind_all("<Control-t>", lambda e: self._open_settings())
+
+        for idx in range(1, 10):
+            self.bind_all(
+                f"<Alt-Key-{idx}>",
+                lambda e, index=idx - 1: self._select_tab_by_index(index),
+            )
+        self.bind_all("<Alt-Key-0>", lambda e: self._select_tab_by_index(9))
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -175,6 +181,12 @@ class FIMPad(tk.Tk):
         if not self.tabs:
             self._new_tab()
 
+    def _select_tab_by_index(self, index: int) -> None:
+        tabs = self.nb.tabs()
+        if index < 0 or index >= len(tabs):
+            return
+        self.nb.select(tabs[index])
+
     # ---------- Menu / Toolbar ----------
 
     def _build_menu(self):
@@ -220,6 +232,10 @@ class FIMPad(tk.Tk):
         editmenu.add_command(
             label="Select All", accelerator="Ctrl+A", command=self._select_all_current
         )
+        editmenu.add_separator()
+        editmenu.add_command(
+            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
+        )
         menubar.add_cascade(label="Edit", menu=editmenu)
 
         aimenu = tk.Menu(menubar, tearoff=0)
@@ -230,32 +246,7 @@ class FIMPad(tk.Tk):
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
-        setmenu = tk.Menu(menubar, tearoff=0)
-        setmenu.add_command(
-            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
-        )
-        menubar.add_cascade(label="Settings", menu=setmenu)
-
         self.config(menu=menubar)
-
-    def _build_toolbar(self):
-        bar = ttk.Frame(self)
-        bar.pack(fill=tk.X)
-
-        ttk.Button(bar, text="Generate (Ctrl+Enter)", command=self.generate).pack(
-            side=tk.LEFT, padx=6, pady=6
-        )
-        ttk.Separator(bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
-        ttk.Button(bar, text="New Tab", command=self._new_tab).pack(side=tk.LEFT, padx=6, pady=6)
-        ttk.Button(bar, text="Open…", command=self._open_file_into_current).pack(
-            side=tk.LEFT, padx=6, pady=6
-        )
-        ttk.Button(bar, text="Save", command=self._save_file_current).pack(
-            side=tk.LEFT, padx=6, pady=6
-        )
-
-        self.wrap_label = ttk.Label(bar, text="Wrap: word")
-        self.wrap_label.pack(side=tk.RIGHT, padx=8)
 
     # ---------- Helpers ----------
 
@@ -296,7 +287,6 @@ class FIMPad(tk.Tk):
         else:
             st["wrap"] = "word"
             text.config(wrap=tk.WORD)
-        self.wrap_label.config(text=f"Wrap: {st['wrap']}")
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
 
     def _select_all_current(self):
