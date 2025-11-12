@@ -62,7 +62,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-s>", lambda e: self._save_file_current())
         self.bind_all("<Control-Shift-S>", lambda e: self._save_file_as_current())
         self.bind_all("<Control-q>", lambda e: self._on_close())
-        self.bind_all("<Control-Return>", lambda e: self.generate())
+        self.bind_all("<Control-Return>", self._on_generate_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
@@ -769,6 +769,10 @@ class FIMPad(tk.Tk):
             "Generate",
             "Place the caret inside a [[[N]]] marker or chat tag block.",
         )
+
+    def _on_generate_shortcut(self, event):
+        self.generate()
+        return "break"
 
     # ----- FIM/completion streaming -----
 
