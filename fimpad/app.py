@@ -113,6 +113,8 @@ class FIMPad(tk.Tk):
             "stops_after_maxlen": 0,
             "stream_tail": "",
             "stream_cancelled": False,
+            "chat_after_placeholder_mark": None,
+            "chat_stream_active": False,
         }
 
         def on_modified(event=None):
@@ -642,6 +644,15 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
+    def _clear_chat_state(self, st):
+        text = st.get("text")
+        mark_name = st.get("chat_after_placeholder_mark")
+        if text is not None and mark_name:
+            with contextlib.suppress(tk.TclError):
+                text.mark_unset(mark_name)
+        st["chat_after_placeholder_mark"] = None
+        st["chat_stream_active"] = False
+
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
         if job is not None:
@@ -654,6 +665,7 @@ class FIMPad(tk.Tk):
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
+        self._clear_chat_state(st)
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -714,7 +726,25 @@ class FIMPad(tk.Tk):
             return
 
         if self._contains_chat_tags(content):
-            self._launch_chat_stream(st, content)
+            text_widget = st["text"]
+            cursor_index = text_widget.index(tk.INSERT)
+            try:
+                cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
+            except Exception:
+                cursor_offset = len(content)
+
+            bounds = self._locate_chat_block(content, cursor_offset)
+            if not bounds:
+                messagebox.showinfo("Chat", "Place the cursor inside a chat block.")
+                return
+
+            self._reset_stream_state(st)
+            messages = self._prepare_chat_block(st, content, bounds[0], bounds[1])
+            if not messages:
+                messagebox.showinfo("Chat", "No parsed chat messages in this block.")
+                return
+
+            self._launch_chat_stream(st, messages)
             return
 
         messagebox.showinfo("Generate", "No [[[N]]] marker or chat tags found.")
@@ -898,6 +928,29 @@ class FIMPad(tk.Tk):
         )
         return bool(pat.search(content))
 
+    def _locate_chat_block(self, content: str, cursor_offset: int):
+        cursor_offset = max(0, min(len(content), cursor_offset))
+        sys_t = self.cfg["chat_system"]
+        sys_re = re.compile(rf"\[\[\[\s*{re.escape(sys_t)}\s*\]\]\]", re.IGNORECASE)
+
+        prev_match = None
+        for match in sys_re.finditer(content):
+            if match.start() <= cursor_offset:
+                prev_match = match
+            else:
+                break
+
+        if prev_match is None:
+            return None
+
+        next_match = sys_re.search(content, prev_match.end())
+        block_end = next_match.start() if next_match else len(content)
+
+        if cursor_offset < prev_match.start() or cursor_offset > block_end:
+            return None
+
+        return prev_match.start(), block_end
+
     def _parse_chat_messages(self, content: str):
         sys_t = self.cfg["chat_system"]
         usr_t = self.cfg["chat_user"]
@@ -948,37 +1001,108 @@ class FIMPad(tk.Tk):
         flush()
         return messages
 
-    def _launch_chat_stream(self, st, content):
+    def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
+        block_text = full_content[block_start:block_end]
+        parsed = self._parse_chat_messages(block_text)
+        if not parsed:
+            return []
+
         cfg = self.cfg
-        messages = self._parse_chat_messages(content)
-        if not messages:
-            messagebox.showinfo("Chat", "No parsed chat messages.")
+        text = st["text"]
+
+        role_lookup = {
+            cfg["chat_system"].lower(): cfg["chat_system"],
+            cfg["chat_user"].lower(): cfg["chat_user"],
+            cfg["chat_assistant"].lower(): cfg["chat_assistant"],
+        }
+
+        normalized_messages = []
+        pieces: list[str] = []
+        for msg in parsed:
+            role = (msg.get("role") or "").lower()
+            body = (msg.get("content") or "").rstrip("\n")
+            normalized_messages.append({"role": role, "content": body})
+
+            tag_name = role_lookup.get(role, role)
+            open_tag = f"[[[{tag_name}]]]"
+            close_tag = f"[[[/{tag_name}]]]"
+
+            pieces.append(open_tag)
+            pieces.append("\n")
+            if body:
+                pieces.append(body)
+                pieces.append("\n")
+            pieces.append(close_tag)
+            pieces.append("\n\n")
+
+        normalized_text = "".join(pieces)
+
+        assistant_tag = cfg["chat_assistant"]
+        placeholder_open = f"[[[{assistant_tag}]]]"
+        placeholder_close = f"[[[/{assistant_tag}]]]"
+        placeholder = f"{placeholder_open}\n\n{placeholder_close}"
+
+        replacement = normalized_text + placeholder
+
+        start_idx = offset_to_tkindex(full_content, block_start)
+        end_idx = offset_to_tkindex(full_content, block_end)
+
+        text.delete(start_idx, end_idx)
+        text.insert(start_idx, replacement)
+
+        normalized_len = len(normalized_text)
+        open_len = len(placeholder_open)
+        close_len = len(placeholder_close)
+
+        stream_offset = normalized_len + open_len + 1
+        after_close_offset = normalized_len + open_len + 2 + close_len
+
+        stream_index = text.index(f"{start_idx}+{stream_offset}c")
+        text.mark_set("stream_here", stream_index)
+        text.mark_gravity("stream_here", tk.RIGHT)
+
+        after_close_index = text.index(f"{start_idx}+{after_close_offset}c")
+        text.mark_set("chat_after_placeholder", after_close_index)
+        text.mark_gravity("chat_after_placeholder", tk.RIGHT)
+        st["chat_after_placeholder_mark"] = "chat_after_placeholder"
+
+        normalized_messages.append({"role": "assistant", "content": ""})
+
+        return normalized_messages
+
+    def _launch_chat_stream(self, st, messages):
+        cfg = self.cfg
+        text = st["text"]
+
+        assistant_role = cfg["chat_assistant"].lower()
+        payload_messages = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in messages
+            if not (
+                msg["role"].lower() == assistant_role and not (msg["content"] or "").strip()
+            )
+        ]
+
+        if not payload_messages:
+            messagebox.showinfo("Chat", "No parsed chat messages in this block.")
+            self._clear_chat_state(st)
             return
 
         payload = {
             "model": cfg["model"],
-            "messages": messages,
+            "messages": payload_messages,
             "temperature": cfg["temperature"],
             "top_p": cfg["top_p"],
             "stream": True,
         }
 
-        arole = cfg["chat_assistant"]
-        text = st["text"]
-
-        self._reset_stream_state(st)
-
         self._set_busy(True)
 
-        # Append opening assistant tag and set stream mark
-        follow = self._should_follow(text)
-        text.insert(tk.END, f"[[[{arole}]]]")
-        text.mark_set("stream_here", tk.END)
-        text.mark_gravity("stream_here", tk.RIGHT)
-        if follow:
-            text.see("stream_here")
-        self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
+        st["chat_stream_active"] = True
+
+        if self._should_follow(text):
+            text.see("stream_here")
 
         def worker(tab_id):
             try:
@@ -995,16 +1119,6 @@ class FIMPad(tk.Tk):
             except Exception as e:
                 self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
             finally:
-                arole_local = self.cfg["chat_assistant"]
-                self._result_queue.put(
-                    {
-                        "ok": True,
-                        "kind": "stream_append",
-                        "tab": tab_id,
-                        "mark": "stream_here",
-                        "text": f"[[[/{arole_local}]]]",
-                    }
-                )
                 self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
                 self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
 
@@ -1024,6 +1138,7 @@ class FIMPad(tk.Tk):
                         st_err = self.tabs[frame]
                         mark = st_err.get("stream_mark") or "stream_here"
                         self._force_flush_stream_buffer(frame, mark)
+                        self._clear_chat_state(st_err)
                     self._set_busy(False)
                     messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                     continue
@@ -1107,6 +1222,24 @@ class FIMPad(tk.Tk):
                     st["stops_after"] = []
                     st["stops_after_maxlen"] = 0
                     st["stream_tail"] = ""
+                    if st.get("chat_stream_active"):
+                        after_idx = None
+                        mark_name = st.get("chat_after_placeholder_mark")
+                        if mark_name:
+                            try:
+                                after_idx = text.index(mark_name)
+                            except tk.TclError:
+                                after_idx = None
+                        if after_idx:
+                            urole = self.cfg["chat_user"]
+                            open_tag = f"[[[{urole}]]]"
+                            user_block = f"\n\n{open_tag}\n\n[[[/{urole}]]]"
+                            text.insert(after_idx, user_block)
+                            cursor_offset = len("\n\n" + open_tag + "\n")
+                            insert_target = text.index(f"{after_idx}+{cursor_offset}c")
+                            text.mark_set(tk.INSERT, insert_target)
+                            text.see(tk.INSERT)
+                        self._clear_chat_state(st)
                     self._set_busy(False)
 
                 elif kind == "spellcheck_now":
