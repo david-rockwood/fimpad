@@ -32,11 +32,9 @@ DEFAULTS = {
 # Reuse your existing patterns
 MARKER_REGEX = re.compile(
     r"""
-    \[\[\[\s*
-    (?P<body>.*?)
-    \s*\]\]\]
+    \[\[\[ \s* (?P<body> \d+ (?: \s+ (?: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' ) )* ) \s* \]\]\]
     """,
-    re.VERBOSE | re.DOTALL,
+    re.VERBOSE,
 )
 WORD_RE = re.compile(r"\b[^\W\d_']+\b", re.UNICODE)
 
