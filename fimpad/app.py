@@ -709,7 +709,7 @@ class FIMPad(tk.Tk):
         content = st["text"].get("1.0", tk.END)
 
         m = MARKER_REGEX.search(content)
-        if m:
+        if m is not None:
             self._launch_fim_or_completion_stream(st, content, m.start(), m.end(), m)
             return
 
