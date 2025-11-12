@@ -62,7 +62,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-s>", lambda e: self._save_file_current())
         self.bind_all("<Control-Shift-S>", lambda e: self._save_file_as_current())
         self.bind_all("<Control-q>", lambda e: self._on_close())
-        self.bind_all("<Control-Return>", lambda e: self.generate())
+        self.bind_all("<Control-Return>", self._on_generate_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
@@ -98,6 +98,8 @@ class FIMPad(tk.Tk):
             "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
+        text.bind("<Control-Return>", self._on_generate_shortcut)
+        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
 
         st = {
             "path": None,
@@ -770,6 +772,10 @@ class FIMPad(tk.Tk):
             "Place the caret inside a [[[N]]] marker or chat tag block.",
         )
 
+    def _on_generate_shortcut(self, event):
+        self.generate()
+        return "break"
+
     # ----- FIM/completion streaming -----
 
     def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
@@ -976,7 +982,7 @@ class FIMPad(tk.Tk):
 
     @staticmethod
     def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        return start <= cursor_offset < end or (
+        return (start <= cursor_offset <= end) or (
             cursor_offset > 0 and start <= cursor_offset - 1 < end
         )
 
