@@ -939,12 +939,37 @@ class FIMPad(tk.Tk):
 
     # ----- Chat streaming -----
 
+    def _chat_role_aliases(self) -> dict[str, str]:
+        cfg = self.cfg
+        base_aliases = {
+            cfg["chat_system"].lower(): "system",
+            cfg["chat_user"].lower(): "user",
+            cfg["chat_assistant"].lower(): "assistant",
+            "system": "system",
+            "user": "user",
+            "assistant": "assistant",
+            "s": "system",
+            "u": "user",
+            "a": "assistant",
+        }
+
+        aliases = {}
+        for name, role in base_aliases.items():
+            aliases[name] = role
+            if not name.startswith("/"):
+                aliases[f"/{name}"] = role
+
+        return aliases
+
+    def _chat_tag_names(self) -> list[str]:
+        role_aliases = self._chat_role_aliases()
+        tag_names = {name.lstrip("/") for name in role_aliases}
+        return sorted(tag_names, key=len, reverse=True)
+
     def _contains_chat_tags(self, content: str) -> bool:
-        sys_t = self.cfg["chat_system"]
-        usr_t = self.cfg["chat_user"]
-        ast_t = self.cfg["chat_assistant"]
+        tag_names = self._chat_tag_names()
         pat = re.compile(
-            rf"\[\[\[\s*/?\s*(?:{re.escape(sys_t)}|{re.escape(usr_t)}|{re.escape(ast_t)})\s*\]\]\]",
+            rf"\[\[\[\s*/?\s*(?:{'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\]",
             re.IGNORECASE,
         )
         return bool(pat.search(content))
@@ -957,8 +982,16 @@ class FIMPad(tk.Tk):
 
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
-        sys_t = self.cfg["chat_system"]
-        sys_re = re.compile(rf"\[\[\[\s*{re.escape(sys_t)}\s*\]\]\]", re.IGNORECASE)
+        role_aliases = self._chat_role_aliases()
+        system_names = sorted(
+            {name.lstrip("/") for name, role in role_aliases.items() if role == "system"},
+            key=len,
+            reverse=True,
+        )
+        sys_re = re.compile(
+            rf"\[\[\[\s*(?:{'|'.join(re.escape(name) for name in system_names)})\s*\]\]\]",
+            re.IGNORECASE,
+        )
         matches = list(sys_re.finditer(content))
         if not matches:
             return None
@@ -972,11 +1005,10 @@ class FIMPad(tk.Tk):
         return None
 
     def _parse_chat_messages(self, content: str):
-        sys_t = self.cfg["chat_system"]
-        usr_t = self.cfg["chat_user"]
-        ast_t = self.cfg["chat_assistant"]
+        role_aliases = self._chat_role_aliases()
+        tag_names = self._chat_tag_names()
         tag_re = re.compile(
-            rf"(\[\[\[\s*(/)?\s*({re.escape(sys_t)}|{re.escape(usr_t)}|{re.escape(ast_t)})\s*\]\]\])",
+            rf"(\[\[\[\s*(/)?\s*({'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\])",
             re.IGNORECASE,
         )
         tokens = []
@@ -1006,7 +1038,8 @@ class FIMPad(tk.Tk):
                     buf.append(t[1])
             else:
                 _, _raw, is_close, role = t
-                role = role.lower()
+                role_key = role.lower()
+                role = role_aliases.get(role_key, role_aliases.get(f"/{role_key}", role_key))
                 if not is_close:
                     flush()
                     cur_role = role
@@ -1035,6 +1068,9 @@ class FIMPad(tk.Tk):
             cfg["chat_user"].lower(): cfg["chat_user"],
             cfg["chat_assistant"].lower(): cfg["chat_assistant"],
         }
+        role_lookup.setdefault("system", cfg["chat_system"])
+        role_lookup.setdefault("user", cfg["chat_user"])
+        role_lookup.setdefault("assistant", cfg["chat_assistant"])
 
         normalized_messages = []
         pieces: list[str] = []
