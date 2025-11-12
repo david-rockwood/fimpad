@@ -1400,6 +1400,41 @@ class FIMPad(tk.Tk):
             return
 
         menu = tk.Menu(t, tearoff=0)
+        temp_bindings = []
+
+        def remove_temp_bindings():
+            nonlocal temp_bindings
+            for sequence, funcid in temp_bindings:
+                if funcid:
+                    self.unbind(sequence, funcid)
+            temp_bindings = []
+
+        def close_menu(event=None):
+            remove_temp_bindings()
+            with contextlib.suppress(tk.TclError):
+                menu.unpost()
+
+        def bind_temp(sequence, func, add="+"):
+            funcid = self.bind(sequence, func, add=add)
+            temp_bindings.append((sequence, funcid))
+
+        def handle_click(event):
+            if menu.winfo_ismapped():
+                mx, my = menu.winfo_rootx(), menu.winfo_rooty()
+                mw, mh = mx + menu.winfo_width(), my + menu.winfo_height()
+                if mx <= event.x_root < mw and my <= event.y_root < mh:
+                    return
+            close_menu()
+
+        def handle_escape(event):
+            close_menu()
+            return "break"
+
+        bind_temp("<Button-1>", handle_click)
+        bind_temp("<Button-2>", handle_click)
+        bind_temp("<Escape>", handle_escape)
+        menu.bind("<Unmap>", lambda e: remove_temp_bindings(), add="+")
+
         suggs = self._aspell_suggestions(word)
         if suggs:
             for s in suggs[:8]:
