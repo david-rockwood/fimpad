@@ -36,7 +36,7 @@ MARKER_REGEX = re.compile(
     """,
     re.VERBOSE,
 )
-WORD_RE = re.compile(r"\b[^\W\d_']+\b", re.UNICODE)
+WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
 
 
 def load_config() -> dict:
