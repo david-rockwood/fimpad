@@ -718,28 +718,39 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
-        content = st["text"].get("1.0", tk.END)
 
-        m = MARKER_REGEX.search(content)
-        if m is not None:
-            self._launch_fim_or_completion_stream(st, content, m.start(), m.end(), m)
+        text_widget = st["text"]
+        cursor_index = text_widget.index(tk.INSERT)
+        try:
+            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
+        except Exception:
+            cursor_offset = None
+
+        content = text_widget.get("1.0", tk.END)
+        if cursor_offset is None:
+            cursor_offset = len(content)
+        cursor_offset = max(0, min(len(content), cursor_offset))
+
+        match_for_cursor = None
+        for marker_match in MARKER_REGEX.finditer(content):
+            if self._cursor_within_span(marker_match.start(), marker_match.end(), cursor_offset):
+                if match_for_cursor is None or marker_match.start() >= match_for_cursor.start():
+                    match_for_cursor = marker_match
+
+        if match_for_cursor is not None:
+            self._launch_fim_or_completion_stream(
+                st,
+                content,
+                match_for_cursor.start(),
+                match_for_cursor.end(),
+                match_for_cursor,
+            )
             return
 
-        if self._contains_chat_tags(content):
-            text_widget = st["text"]
-            cursor_index = text_widget.index(tk.INSERT)
-            try:
-                cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-            except Exception:
-                cursor_offset = len(content)
-
-            bounds = self._locate_chat_block(content, cursor_offset)
-            if not bounds:
-                messagebox.showinfo("Chat", "Place the cursor inside a chat block.")
-                return
-
+        chat_bounds = self._locate_chat_block(content, cursor_offset)
+        if chat_bounds:
             self._reset_stream_state(st)
-            messages = self._prepare_chat_block(st, content, bounds[0], bounds[1])
+            messages = self._prepare_chat_block(st, content, chat_bounds[0], chat_bounds[1])
             if not messages:
                 messagebox.showinfo("Chat", "No parsed chat messages in this block.")
                 return
@@ -747,7 +758,14 @@ class FIMPad(tk.Tk):
             self._launch_chat_stream(st, messages)
             return
 
-        messagebox.showinfo("Generate", "No [[[N]]] marker or chat tags found.")
+        if self._contains_chat_tags(content):
+            messagebox.showinfo("Chat", "Place the cursor inside a chat block.")
+            return
+
+        messagebox.showinfo(
+            "Generate",
+            "Place the caret inside a [[[N]]] marker or chat tag block.",
+        )
 
     # ----- FIM/completion streaming -----
 
@@ -928,28 +946,29 @@ class FIMPad(tk.Tk):
         )
         return bool(pat.search(content))
 
+    @staticmethod
+    def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
+        if start <= cursor_offset < end:
+            return True
+        if cursor_offset > 0 and start <= cursor_offset - 1 < end:
+            return True
+        return False
+
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
         sys_t = self.cfg["chat_system"]
         sys_re = re.compile(rf"\[\[\[\s*{re.escape(sys_t)}\s*\]\]\]", re.IGNORECASE)
-
-        prev_match = None
-        for match in sys_re.finditer(content):
-            if match.start() <= cursor_offset:
-                prev_match = match
-            else:
-                break
-
-        if prev_match is None:
+        matches = list(sys_re.finditer(content))
+        if not matches:
             return None
 
-        next_match = sys_re.search(content, prev_match.end())
-        block_end = next_match.start() if next_match else len(content)
+        for idx in range(len(matches) - 1, -1, -1):
+            start = matches[idx].start()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(content)
+            if self._cursor_within_span(start, end, cursor_offset):
+                return start, end
 
-        if cursor_offset < prev_match.start() or cursor_offset > block_end:
-            return None
-
-        return prev_match.start(), block_end
+        return None
 
     def _parse_chat_messages(self, content: str):
         sys_t = self.cfg["chat_system"]
