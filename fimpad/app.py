@@ -1041,6 +1041,8 @@ class FIMPad(tk.Tk):
         for msg in parsed:
             role = (msg.get("role") or "").lower()
             body = (msg.get("content") or "").rstrip("\n")
+            if body.startswith("\n"):
+                body = body[1:]
             normalized_messages.append({"role": role, "content": body})
 
             tag_name = role_lookup.get(role, role)
