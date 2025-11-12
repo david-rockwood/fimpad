@@ -948,6 +948,67 @@ class FIMPad(tk.Tk):
         flush()
         return messages
 
+    def _find_chat_insert_index(self, text_widget: tk.Text, content: str) -> str:
+        """
+        Return a Tk index where an assistant reply should be inserted:
+        - Immediately after the final [[[user]]] block's content (on a fresh line).
+        - If no [[[user]]] tag exists, return 'end-1c' (append to end).
+        This is tolerant of optional closing tags and interleaved other tags.
+        """
+
+        sys_t = self.cfg["chat_system"]
+        usr_t = self.cfg["chat_user"]
+        ast_t = self.cfg["chat_assistant"]
+
+        # Case-insensitive tags, e.g. [[[user]]], [[[/user]]]
+        open_user = re.compile(rf"\[\[\[\s*{re.escape(usr_t)}\s*\]\]\]", re.IGNORECASE)
+        any_tag = re.compile(
+            rf"\[\[\[\s*/?\s*(?:{re.escape(sys_t)}|{re.escape(usr_t)}|{re.escape(ast_t)})\s*\]\]\]",
+            re.IGNORECASE,
+        )
+        close_user = re.compile(rf"\[\[\[\s*/\s*{re.escape(usr_t)}\s*\]\]\]", re.IGNORECASE)
+
+        tag_spans = list(m.span() for m in any_tag.finditer(content))
+
+        last_user_open = None
+        for m in open_user.finditer(content):
+            last_user_open = m
+
+        if last_user_open is None:
+            return "end-1c"
+
+        u_open_start, u_open_end = last_user_open.span()
+
+        next_tag_start = None
+        for (s, e) in tag_spans:
+            if s > u_open_end:
+                next_tag_start = s
+                break
+
+        u_close_match = None
+        for m in close_user.finditer(content, u_open_end):
+            c_start, c_end = m.span()
+            if next_tag_start is None or c_start <= next_tag_start:
+                u_close_match = m
+                break
+
+        if u_close_match:
+            insert_offset = u_close_match.end()
+        else:
+            insert_offset = next_tag_start if next_tag_start is not None else len(content)
+
+        idx = offset_to_tkindex(content, insert_offset)
+
+        try:
+            line_start = f"{idx.split('.')[0]}.0"
+            if text_widget.compare(idx, ">", line_start):
+                line_end = f"{idx.split('.')[0]}.end"
+                return line_end
+        except Exception:
+            pass
+
+        return idx
+
     def _launch_chat_stream(self, st, content):
         cfg = self.cfg
         messages = self._parse_chat_messages(content)
@@ -967,16 +1028,38 @@ class FIMPad(tk.Tk):
         text = st["text"]
 
         self._reset_stream_state(st)
-
         self._set_busy(True)
 
-        # Append opening assistant tag and set stream mark
-        follow = self._should_follow(text)
-        text.insert(tk.END, f"[[[{arole}]]]")
-        text.mark_set("stream_here", tk.END)
+        # Compute correct insert point: after the last [[[user]]] block
+        content_snapshot = text.get("1.0", "end-1c")
+        insert_idx = self._find_chat_insert_index(text, content_snapshot)
+
+        # Ensure a newline before the assistant block if we are not already at start of a
+        # blank line (so the assistant reply starts on its own fresh line)
+        try:
+            prev_char = text.get(f"{insert_idx}-1c", insert_idx)
+            if prev_char not in ("", "\n"):
+                text.insert(insert_idx, "\n")
+                insert_idx = text.index(f"{insert_idx}+1c")
+        except Exception:
+            pass
+
+        # Write opening assistant tag and place streaming mark right after it
+        opening = f"[[[{arole}]]]"
+        text.insert(insert_idx, opening)
+        after_open = text.index(f"{insert_idx}+{len(opening)}c")
+
+        # Always start the streamed content on a new line
+        text.insert(after_open, "\n")
+        after_open = text.index(f"{after_open}+1c")
+
+        # Place the streaming mark at the start of the assistant's content
+        text.mark_set("stream_here", after_open)
         text.mark_gravity("stream_here", tk.RIGHT)
-        if follow:
+
+        if self._should_follow(text):
             text.see("stream_here")
+
         self._set_dirty(st, True)
         st["stream_mark"] = "stream_here"
 
@@ -996,13 +1079,14 @@ class FIMPad(tk.Tk):
                 self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
             finally:
                 arole_local = self.cfg["chat_assistant"]
+                # ensure closing tag starts on a new line
                 self._result_queue.put(
                     {
                         "ok": True,
                         "kind": "stream_append",
                         "tab": tab_id,
                         "mark": "stream_here",
-                        "text": f"[[[/{arole_local}]]]",
+                        "text": "\n[[[/" + arole_local + "]]]",
                     }
                 )
                 self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
