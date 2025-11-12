@@ -980,7 +980,7 @@ class FIMPad(tk.Tk):
         u_open_start, u_open_end = last_user_open.span()
 
         next_tag_start = None
-        for (s, e) in tag_spans:
+        for (s, _e) in tag_spans:
             if s > u_open_end:
                 next_tag_start = s
                 break
