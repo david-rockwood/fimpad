@@ -982,11 +982,9 @@ class FIMPad(tk.Tk):
 
     @staticmethod
     def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        if start <= cursor_offset <= end:
-            return True
-        if cursor_offset > 0 and start <= cursor_offset - 1 < end:
-            return True
-        return False
+        return (start <= cursor_offset <= end) or (
+            cursor_offset > 0 and start <= cursor_offset - 1 < end
+        )
 
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
