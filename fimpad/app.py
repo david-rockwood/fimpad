@@ -98,6 +98,8 @@ class FIMPad(tk.Tk):
             "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
+        text.bind("<Control-Return>", self._on_generate_shortcut)
+        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
 
         st = {
             "path": None,
@@ -980,9 +982,11 @@ class FIMPad(tk.Tk):
 
     @staticmethod
     def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        return start <= cursor_offset < end or (
-            cursor_offset > 0 and start <= cursor_offset - 1 < end
-        )
+        if start <= cursor_offset <= end:
+            return True
+        if cursor_offset > 0 and start <= cursor_offset - 1 < end:
+            return True
+        return False
 
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
