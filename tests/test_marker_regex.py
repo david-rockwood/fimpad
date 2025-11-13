@@ -19,6 +19,8 @@ from fimpad.config import MARKER_REGEX
         "[[[456! \"STOP\"]]]",
         "[[[456 ! \"STOP\"]]]",
         "[[[789! 'TAIL']]]",
+        "[[[20!'output:']]]",
+        "[[[100\"Jane: \" ]]]",
     ],
 )
 def test_marker_regex_matches_numeric_markers(text):
