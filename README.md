@@ -64,7 +64,7 @@ When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of o
 [[[250]]]*
 ```
 
-For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. However, sometimes you won't want all the text in the text file to be sent as either prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
+For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. However, sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
 ### Prefix and Suffix Tags (only work for FIM generation)
 
