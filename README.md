@@ -146,6 +146,14 @@ In situations where you can predict a sequence of characters that the model is l
 
 In the above example, the model generates until it gets to "Joe: ", at which point it stops. When doing FIM on structured text, you can pretty reliably get expected sequences like this, as long as the text has a lot of occurrences of the stop sequence elsewhere in the prefix and suffix text.
 
+Multiple stop sequences may be used in the same [[[N]]] tag:
+
+```
+[[[800'Jane: ''Sally: ']]]
+```
+
+Whichever one gets generated first is where it stops.
+
 A a name followed by a colon followed by a space is a very useful way to generate chats with FIM. First write say 5 to 20 lines of dialogue with as many named characters as you want. Write them to have the personality that you desire the FIM generation to continue with. Then start FIM generating while using the name you want to chat as for the stop sequence. An example of this, before the first FIM generation, follows:
 ```
 Joe: I have been told that you are very intelligent and very creative.
