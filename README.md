@@ -181,7 +181,7 @@ There is an exclusive stop sequence option as well with [[[N]]] tags. It just us
 
 With exclusive stop sequences, the stop sequence itself won't be included in the text that was generated. It gets cut off the end.
 
-One nice things about FIM generation is it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems bypassed.
+One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems bypassed.
 
 But still, sometimes it is nice to just have a good old-fashioned chat with an instruct model.
 
