@@ -7,7 +7,7 @@ This project is at an early stage. FIMpad has only been run on Linux so far. FIM
 ## Quick start
 
 ```bash
-git clone https://github.com/david-rockwood/fimpad.git
+git clone https://github.com/david-rockwood/fimpad
 cd fimpad
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
