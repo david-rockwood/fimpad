@@ -50,7 +50,7 @@ There are two classes of tags in FIMpad: FIM tags and Chat tags. The FIM tags en
 
 ## FIM tags
 
-To do an FIM generation, make an FIM tag like this:
+To do an FIM generation, make a FIM tag like this:
 ```
 [[[N]]]
 ```
