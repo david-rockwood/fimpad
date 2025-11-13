@@ -139,7 +139,7 @@ Note that the 20 tokens were used up by the time that Joe said "quite", ending m
 
 ## Stop Sequences
 
-In situations where you can predict a sequence of characters that the model is likely to generate at some point during FIM generation, and where you would like to stop generation at that point, use stop sequences. Here is what an FIM tag with an inclusive stop sequence looks like:
+In situations where you can predict a sequence of characters that the model is likely to generate at some point, and where you would like to stop generation at that point, use stop sequences. Here is what an FIM tag with an inclusive stop sequence looks like:
 ```
 [[[300'Joe: ']]]
 ```
