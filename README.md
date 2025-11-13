@@ -147,6 +147,8 @@ Hiding part of the prefix text is not just about what facts the model has access
 
 Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at a clean point in the text.
 
+(By the way, you can estimate about 2 tokens per word, until you get a feel for estimating the number of tokens that you want. It can be closer to 1 token per word with simple conversation, but it is often better and easier to overestimate, then delete excess. Longer words are often more tokens. Common words are often fewer tokens. Different models organize tokens in different ways. Overall it easiest to just start out guessing 2 tokens per word, and then develop an intuition for token estimation as you go.)
+
 ## Stop Sequences
 
 In situations where you can predict a sequence of characters that the model is likely to generate at some point, and where you would like to stop generation at that point, use stop sequences. Here is what an FIM tag with an inclusive stop sequence looks like:
