@@ -838,11 +838,17 @@ class FIMPad(tk.Tk):
 
         remainder = body
         token_value: int | str | None = None
+        keep_tags = False
         if remainder:
             n_match = re.match(r"(\d+)", remainder)
             if n_match:
                 token_value = n_match.group(1)
-                remainder = remainder[n_match.end() :].strip()
+                remainder = remainder[n_match.end() :]
+                bang_match = re.match(r"\s*!\s*", remainder)
+                if bang_match:
+                    keep_tags = True
+                    remainder = remainder[bang_match.end() :]
+                remainder = remainder.strip()
             else:
                 remainder = remainder.strip()
         else:
@@ -958,12 +964,12 @@ class FIMPad(tk.Tk):
         # Prepare streaming mark
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
-        if sfx_match is not None:
+        if sfx_match is not None and not keep_tags:
             s_s = offset_to_tkindex(content, sfx_used_start)
             s_e = offset_to_tkindex(content, sfx_used_end)
             with contextlib.suppress(tk.TclError):
                 text.delete(s_s, s_e)
-        if pfx_match is not None:
+        if pfx_match is not None and not keep_tags:
             p_s = offset_to_tkindex(content, pfx_used_start)
             p_e = offset_to_tkindex(content, pfx_used_end)
             with contextlib.suppress(tk.TclError):

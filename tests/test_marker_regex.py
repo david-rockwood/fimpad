@@ -14,6 +14,11 @@ from fimpad.config import MARKER_REGEX
         "[[[78 'TAIL']]]",
         "[[[90 \"STOP\" 'TAIL']]]",
         "prefix [[[123]]] suffix",
+        "[[[123!]]]",
+        "[[[123 !]]]",
+        "[[[456! \"STOP\"]]]",
+        "[[[456 ! \"STOP\"]]]",
+        "[[[789! 'TAIL']]]",
     ],
 )
 def test_marker_regex_matches_numeric_markers(text):
@@ -33,6 +38,8 @@ def test_marker_regex_matches_numeric_markers(text):
         "[[[ 123 unquoted stop ]]]",
         "[[[  ]]]",
         "[[[123 \" 'mixed quotes without closing]]]",
+        "[[[123 !!]]]",
+        "[[[!123]]]",
     ],
 )
 def test_marker_regex_ignores_non_numeric_triple_brackets(text):
