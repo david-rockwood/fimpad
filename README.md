@@ -170,7 +170,7 @@ Without a stop sequence the model will speak for both Joe and Chauncey within th
 
 Press Ctrl+Shit+Enter to redo the last FIM tag you executed again, in the current location of the caret. This makes chatting with stop sequences faster since you don't need to retype tags. Type your message, press Ctrl+Shift+Enter, get a streamed response, land right after your name label. Repeat as for long as you want to chat.
 
-FIM tags are set up such that the [[[N]]] tag and any [[[prefix]]] or [[[suffix]]] tags used disappear when you hit Ctrl+Enter. This allows you to keep your text file clear of a bunch of old tags. And it allows you to sort of just move around and fill things in freely. The solution to having to retype the tags over and over again is the Ctrl+Shift+Enter shortcut to re-execute the last FIM tag, but at the current caret position. But what if you want to keep the [[[prefix]]] and [[[suffix]]] tags in place over multiple FIM fills? The solution to that is to put an exclamation point after the max tokens number, like this:
+FIM tags are set up such that the [[[N]]] tag and any [[[prefix]]] or [[[suffix]]] tags used disappear when you hit Ctrl+Enter. This allows you to keep your text file clear of a bunch of old tags. And it allows you to sort of just move around and fill things in freely. The solution to having to retype the tags over and over again is the Ctrl+Shift+Enter shortcut to re-execute the last FIM tag, but at the current caret position. But what if you want to keep the [[[prefix]]] and [[[suffix]]] tags in place over multiple FIM fills? The solution to that problem is to put an exclamation point after the max tokens number, like this:
 
 ```
 [[[200!]]]
@@ -180,7 +180,7 @@ or this:
 [[[200!'. ''? ''! ']]]
 ```
 
-Then [[[prefix]]] and [[[suffix]]] tags will not be deleted.
+Then [[[prefix]]] and [[[suffix]]] tags will not be deleted upon FIM tag execution.
 
 There is an exclusive stop sequence option as well with [[[N]]] tags. It just uses double quotes instead of single quotes. Like this:
 ```
