@@ -156,7 +156,7 @@ Joe: I need to write a poem about spending a stormy night in a Paris apartment a
 Chauncey: [[[500'Joe: ']]]
 ```
 
-When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe. And you can repeat the process over and over to have a chat.
+When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe again. And you can repeat the process over and over to have a chat.
 
 Without a stop sequence the model will speak for both Joe and Chauncey within the constraints of the max tokens you gave it. Not desirable for an immersive chat, but it can be useful for real problem solving with an assistant. Sometimes the model will think of questions that you should be asking, or planned to ask next. This can speed up the process of discovering a solution or discovering a next step.
 
