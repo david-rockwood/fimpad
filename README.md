@@ -39,7 +39,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
 ```
 and the Q6 version of Granite Tiny available at:
 ```
-https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF
+https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
 Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
