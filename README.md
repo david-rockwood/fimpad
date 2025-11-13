@@ -143,7 +143,7 @@ Joe: Bye Jane.
 
 This time Joe has a favorable opinion of poodles. With the variability of LLM output, it is not guaranteed that he would. But it is far more likely when we hide the part of the prefix that says that he strongly dislikes all types dogs.
 
-Hiding prefix is not just about what facts the model has access to, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
+Hiding part of the prefix text is not just about what facts the model has access to, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
 
 Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at a clean point in the text.
 
