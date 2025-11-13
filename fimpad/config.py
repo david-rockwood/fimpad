@@ -32,7 +32,11 @@ DEFAULTS = {
 # Reuse your existing patterns
 MARKER_REGEX = re.compile(
     r"""
-    \[\[\[ \s* (?P<body> \d+ (?: \s*! \s* )? (?: \s+ (?: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' ) )* ) \s* \]\]\]
+    \[\[\[ \s* (?P<body>
+        \d+
+        (?: \s*! \s* )?
+        (?: \s+ (?: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' ) )*
+    ) \s* \]\]\]
     """,
     re.VERBOSE,
 )
