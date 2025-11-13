@@ -36,13 +36,13 @@ and the Q6 version of Granite Tiny available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF
 ```
 
-Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size.
+Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
 ## Overview
 
 With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
 
-FIMpad can also chat with the LLM. A text document is a good interface for LLM chat because you can edit chat history, and because you can save a text file that works as a save state for the session. You can save prefills the same way. You can resume a session at a later date by simply reopening the text file. You can save notes outside the chat tags.
+FIMpad can also chat with the LLM. A text document is a good interface for LLM chat because you can edit chat history, and because you can save a text file that works as a save state for the session. You can save prefillsthe same way. You can resume a session at a later date by simply reopening the text file. You can save notes outside the chat blocks.
 
 ## The Two Tag Classes
 
@@ -56,7 +56,7 @@ To do an FIM generation, make an FIM tag like this:
 ```
 where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-When you hit Ctrl+Enter to generate in FIMpad, the cursor needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the cursor when you hit Ctrl+Enter to generate a [[[N]]] tag.
+When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you hit Ctrl+Enter to generate a [[[N]]] tag.
 ```
 *[[[100]]]
 [*[[100]]]
