@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Utilities for loading the help tab template."""
 from __future__ import annotations
 
