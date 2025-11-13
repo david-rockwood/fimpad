@@ -172,7 +172,7 @@ or this:
 [[[200!'. ''? ''! ']]]
 ```
 
-Then any [[[prefix]]] or [[[suffix]]] tags present will not be deleted.
+Then [[[prefix]]] and [[[suffix]]] tags will not be deleted.
 
 There is an exclusive stop sequence option as well with [[[N]]] tags. It just uses double quotes instead of single quotes. Like this:
 ```
@@ -181,9 +181,9 @@ There is an exclusive stop sequence option as well with [[[N]]] tags. It just us
 
 With exclusive stop sequences, the stop sequence itself won't be included in the text that was generated. It gets cut off the end.
 
-One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems bypassed.
+One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems somewhat bypassed.
 
-But still, sometimes it is nice to just have a good old-fashioned chat with an instruct model.
+Still, sometimes it is nice to just have a good old-fashioned chat with an instruct model. Which brings us to chat tags.
 
 ## Chat Tags
 
