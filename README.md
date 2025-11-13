@@ -56,12 +56,12 @@ To do an FIM generation, make an FIM tag like this:
 ```
 where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you hit Ctrl+Enter to generate a [[[N]]] tag.
+When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you hit Ctrl+Enter to generate a [[[N]]] tag. Note, asterisks are not used in the [[[N]]] tag, I just use them here to highlight the range of where of where the caret can be.
 ```
-*[[[100]]]
-[*[[100]]]
-[[[10*0]]]
-[[[100]]]*
+*[[[250]]]
+[*[[250]]]
+[[[25*0]]]
+[[[250]]]*
 ```
 
 For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. However, sometimes you won't want all the text in the text file to be sent as either prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
@@ -133,11 +133,71 @@ Joe: Bye Jane.
 
 This time Joe has a favorable opinion of poodles. With the variability of LLM output, it is not guaranteed that he would. But it is far more likely when we hide the part of the prefix that says that he strongly dislikes all types dogs.
 
-Hiding prefix is not just about what facts the model knows in context, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
+Hiding prefix is not just about what facts the model has access to, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
 
-Note that the 20 tokens were used up by the time that Joe said "quite", mid-line again. We need a way to get the model to stop at clean point in the text.
+Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at clean point in the text.
 
 ## Stop Sequences
+
+In situations where you can predict a sequence of characters that the model is likely to generate at some point during FIM generation, and where you would like to stop generation at that point, use stop sequences. Here is what an FIM tag with an inclusive stop sequence looks like:
+```
+[[[300'Joe: ']]]
+```
+
+In the above example, if the model generates until it gets to "Joe: ", at which point it stops. When doing FIM on structured text, you can pretty reliably get expected sequences like this, as long as the text has a lot of occurrences of the stop sequence elsewhere in the prefix and suffix text.
+
+A a name followed by a colon followed by a space is a very useful way to generate chats with FIM. First write say 5 to 20 lines of dialogue with as many named characters as you want. Write them to have the personality that you desire the FIM generation to continue with. Then start FIM generating while using the name you want to chat as. An example of this, before the first FIM generation, follows:
+```
+Joe: I have been told that you are very intelligent and very creative.
+Chauncey: True. I am both. Very.
+Joe: Excellent. I have a project which requires your assistance.
+Chauncey: Do tell.
+Joe: I need to write a poem about spending a stormy night in a Paris apartment alone.
+Chauncey: [[[500'Joe: ']]]
+```
+
+When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe. And you can repeat the process over and over to have a chat.
+
+Without a stop sequence the model will speak for both Joe and Chauncey within the constraints of the max tokens you gave it. Not desirable for an immersive chat, but it can be useful for real problem solving with an assistant. Sometimes the model will think of questions that you should be asking, or planned to ask next. This can speed up the process of discovering a solution or discovering a next step.
+
+Press Ctrl+Shit+Enter to redo the last FIM tag you executed again, in the current location of the caret. This makes chatting with stop sequences faster since you don't need to retype tags. Type your message, press Ctrl+Shift+Enter, get a streamed response, land right after your name label. Repeat as for long as you want to chat.
+
+FIM tag are set up such that the [[[N]]] tag and any [[[prefix]]] or [[[suffix]]] tags used disappear when you hit Ctrl+Enter. This allows you to keep your text file clear of a bunch of old tags. And it allows you sort of just move around and fill things in freely. The solution to having to retype the tags over and over again is the Ctrl+Shift+Enter shortcut to do re-execute the last FIM tag at the current caret position. But what if you want to keep the [[[prefix]]] and [[[suffix]]] tags in place over multiple FIM fills? The solution to that is to put an exclamation point after the max tokens number, like this:
+
+```
+[[[200!]]]
+```
+or this:
+```
+[[[200!'. ''? ''! ']]]
+```
+
+Then any [[[prefix]]] or [[[suffix]]] tags present will not be deleted.
+
+There is an exclusive stop sequence option as well with [[[N]]] tags. It just uses double quotes instead of single quotes. Like this:
+```
+[[[2000"BEGIN NEXT PHASE"]]]
+```
+
+With exclusive stop sequences, the stop sequence itself won't be included in the text that was generated. It gets cut off the end.
+
+One nice things about FIM generation is it seems to be relatively uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems bypassed.
+
+But still, sometimes it is nice to just have a good old-fashioned chat with an instruct model.
+
+## Chat Tags
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
