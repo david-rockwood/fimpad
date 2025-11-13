@@ -101,7 +101,7 @@ Joe: Bye Jane.
 
 ```
 
-The line with "Joe: Yes" is where it ran out of tokens before it could add more words or punctuation. We'll see how to deal with that in the next section.
+The line with "Joe: Yes" is where it ran out of tokens before it could add more words or punctuation. We'll see how to deal with that in the Stop Sequences section.
 
 In the next example we can hide knowledge of the fact that Joe dislikes all types of dogs. First the state before generation:
 ```
