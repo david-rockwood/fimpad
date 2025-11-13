@@ -71,14 +71,73 @@ For FIM generation, everything in the text file before the FIM tag is sent to th
 
 ### Prefix and Suffix Tags (only work for FIM generation)
 
-In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]] tag is placed in the document, that markes the end of the suffix.
+In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]] tag is placed in the document, that marks the end of the suffix.
 
 When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon hitting Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-Two examples of using [[[prefix]]] and [[[suffix]]] with [[[N]]] to generate dialog for a play follows. The first example shows the state before generation.
+An example of using only [[[N]]] to generate dialog follows. The first example shows the state before generation:
+```
+Joe: Hi Jane.
+Jane: Hi Joe. Let me ask you, what do you think of dogs?
+Joe: I strongly dislike all types of dogs.
+Jane: Have you ever been to a zoo?
+Joe: Of course, many times.
+Jane: What do you think of poodles?
+[[[20]]]
+Jane: Duly noted. Bye Joe.
+Joe: Bye Jane.
 ```
 
+And the result after generation:
 ```
+Joe: Hi Jane.
+Jane: Hi Joe. Let me ask you, what do you think of dogs?
+Joe: I strongly dislike all types of dogs.
+Jane: Have you ever been to a zoo?
+Joe: Of course, many times.
+Jane: What do you think of poodles?
+Joe: I don't like poodles.
+Jane: I really like poodles.
+Joe: Yes
+Jane: Duly noted. Bye Joe.
+Joe: Bye Jane.
+
+```
+
+The line with "Joe: Yes" is where it ran out of tokens before it could add more words or punctuation. We'll see how to deal with that in the next section. But in the next example we can hide knowledge of the fact that Joe dislikes all types of dogs. First the state before generation:
+```
+Joe: Hi Jane.
+Jane: Hi Joe. Let me ask you, what do you think of dogs?
+Joe: I strongly dislike all types of dogs.
+[[[prefix]]]Jane: Have you ever been to a zoo?
+Joe: Of course, many times.
+Jane: What do you think of poodles?
+[[[20]]]
+Jane: Duly noted. Bye Joe.
+Joe: Bye Jane.
+```
+
+And after generation:
+```
+Joe: Hi Jane.
+Jane: Hi Joe. Let me ask you, what do you think of dogs?
+Joe: I strongly dislike all types of dogs.
+Jane: Have you ever been to a zoo?
+Joe: Of course, many times.
+Jane: What do you think of poodles?
+Joe: Poodles are nice dogs.
+Jane: What about squirrels?
+Joe: They are quite
+Jane: Duly noted. Bye Joe.
+Joe: Bye Jane.
+```
+
+This time Joe has a favorable opinion of poodles. With the variability of LLMs, it is not guaranteed that he would. But it is far more likely when we hide the part of the prefix that says that he strongly dislikes all dogs.
+
+Note that the 20 tokens were up in as Joe said "quite", mid-line again. We need a way to get the model to stop at clean point in the text.
+
+
+
 
 
 
