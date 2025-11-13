@@ -135,7 +135,7 @@ This time Joe has a favorable opinion of poodles. With the variability of LLM ou
 
 Hiding prefix is not just about what facts the model has access to, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
 
-Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at clean point in the text.
+Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at a clean point in the text.
 
 ## Stop Sequences
 
