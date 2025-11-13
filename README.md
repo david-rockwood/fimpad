@@ -178,7 +178,7 @@ When you generate the above, you'll get one comment from Chauncey as a confident
 
 In situations where you don't like what the LLM generates, hit Ctrl+z twice to step back in the history, to before you started the generation, then hit Ctrl+Enter to try again. Some call this re-rolling.
 
-Also, because you are in a text editor, you can simply modify imperfect generations to your liking. This not only improves the text, it brings the LLM's future responses closer to what you are looking for; because it makes the prefix text given to the model on the next generation a better demonstration of what you are looking for.
+Also, because you are in a text editor, you can simply modify imperfect generations to your liking. This not only improves the text, it brings the LLM's future responses closer to what you want; because it makes the prefix text given to the model on the next generation a better demonstration of what you are looking for.
 
 Without a stop sequence the model will speak for both Joe and Chauncey within the constraints of the max tokens you gave it. Not desirable for an immersive chat, but it can be useful for real problem solving with an assistant. Sometimes the model will think of questions that you should be asking, or planned to ask next. This can speed up the process of discovering a solution or discovering a next step.
 
