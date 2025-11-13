@@ -64,14 +64,21 @@ To do an FIM generation, make an FIM tag like this:
 ```
 [[[N]]]
 ```
-where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. It won't always generate up to the max in situations where fewer tokens seem to fit the gap. Click "Generate" and the FIM tag will be deleted and text from the LLM will be streamed into the text file at the location where the FIM tag was before it was deleted.
+where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. It won't always generate up to the max in situations where fewer tokens seem to fit the gap. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
+
 
 For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. However, sometimes you won't want all the text in the text file to be sent as either prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
 ### Prefix and Suffix Tags (only work for FIM generation)
 
-In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These allow you to optionally narrow the range of the text document that is sent to the LLM.
+In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]] tag is placed in the document, that markes the end of the suffix.
 
+When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon hitting Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
+
+Two examples of using [[[prefix]]] and [[[suffix]]] with [[[N]]] to generate dialog for a play follows. The first example shows the state before generation.
+```
+
+```
 
 
 
