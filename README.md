@@ -3,17 +3,7 @@
 A lightweight text editor that can do LLM FIM (fill-in-the-middle) and chat within a text file.
 
 This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad only works with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer, and the lack (as far as I know) of very many instruct models that are set up for FIM.
-Joe: I have been told that you are very intelligent and very creative.
-Chauncey: True. I am both. Very.
-Joe: Excellent. I have a project which requires your assistance.
-Chauncey: Do tell.
-Joe: I need to write a poem about spending a stormy night in a Paris apartment alone.
-Chauncey: [[[500'Joe: ']]]Joe: I have been told that you are very intelligent and very creative.
-Chauncey: True. I am both. Very.
-Joe: Excellent. I have a project which requires your assistance.
-Chauncey: Do tell.
-Joe: I need to write a poem about spending a stormy night in a Paris apartment alone.
-Chauncey: [[[500'Joe: ']]]
+
 ## Quick start
 
 ```bash
