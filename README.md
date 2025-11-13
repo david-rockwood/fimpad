@@ -4,8 +4,6 @@ A lightweight text editor that can do LLM FIM (fill-in-the-middle) and chat with
 
 This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad only works with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer, and the lack (as far as I know) of very many instruct models that are set up for FIM.
 
-
-
 ## Quick start
 
 ```bash
@@ -15,8 +13,6 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m fimpad
 ```
-
-
 
 ## The Server
 
@@ -42,21 +38,15 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF
 
 Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size.
 
-
-
 ## Overview
 
 With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
 
 FIMpad can also chat with the LLM. A text document is a good interface for LLM chat because you can edit chat history, and because you can save a text file that works as a save state for the session. You can save prefills the same way. You can resume a session at a later date by simply reopening the text file. You can save notes outside the chat tags.
 
-
-
 ## The Two Tag Classes
 
 There are two classes of tags in FIMpad: FIM tags and Chat tags. The FIM tags enable fill-in-the-model insertion of text from an LLM into the text file. The Chat tags enable chat with an LLM using system, user, and assistant messages.
-
-
 
 ## FIM tags
 
@@ -66,7 +56,7 @@ To do an FIM generation, make an FIM tag like this:
 ```
 where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-When you hit Ctrl+Enter to generate in FIMpad, the cursor needs to be inside or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the cursor when you hit Ctrl+Enter to generate a [[[N]]] tag.
+When you hit Ctrl+Enter to generate in FIMpad, the cursor needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the cursor when you hit Ctrl+Enter to generate a [[[N]]] tag.
 ```
 *[[[100]]]
 [*[[100]]]
@@ -82,7 +72,7 @@ In order to control which text is sent to the LLM as context for FIM generation,
 
 When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon hitting Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-An example of using only [[[N]]] to generate dialog follows. The first example shows the state before generation:
+An example of using only [[[N]]] to generate dialogue follows. The first example shows the state before generation:
 ```
 Joe: Hi Jane.
 Jane: Hi Joe. Let me ask you, what do you think of dogs?
@@ -111,7 +101,9 @@ Joe: Bye Jane.
 
 ```
 
-The line with "Joe: Yes" is where it ran out of tokens before it could add more words or punctuation. We'll see how to deal with that in the next section. But in the next example we can hide knowledge of the fact that Joe dislikes all types of dogs. First the state before generation:
+The line with "Joe: Yes" is where it ran out of tokens before it could add more words or punctuation. We'll see how to deal with that in the next section.
+
+In the next example we can hide knowledge of the fact that Joe dislikes all types of dogs. First the state before generation:
 ```
 Joe: Hi Jane.
 Jane: Hi Joe. Let me ask you, what do you think of dogs?
@@ -139,9 +131,13 @@ Jane: Duly noted. Bye Joe.
 Joe: Bye Jane.
 ```
 
-This time Joe has a favorable opinion of poodles. With the variability of LLMs, it is not guaranteed that he would. But it is far more likely when we hide the part of the prefix that says that he strongly dislikes all dogs.
+This time Joe has a favorable opinion of poodles. With the variability of LLM output, it is not guaranteed that he would. But it is far more likely when we hide the part of the prefix that says that he strongly dislikes all types dogs.
 
-Note that the 20 tokens were up in as Joe said "quite", mid-line again. We need a way to get the model to stop at clean point in the text.
+Hiding prefix is not just about what facts the model knows in context, it is also about formatting and patterns. I used the examples above because they were short. But in a longer example with things like stage directions or narration, you would hide those when you want the model to generate only dialogue.
+
+Note that the 20 tokens were used up by the time that Joe said "quite", mid-line again. We need a way to get the model to stop at clean point in the text.
+
+## Stop Sequences
 
 
 
