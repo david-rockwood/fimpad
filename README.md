@@ -144,7 +144,7 @@ In situations where you can predict a sequence of characters that the model is l
 [[[300'Joe: ']]]
 ```
 
-In the above example, if the model generates until it gets to "Joe: ", at which point it stops. When doing FIM on structured text, you can pretty reliably get expected sequences like this, as long as the text has a lot of occurrences of the stop sequence elsewhere in the prefix and suffix text.
+In the above example, the model generates until it gets to "Joe: ", at which point it stops. When doing FIM on structured text, you can pretty reliably get expected sequences like this, as long as the text has a lot of occurrences of the stop sequence elsewhere in the prefix and suffix text.
 
 A a name followed by a colon followed by a space is a very useful way to generate chats with FIM. First write say 5 to 20 lines of dialogue with as many named characters as you want. Write them to have the personality that you desire the FIM generation to continue with. Then start FIM generating while using the name you want to chat as. An example of this, before the first FIM generation, follows:
 ```
