@@ -53,6 +53,8 @@ class FIMPad(tk.Tk):
         self._aspell_available = self._probe_aspell()
         self._spell_ignore = set()  # session-level ignores
 
+        self._last_fim_marker: str | None = None
+
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
 
@@ -63,6 +65,8 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Shift-S>", lambda e: self._save_file_as_current())
         self.bind_all("<Control-q>", lambda e: self._on_close())
         self.bind_all("<Control-Return>", self._on_generate_shortcut)
+        self.bind_all("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
+        self.bind_all("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
@@ -115,6 +119,8 @@ class FIMPad(tk.Tk):
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Control-Return>", self._on_generate_shortcut)
         text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
+        text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
 
         st = {
             "path": None,
@@ -251,6 +257,11 @@ class FIMPad(tk.Tk):
             label="Generate",
             accelerator="Ctrl+Enter",
             command=self.generate,
+        )
+        aimenu.add_command(
+            label="Repeat Last FIM",
+            accelerator="Ctrl+Shift+Enter",
+            command=self.repeat_last_fim,
         )
         aimenu.add_command(
             label="Help",
@@ -830,10 +841,56 @@ class FIMPad(tk.Tk):
         self.generate()
         return "break"
 
+    def repeat_last_fim(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+
+        text_widget = st.get("text")
+        if text_widget is None:
+            return
+
+        marker = self._last_fim_marker or "[[[20]]]"
+
+        try:
+            start_index = text_widget.index(tk.INSERT)
+        except tk.TclError:
+            return
+
+        try:
+            text_widget.insert(start_index, marker)
+        except tk.TclError:
+            return
+
+        marker_match = MARKER_REGEX.search(marker)
+        if marker_match:
+            body_offset = marker_match.start("body") - marker_match.start()
+        else:
+            body_offset = marker.find("]]]")
+            if body_offset == -1:
+                body_offset = len(marker)
+
+        try:
+            inside_index = text_widget.index(f"{start_index}+{body_offset}c")
+        except tk.TclError:
+            inside_index = text_widget.index(start_index)
+
+        text_widget.mark_set(tk.INSERT, inside_index)
+        text_widget.tag_remove("sel", "1.0", tk.END)
+        text_widget.see(tk.INSERT)
+        text_widget.focus_set()
+
+        self.generate()
+
+    def _on_repeat_last_fim_shortcut(self, event):
+        self.repeat_last_fim()
+        return "break"
+
     # ----- FIM/completion streaming -----
 
     def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
         cfg = self.cfg
+        self._last_fim_marker = marker_match.group(0)
         body = (marker_match.group("body") or "").strip()
 
         remainder = body
