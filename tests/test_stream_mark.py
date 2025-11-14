@@ -39,9 +39,9 @@ class FakeText:
         self.content = self.content[:offset] + normalized + self.content[offset:]
         delta = len(normalized)
         for name, pos in list(self.marks.items()):
-            if pos > offset:
-                self.marks[name] = pos + delta
-            elif pos == offset and self.gravities.get(name, "right") == "right":
+            if pos > offset or (
+                pos == offset and self.gravities.get(name, "right") == "right"
+            ):
                 self.marks[name] = pos + delta
 
     def mark_set(self, name: str, index: str) -> None:
