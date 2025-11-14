@@ -287,7 +287,7 @@ And you can use [[[N]]] tags within chat blocks if you want. But you cannot use 
 
 ## Chat Blocks As Functions
 
-Try thinking of chat blocks as functions. Input goes in [[user]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you hit Ctrl+Enter.
+Try thinking of chat blocks as functions. Input goes in [[[user]]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you hit Ctrl+Enter.
 
 You can copy the output of one function and paste it into the input of another function. You can make a text file with fifty  functions, and copy and paste a few of them into a new tab for a specific project. They are like macros.
 
