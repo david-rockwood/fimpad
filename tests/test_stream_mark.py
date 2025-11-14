@@ -183,7 +183,6 @@ def test_chat_block_follow_and_flush_keeps_stream_visible():
 
 def test_chat_block_follow_persists_across_turns():
     app = object.__new__(FIMPad)
-    frame = object()
     text = FakeText("[[[assistant]]]\n\n[[[/assistant]]]")
 
     app._should_follow = lambda widget: False
@@ -201,7 +200,11 @@ def test_chat_block_follow_persists_across_turns():
 
     app._parse_chat_messages = lambda content: dummy_block
 
-    normalized_history = "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\nthere\n[[[/assistant]]]\n\n[[[user]]]\nagain\n[[[/user]]]\n\n"
+    normalized_history = (
+        "[[[user]]]\nhi\n[[[/user]]]\n\n"
+        "[[[assistant]]]\nthere\n[[[/assistant]]]\n\n"
+        "[[[user]]]\nagain\n[[[/user]]]\n\n"
+    )
 
     def fake_render(block):
         replacement = normalized_history + "[[[assistant]]]\n\n[[[/assistant]]]"
