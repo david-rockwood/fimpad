@@ -264,13 +264,13 @@ Next we can get into ways than you can reduce the amount of typing you need to d
 [[[user]]]What is the population of Oklahoma?[[[/user]]]
 ```
 
-Second, a new opening tag without a closing tag automatically closes the previously opened chat tag within a chat block, so this is also equivalent:
+Second, a new opening tag without a closing tag from the chat tag that precedes it automatically closes the previously opened chat tag within a chat block. So this is also equivalent:
 ```
 [[[system]]]Assist concisely.
 [[[user]]]What is the population of Oklahoma?[[[/user]]]
 ```
 
-Third, there one letter aliases for chat tags, so you can to this:
+Third, there are one letter aliases for chat tags, so you can do this too and get the same result:
 ```
 [[[s]]]Assist concisely.
 [[[u]]]What is the population of Oklahoma?[[[/u]]]
@@ -280,6 +280,8 @@ One liners are possible, but probably overly confusing:
 ```
 [[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
 ```
+
+You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
 ## Chat Blocks As Functions
 
