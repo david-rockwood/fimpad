@@ -1076,6 +1076,13 @@ class FIMPad(tk.Tk):
             "a": "assistant",
         }
 
+        star_aliases = {
+            f"{name}*": role
+            for name, role in base_aliases.items()
+            if "*" not in name
+        }
+        base_aliases.update(star_aliases)
+
         aliases = {}
         for name, role in base_aliases.items():
             aliases[name] = role
@@ -1086,7 +1093,12 @@ class FIMPad(tk.Tk):
 
     def _chat_tag_names(self) -> list[str]:
         role_aliases = self._chat_role_aliases()
-        tag_names = {name.lstrip("/") for name in role_aliases}
+        base_names = {name.lstrip("/") for name in role_aliases}
+        tag_names = set()
+        for name in base_names:
+            tag_names.add(name)
+            if not name.endswith("*"):
+                tag_names.add(f"{name}*")
         return sorted(tag_names, key=len, reverse=True)
 
     def _contains_chat_tags(self, content: str) -> bool:
@@ -1106,11 +1118,15 @@ class FIMPad(tk.Tk):
     def _locate_chat_block(self, content: str, cursor_offset: int):
         cursor_offset = max(0, min(len(content), cursor_offset))
         role_aliases = self._chat_role_aliases()
-        system_names = sorted(
-            {name.lstrip("/") for name, role in role_aliases.items() if role == "system"},
-            key=len,
-            reverse=True,
-        )
+        system_base_names = {
+            name.lstrip("/") for name, role in role_aliases.items() if role == "system"
+        }
+        system_names = set()
+        for name in system_base_names:
+            system_names.add(name)
+            if not name.endswith("*"):
+                system_names.add(f"{name}*")
+        system_names = sorted(system_names, key=len, reverse=True)
         sys_re = re.compile(
             rf"\[\[\[\s*(?:{'|'.join(re.escape(name) for name in system_names)})\s*\]\]\]",
             re.IGNORECASE,
@@ -1127,7 +1143,31 @@ class FIMPad(tk.Tk):
 
         return None
 
-    def _parse_chat_messages(self, content: str):
+    def _is_star_chat_block(self, block_text: str) -> bool:
+        role_aliases = self._chat_role_aliases()
+        system_base_names = {
+            name.lstrip("/") for name, role in role_aliases.items() if role == "system"
+        }
+        system_names = set()
+        for name in system_base_names:
+            system_names.add(name)
+            if not name.endswith("*"):
+                system_names.add(f"{name}*")
+        if not system_names:
+            return False
+
+        system_names = sorted(system_names, key=len, reverse=True)
+        pattern = re.compile(
+            rf"^\[\[\[\s*(?:({'|'.join(re.escape(name) for name in system_names)}))\s*\]\]\]",
+            re.IGNORECASE,
+        )
+        match = pattern.match(block_text)
+        if not match:
+            return False
+        tag_name = match.group(1) or ""
+        return tag_name.endswith("*")
+
+    def _parse_chat_messages(self, content: str, star_mode: bool = False):
         role_aliases = self._chat_role_aliases()
         tag_names = self._chat_tag_names()
         tag_re = re.compile(
@@ -1139,7 +1179,11 @@ class FIMPad(tk.Tk):
         for m in tag_re.finditer(content):
             if m.start() > last_end:
                 tokens.append(("TEXT", content[last_end : m.start()]))
-            tokens.append(("TAG", m.group(0), m.group(2) is not None, m.group(3)))
+            tag_name = m.group(3)
+            if star_mode and not tag_name.endswith("*"):
+                tokens.append(("TEXT", m.group(0)))
+            else:
+                tokens.append(("TAG", m.group(0), m.group(2) is not None, tag_name))
             last_end = m.end()
         if last_end < len(content):
             tokens.append(("TEXT", content[last_end:]))
@@ -1147,6 +1191,17 @@ class FIMPad(tk.Tk):
         messages = []
         cur_role = None
         buf = []
+
+        def resolve_role(name: str) -> str:
+            key = name.lower()
+            base_key = key[:-1] if key.endswith("*") else key
+            return (
+                role_aliases.get(key)
+                or role_aliases.get(base_key)
+                or role_aliases.get(f"/{key}")
+                or role_aliases.get(f"/{base_key}")
+                or base_key
+            )
 
         def flush():
             nonlocal cur_role, buf
@@ -1161,14 +1216,13 @@ class FIMPad(tk.Tk):
                     buf.append(t[1])
             else:
                 _, _raw, is_close, role = t
-                role_key = role.lower()
-                role = role_aliases.get(role_key, role_aliases.get(f"/{role_key}", role_key))
+                resolved_role = resolve_role(role)
                 if not is_close:
                     flush()
-                    cur_role = role
+                    cur_role = resolved_role
                     buf = []
                 else:
-                    if cur_role == role:
+                    if cur_role == resolved_role:
                         flush()
                     else:
                         flush()
@@ -1179,7 +1233,8 @@ class FIMPad(tk.Tk):
 
     def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
         block_text = full_content[block_start:block_end]
-        parsed = self._parse_chat_messages(block_text)
+        star_mode = self._is_star_chat_block(block_text)
+        parsed = self._parse_chat_messages(block_text, star_mode=star_mode)
         if not parsed:
             return []
 
@@ -1205,6 +1260,8 @@ class FIMPad(tk.Tk):
             normalized_messages.append({"role": role, "content": body})
 
             tag_name = role_lookup.get(role, role)
+            if star_mode and not tag_name.endswith("*"):
+                tag_name = f"{tag_name}*"
             open_tag = f"[[[{tag_name}]]]"
             close_tag = f"[[[/{tag_name}]]]"
 
@@ -1219,6 +1276,8 @@ class FIMPad(tk.Tk):
         normalized_text = "".join(pieces)
 
         assistant_tag = cfg["chat_assistant"]
+        if star_mode and not assistant_tag.endswith("*"):
+            assistant_tag = f"{assistant_tag}*"
         placeholder_open = f"[[[{assistant_tag}]]]"
         placeholder_close = f"[[[/{assistant_tag}]]]"
         placeholder = f"{placeholder_open}\n\n{placeholder_close}"

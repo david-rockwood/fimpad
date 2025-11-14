@@ -8,6 +8,14 @@ def make_app():
     return app
 
 
+def test_chat_tag_names_include_star_variants():
+    app = make_app()
+    names = app._chat_tag_names()
+    assert "system*" in names
+    assert "s*" in names
+    assert "user*" in names
+
+
 def test_contains_chat_tags_alias():
     app = make_app()
     assert app._contains_chat_tags("[[[s]]]")
@@ -24,6 +32,29 @@ def test_parse_chat_alias_normalizes_roles():
         {"role": "system", "content": "System msg"},
         {"role": "user", "content": "Hi"},
         {"role": "assistant", "content": "Ack"},
+    ]
+
+
+def test_parse_chat_allows_starred_closer_in_non_star_mode():
+    app = make_app()
+    content = "[[[user]]]Hello[[[/user*]]]"
+    messages = app._parse_chat_messages(content)
+    assert messages == [{"role": "user", "content": "Hello"}]
+
+
+def test_star_chat_block_detection():
+    app = make_app()
+    assert app._is_star_chat_block("[[[system*]]]Body")
+    assert not app._is_star_chat_block("[[[system]]]Body")
+
+
+def test_parse_chat_star_mode_treats_unstarred_tags_as_text():
+    app = make_app()
+    content = "[[[system*]]]First [[[u]]] block[[[/system*]]][[[user*]]]Second[[[/user*]]]"
+    messages = app._parse_chat_messages(content, star_mode=True)
+    assert messages == [
+        {"role": "system", "content": "First [[[u]]] block"},
+        {"role": "user", "content": "Second"},
     ]
 
 
