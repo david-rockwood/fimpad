@@ -82,6 +82,20 @@ def test_locate_chat_block_with_alias():
     assert block == (content.index("[[[s]]]"), len(content))
 
 
+def test_locate_chat_block_star_mode_prefers_star_system():
+    app = make_app()
+    content = (
+        "[[[system]]]Plain system[[[/system]]]"
+        "\n\n[[[system*]]]\n[[[user*]]]Hello[[[/user*]]]\n[[[/system*]]]"
+    )
+    cursor_offset = content.index("Hello") + 1
+
+    block = app._locate_chat_block(content, cursor_offset)
+
+    star_start = content.index("[[[system*]]]")
+    assert block == (star_start, len(content))
+
+
 def test_chat_user_followup_block_respects_star_mode():
     app = make_app()
 

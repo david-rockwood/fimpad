@@ -1120,11 +1120,28 @@ class FIMPad(tk.Tk):
             tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
 
         system_tokens: list[TagToken] = []
+        star_stack: list[bool] = []
+        star_depth = 0
         for token in tokens:
             if not isinstance(token, TagToken):
                 continue
-            if token.kind == "chat" and not token.is_close and token.role == "system":
-                system_tokens.append(token)
+            if token.kind != "chat":
+                continue
+
+            if star_depth > 0 and not token.is_star:
+                continue
+
+            if not token.is_close:
+                if token.role == "system":
+                    system_tokens.append(token)
+                star_stack.append(token.is_star)
+                if token.is_star:
+                    star_depth += 1
+            else:
+                if star_stack:
+                    closing_star = star_stack.pop()
+                    if closing_star:
+                        star_depth = max(0, star_depth - 1)
 
         if not system_tokens:
             return None
