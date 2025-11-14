@@ -1091,8 +1091,13 @@ class FIMPad(tk.Tk):
 
     def _contains_chat_tags(self, content: str) -> bool:
         tag_names = self._chat_tag_names()
+        base_pattern = "|".join(re.escape(name) for name in tag_names)
+        if base_pattern:
+            combined_pattern = f"(?:{base_pattern}|system\\d+)"
+        else:
+            combined_pattern = "system\\d+"
         pat = re.compile(
-            rf"\[\[\[\s*/?\s*(?:{'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\]",
+            rf"\[\[\[\s*/?\s*{combined_pattern}\s*\]\]\]",
             re.IGNORECASE,
         )
         return bool(pat.search(content))
@@ -1111,8 +1116,13 @@ class FIMPad(tk.Tk):
             key=len,
             reverse=True,
         )
+        base_pattern = "|".join(re.escape(name) for name in system_names)
+        if base_pattern:
+            combined_pattern = f"(?:{base_pattern}|system\\d+)"
+        else:
+            combined_pattern = "system\\d+"
         sys_re = re.compile(
-            rf"\[\[\[\s*(?:{'|'.join(re.escape(name) for name in system_names)})\s*\]\]\]",
+            rf"\[\[\[\s*{combined_pattern}\s*\]\]\]",
             re.IGNORECASE,
         )
         matches = list(sys_re.finditer(content))
@@ -1130,13 +1140,19 @@ class FIMPad(tk.Tk):
     def _parse_chat_messages(self, content: str):
         role_aliases = self._chat_role_aliases()
         tag_names = self._chat_tag_names()
+        base_pattern = "|".join(re.escape(name) for name in tag_names)
+        if base_pattern:
+            combined_pattern = f"(?:{base_pattern}|system\\d+)"
+        else:
+            combined_pattern = "system\\d+"
         tag_re = re.compile(
-            rf"(\[\[\[\s*(/)?\s*({'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\])",
+            rf"(\[\[\[\s*(/)?\s*({combined_pattern})\s*\]\]\])",
             re.IGNORECASE,
         )
         messages = []
         cur_role: str | None = None
-        expected_close: str | None = None
+        expected_close_role: str | None = None
+        expected_close_tag: str | None = None
         buf: list[str] = []
 
         pos = 0
@@ -1154,29 +1170,47 @@ class FIMPad(tk.Tk):
             is_close = bool(m.group(2))
             tag_name = m.group(3)
             role_key = tag_name.lower()
-            normalized_role = role_aliases.get(
-                role_key, role_aliases.get(f"/{role_key}", role_key)
-            )
+            if re.fullmatch(r"system\d+", role_key):
+                normalized_role = "system"
+                numbered_system_tag = role_key
+            else:
+                normalized_role = role_aliases.get(
+                    role_key, role_aliases.get(f"/{role_key}", role_key)
+                )
+                numbered_system_tag = None
 
             if cur_role is None:
                 if not is_close:
                     cur_role = normalized_role
-                    expected_close = normalized_role
+                    expected_close_role = normalized_role
+                    expected_close_tag = numbered_system_tag
                     buf = []
                 # Ignore stray close tags outside of a chat message
             else:
-                if is_close and normalized_role == expected_close:
-                    messages.append({"role": cur_role.lower(), "content": "".join(buf)})
-                    cur_role = None
-                    expected_close = None
-                    buf = []
+                if is_close:
+                    matches_close = False
+                    if expected_close_tag is not None:
+                        matches_close = role_key == expected_close_tag
+                    else:
+                        matches_close = normalized_role == expected_close_role
+
+                    if matches_close:
+                        messages.append(
+                            {"role": (cur_role or "").lower(), "content": "".join(buf)}
+                        )
+                        cur_role = None
+                        expected_close_role = None
+                        expected_close_tag = None
+                        buf = []
+                    else:
+                        buf.append(raw)
                 else:
                     buf.append(raw)
 
             pos = m.end()
 
         if cur_role is not None:
-            messages.append({"role": cur_role.lower(), "content": "".join(buf)})
+            messages.append({"role": (cur_role or "").lower(), "content": "".join(buf)})
 
         return messages
 

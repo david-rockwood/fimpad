@@ -14,6 +14,7 @@ def test_contains_chat_tags_alias():
     assert app._contains_chat_tags("[[[/s]]]")
     assert app._contains_chat_tags("[[[/u]]]")
     assert app._contains_chat_tags("[[[/a]]]")
+    assert app._contains_chat_tags("[[[system1]]]")
 
 
 def test_parse_chat_alias_normalizes_roles():
@@ -43,6 +44,14 @@ def test_locate_chat_block_with_alias():
     assert block == (content.index("[[[s]]]"), len(content))
 
 
+def test_locate_chat_block_with_numbered_system_tag():
+    app = make_app()
+    content = "Intro\n[[[system1]]]\nExample\n[[[/system1]]]\nTail"
+    cursor_offset = content.index("[[[system1]]]") + 2
+    block = app._locate_chat_block(content, cursor_offset)
+    assert block == (content.index("[[[system1]]]"), len(content))
+
+
 def test_nested_chat_tags_treated_as_literal():
     app = make_app()
     content = (
@@ -65,5 +74,25 @@ def test_nested_chat_tags_treated_as_literal():
             "role": "user",
             "content": "Please include [[[N]]] inside this response.",
         },
+    ]
+
+
+def test_numbered_system_tag_protects_literal_chat_tags():
+    app = make_app()
+    content = (
+        "[[[system1]]]"
+        "[[[s]]]\n[[[/s]]]\n[[[/u]]]\n[[[/a]]]\nAssist.\n[[[/s]]]"
+        "[[[/system1]]]"
+        "[[[user]]]Hi![[[/user]]]"
+    )
+
+    messages = app._parse_chat_messages(content)
+
+    assert messages == [
+        {
+            "role": "system",
+            "content": "[[[s]]]\n[[[/s]]]\n[[[/u]]]\n[[[/a]]]\nAssist.\n[[[/s]]]",
+        },
+        {"role": "user", "content": "Hi!"},
     ]
 
