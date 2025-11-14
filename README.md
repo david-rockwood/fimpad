@@ -73,8 +73,6 @@ To do a FIM generation, make a FIM tag like this:
 ```
 where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Press Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
-FIM generations are stateless: the model only sees the prefix and suffix you give it each time. But the information in the prefix and suffix can be a kind of state that builds over time, and that state is on display before you in the text editor.
-
 When you press Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you press Ctrl+Enter to generate a [[[N]]] tag. Note, asterisks are not used in the [[[N]]] tag, I just use them here to highlight the range of where the caret can be.
 ```
 *[[[250]]]
@@ -84,6 +82,8 @@ When you press Ctrl+Enter to generate in FIMpad, the caret needs to be inside of
 ```
 
 For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. The LLM bases its generation on the prefix, suffix, and everything it already learned during pretraining.
+
+FIM generations are stateless in that the model only sees the prefix and suffix you give it each time, it has no record of previous generations. But the information in the prefix and suffix can be a kind of state that builds over time, and that state is on display before you in the text editor.
 
 Sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
