@@ -224,7 +224,7 @@ What is the population of Oklahoma?
 
 And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you hit Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
 
-The text between [[[system]]] and [[[system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Hit Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
+The text between [[[system]]] and [[[/system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Hit Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
 
 ```
 [[[system]]]
