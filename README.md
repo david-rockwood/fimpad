@@ -211,7 +211,7 @@ Still, sometimes it is nice to just have a good old-fashioned chat with an instr
 
 ## Chat Tags
 
-The beginner way to start a chat the following example, this is what it looks like before hitting Ctrl+Enter:
+The beginner way to start a chat is seen in the following example, this is what it looks like before hitting Ctrl+Enter:
 
 ```
 [[[system]]]
