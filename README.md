@@ -2,6 +2,13 @@
 
 A lightweight text editor that can do LLM FIM (fill-in-the-middle) and chat within a text file.
 
+FIMpad is a local-AI text editor that supports:
+-FIM (fill-in-the-middle) generation with prefix/suffix windows
+-OpenAI-compatible chat using inline tags
+-Granite-optimized FIM workflows
+-Stop sequences, one-key rerolls, and editor-native streaming
+-Full session persistence via plain text files
+
 This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer, and the lack (as far as I know so far) of very many instruct models that are set up for FIM.
 
 ## Quick start
@@ -78,7 +85,7 @@ For FIM generation, everything in the text file before the FIM tag is sent to th
 
 ## Prefix and Suffix Tags (only work for FIM generation)
 
-In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]] tag is placed in the document, that marks the end of the suffix.
+In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]]] tag is placed in the document, that marks the end of the suffix.
 
 When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon hitting Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
@@ -178,7 +185,7 @@ Chauncey: [[[500'Joe: ']]]
 
 When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe again. And you can repeat the process over and over to have a chat.
 
-In situations where you don't like what the LLM generates, hit Ctrl+z twice to step back in the history, to before you started the generation, then hit Ctrl+Enter to try again. Some call this re-rolling.
+In situations where you don't like what the LLM generates, hit Ctrl+z twice to step back in the history, to before you started the generation, then hit Ctrl+Enter to try again. Some call this rerolling.
 
 Also, because you are in a text editor, you can simply modify imperfect generations to your liking. This not only improves the text, it brings the LLM's future responses closer to what you want; because it makes the prefix text given to the model on the next generation a better demonstration of what you are looking for.
 
