@@ -1,9 +1,9 @@
 """Utilities for tokenizing triple-bracket markers and chat tags."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
-from typing import Dict, Iterator, Optional, Union
+from collections.abc import Iterator
+from dataclasses import dataclass
 
 from .config import MARKER_REGEX
 
@@ -24,17 +24,17 @@ class TagToken:
     raw: str
     body: str
     kind: str
-    name: Optional[str] = None
-    role: Optional[str] = None
+    name: str | None = None
+    role: str | None = None
     is_close: bool = False
     is_star: bool = False
 
 
-Token = Union[TextToken, TagToken]
+Token = TextToken | TagToken
 
 
 def parse_triple_tokens(
-    content: str, role_aliases: Optional[Dict[str, str]] = None
+    content: str, role_aliases: dict[str, str] | None = None
 ) -> Iterator[Token]:
     """Yield tokens for ``content`` splitting around ``[[[...]]]`` regions.
 
@@ -70,7 +70,7 @@ def _classify_tag(
     inner: str,
     start: int,
     end: int,
-    role_aliases: Dict[str, str],
+    role_aliases: dict[str, str],
 ) -> TagToken:
     body = inner.strip()
     if not body:
@@ -127,7 +127,7 @@ def _classify_tag(
     )
 
 
-def _resolve_role(name: str, role_aliases: Dict[str, str]) -> Optional[str]:
+def _resolve_role(name: str, role_aliases: dict[str, str]) -> str | None:
     role = role_aliases.get(name)
     if role:
         return role

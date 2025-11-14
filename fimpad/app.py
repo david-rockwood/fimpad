@@ -17,9 +17,10 @@ from tkinter.scrolledtext import ScrolledText
 
 from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
-from .parser import TagToken, TextToken, parse_triple_tokens
 from .help import get_help_template
+from .parser import TagToken, TextToken, parse_triple_tokens
 from .utils import offset_to_tkindex
+
 
 class FIMPad(tk.Tk):
     def __init__(self):
