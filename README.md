@@ -25,15 +25,15 @@ python -m fimpad
 
 Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Hit Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
 
-This is a very long and thorough README, so on some machines and on larger models the first prompt may take a while to get a response. But the LLM will know a lot about how FIMpad works.
+This is a long and thorough README, so on some machines and on larger models the first prompt may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
 
 ## The Server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
-I use llama.cpp llama-server to serve the LLM, but it is my understanding that other servers should be able work with FIMpad if they provide an OpenAI compatible endpoint.
+I use llama.cpp llama-server to serve the LLM, but it is my understanding that other servers should be able to work with FIMpad if they provide an OpenAI compatible endpoint.
 
-The LLM served should be IBM Granite 4.0 H. FIMpad requires FIM tokens be in the model's tokenizer. Granite is the best smaller-sized generalist model that I have found that does this so far. With other LLMs, you should still be able to do Chat in FIMpad, but if you try to do fill-in-the-middle generation with a model other than Granite 4.0 H you will likely run into problems. However, I did try FIM with a variant of Mistral-Nemo and it worked. But then I tried Mistral Small and FIM did not work. The FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. But at the moment I am only focused on supporting IBM Granite 4.0 H.
+The LLM served should be IBM Granite 4.0 H. FIMpad requires that FIM tokens be in the model's tokenizer. Granite is the best smaller-sized generalist model that I have found that does this so far. With other LLMs, you should still be able to do Chat in FIMpad, but if you try to do fill-in-the-middle generation with a model other than Granite 4.0 H you will likely run into problems. However, I did try FIM with a variant of Mistral-Nemo and it worked. But then I tried Mistral Small and FIM did not work. The FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. But at the moment I am only focused on supporting IBM Granite 4.0 H.
 
 I suggest using a recent build of llama.cpp llama-server available at:
 ```
@@ -57,7 +57,7 @@ Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE mod
 
 ## Overview
 
-With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file, it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
+With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the-middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file, it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
 
 FIMpad can also chat with the LLM. A text document is a good interface for LLM chat because you can edit chat history, and because you can save a text file that works as a save state for the session. You can save prefills the same way. You can resume a session at a later date by simply reopening the text file. You can save notes outside the chat blocks.
 
@@ -75,7 +75,7 @@ where N is the max number of tokens that you want to be generated and inserted i
 
 FIM generations are stateless: the model only sees the prefix and suffix you give it each time. But the information in the prefix and suffix can be a kind of state that builds over time, and that state is on display before you in the text editor.
 
-When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you hit Ctrl+Enter to generate a [[[N]]] tag. Note, asterisks are not used in the [[[N]]] tag, I just use them here to highlight the range of where the caret can be.
+When you press Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you press Ctrl+Enter to generate a [[[N]]] tag. Note, asterisks are not used in the [[[N]]] tag, I just use them here to highlight the range of where the caret can be.
 ```
 *[[[250]]]
 [*[[250]]]
@@ -91,7 +91,7 @@ Sometimes you won't want all the text in the text file to be sent as prefix or s
 
 In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]]] tag is placed in the document, that marks the end of the suffix.
 
-When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon hitting Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
+When you are using [[[N]]] with [[[prefix]]] and/or [[[suffix]]] , upon pressing Ctrl+Enter to generate, all three tags will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
 An example of using only [[[N]]] to generate dialogue follows. The first example shows the state before generation:
 ```
@@ -158,7 +158,7 @@ Hiding part of the prefix text is not just about what facts the model has access
 
 Note that the 20 tokens were used up by the time that Joe said "quite", ending mid-line again. We need a way to get the model to stop at a clean point in the text.
 
-(By the way, you can estimate about 2 tokens per word, until you get a feel for estimating the number of tokens that you want. It can be closer to 1 token per word with simple conversation, but it is often better and easier to overestimate, then delete excess. Longer words are often more tokens. Common words are often fewer tokens. Different models organize tokens in different ways. Overall it easiest to just start out guessing 2 tokens per word, and then develop an intuition for token estimation as you go.)
+(By the way, you can estimate about 2 tokens per word, until you get a feel for estimating the number of tokens that you want. It can be closer to 1 token per word with simple conversation, but it is often better and easier to overestimate, then delete excess. Longer words are often more tokens. Common words are often fewer tokens. Different models organize tokens in different ways. Overall it is easiest to just start out guessing 2 tokens per word, and then develop an intuition for token estimation as you go.)
 
 ## Stop Sequences
 
@@ -177,7 +177,7 @@ Multiple stop sequences may be used in the same [[[N]]] tag:
 
 Whichever one gets generated first is where it stops.
 
-A a name followed by a colon followed by a space is a very useful way to generate chats with FIM. First write say 5 to 20 lines of dialogue with as many named characters as you want. Write them to have the personality that you desire the FIM generation to continue with. Then start FIM generating while using the name you want to chat as for the stop sequence. An example of this, before the first FIM generation, follows:
+A name followed by a colon followed by a space is a very useful way to generate chats with FIM. First write say 5 to 20 lines of dialogue with as many named characters as you want. Write them with the personality you want the FIM generation to continue with. Then start FIM generating while using the name you want to chat as for the stop sequence. An example of this, before the first FIM generation, follows:
 ```
 Joe: I have been told that you are very intelligent and very creative.
 Chauncey: True. I am both. Very.
@@ -189,15 +189,15 @@ Chauncey: [[[500'Joe: ']]]
 
 When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe again. And you can repeat the process over and over to have a chat.
 
-In situations where you don't like what the LLM generates, hit Ctrl+z twice to step back in the history, to before you started the generation, then hit Ctrl+Enter to try again. Some call this rerolling.
+In situations where you don't like what the LLM generates, press Ctrl+z twice to step back in the history, to before you started the generation, then press Ctrl+Enter to try again. Some call this rerolling.
 
 Also, because you are in a text editor, you can simply modify imperfect generations to your liking. This not only improves the text, it brings the LLM's future responses closer to what you want; because it makes the prefix text given to the model on the next generation a better demonstration of what you are looking for.
 
 Without a stop sequence the model will speak for both Joe and Chauncey within the constraints of the max tokens you gave it. Not desirable for an immersive chat, but it can be useful for real problem solving with an assistant. Sometimes the model will think of questions that you should be asking, or planned to ask next. This can speed up the process of discovering a solution or discovering a next step.
 
-Press Ctrl+Shift+Enter to do the last FIM tag you executed again, in the current location of the caret. This makes chatting with stop sequences faster since you don't need to retype tags. Type your message, press Ctrl+Shift+Enter, get a streamed response, land right after your name label. Repeat as for long as you want to chat.
+Press Ctrl+Shift+Enter to do the last FIM tag you executed again, in the current location of the caret. This makes chatting with stop sequences faster since you don't need to retype tags. Type your message, press Ctrl+Shift+Enter, get a streamed response, and your caret will end up one space after your name label. Repeat as for long as you want to chat.
 
-FIM tags are set up such that the [[[N]]] tag and any [[[prefix]]] or [[[suffix]]] tags used disappear when you hit Ctrl+Enter. This allows you to keep your text file clear of a bunch of old tags. And it allows you to sort of just move around and fill things in freely. The solution to having to retype the tags over and over again is the Ctrl+Shift+Enter shortcut to re-execute the last FIM tag, but at the current caret position. But what if you want to keep the [[[prefix]]] and [[[suffix]]] tags in place over multiple FIM fills? The solution to that problem is to put an exclamation point after the max tokens number, like this:
+FIM tags are set up such that the [[[N]]] tag and any [[[prefix]]] or [[[suffix]]] tags used disappear when you press Ctrl+Enter. This allows you to keep your text file clear of a bunch of old tags. And it allows you to sort of just move around and fill things in freely. The solution to having to retype the tags over and over again is the Ctrl+Shift+Enter shortcut to re-execute the last FIM tag, but at the current caret position. But what if you want to keep the [[[prefix]]] and [[[suffix]]] tags in place over multiple FIM fills? The solution to that problem is to put an exclamation point after the max tokens number, like this:
 
 ```
 [[[200!]]]
@@ -222,7 +222,7 @@ Still, sometimes it is nice to just have a good old-fashioned chat with an instr
 
 ## Chat Tags
 
-The beginner way to start a chat is seen in the following example, this is what it looks like before hitting Ctrl+Enter:
+The beginner way to start a chat is seen in the following example, this is what it looks like before pressing Ctrl+Enter:
 
 ```
 [[[system]]]
@@ -233,7 +233,7 @@ What is the population of Oklahoma?
 [[[/user]]]
 ```
 
-And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you hit Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
+And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you press Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
 
 The text between [[[system]]] and [[[/system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Hit Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
 
@@ -255,7 +255,7 @@ As of 2021, the estimated population of Oklahoma is approximately 3,959,353 peop
 [[[/user]]]
 ```
 
-It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates new [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and hit Ctrl+Enter to go again.
+It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates new [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and press Ctrl+Enter to go again.
 
 The text between [[[assistant]]] and [[[/assistant]]] is the ASSISTANT RESPONSE.
 
@@ -267,9 +267,9 @@ A LLM chat containing these elements usually goes in this order: system prompt, 
 
 It can go on indefinitely. With each new user prompt, all of the elements that came before, going back to the system prompt, make up what is called the CHAT HISTORY.
 
-Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. For a well-designed LLM server like llama.cpp llama-server, the server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means that the server will have to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
+Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. For a well-designed LLM server like llama.cpp llama-server, the server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means the server will need to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
 
-Next we can get into ways than you can reduce the amount of typing you need to do to get a chat started. First, opening and closing chat tags can be on the same line, so the "beginner way" to start a chat that I described earlier can be done like this and get the same result once you hit Ctrl+Enter:
+Next we can look at ways you can reduce the amount of typing needed to start a chat. First, opening and closing chat tags can be on the same line, so the "beginner way" to start a chat that I described earlier can be done like this and get the same result once you press Ctrl+Enter:
 ```
 [[[system]]]Assist concisely.[[[/system]]]
 [[[user]]]What is the population of Oklahoma?[[[/user]]]
@@ -298,9 +298,9 @@ And you can use [[[N]]] tags within chat blocks if you want. But you cannot use 
 
 ## Chat Blocks As Functions
 
-Try thinking of chat blocks as functions. Input goes in [[[user]]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you hit Ctrl+Enter.
+Try thinking of chat blocks as functions. Input goes in [[[user]]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you press Ctrl+Enter.
 
-You can copy the output of one function and paste it into the input of another function. You can make a text file with fifty  functions, and copy and paste a few of them into a new tab for a specific project. They are like macros.
+You can copy the output of one function and paste it into the input of another function. You can make a text file with fifty functions, and copy and paste a few of them into a new tab for a specific project. They are like macros.
 
 Here is a system prompt to start you off:
 
