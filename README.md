@@ -189,7 +189,7 @@ Chauncey: [[[500'Joe: ']]]
 
 When you generate the above, you'll get one comment from Chauncey as a confident assistant. And generation will end with your caret right where it needs to be for you to type as Joe again. And you can repeat the process over and over to have a chat.
 
-In situations where you don't like what the LLM generates, press Ctrl+z twice to step back in the history, to before you started the generation, then press Ctrl+Enter to try again. Some call this rerolling.
+In situations where you don't like what the LLM generates, press Ctrl+z twice to step back in the undo history, to before you started the generation, then press Ctrl+Enter to try again. Some call this rerolling.
 
 Also, because you are in a text editor, you can simply modify imperfect generations to your liking. This not only improves the text, it brings the LLM's future responses closer to what you want; because it makes the prefix text given to the model on the next generation a better demonstration of what you are looking for.
 
