@@ -53,7 +53,7 @@ and the Q6 version of Granite Tiny available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
+Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models choose a small number of expert subnetworks per token, so they don’t activate all parameters on every step. That’s why Granite 4.0 H Small (~32B total, ~9B active) runs faster than it would if it were not a MoE. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
 ## Overview
 
@@ -73,6 +73,8 @@ To do a FIM generation, make a FIM tag like this:
 ```
 where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
+FIM generations are stateless: the model only sees the prefix and suffix you give it each time. But the information in the prefix and suffix can be a kind of state that builds over time, and that state is on display before you in the text editor.
+
 When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of or right next to the tag that you want to generate for. The asterisks below indicate a few examples of acceptable locations for the caret when you hit Ctrl+Enter to generate a [[[N]]] tag. Note, asterisks are not used in the [[[N]]] tag, I just use them here to highlight the range of where the caret can be.
 ```
 *[[[250]]]
@@ -81,7 +83,9 @@ When you hit Ctrl+Enter to generate in FIMpad, the caret needs to be inside of o
 [[[250]]]*
 ```
 
-For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. However, sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
+For FIM generation, everything in the text file before the FIM tag is sent to the LLM as prefix text, and everything in the text file after the FIM tag is sent to the LLM as suffix text. The LLM uses both prefix text and suffix text as context, and it sends back text that it deems likely to appear between them. The LLM bases its generation on the prefix, suffix, and everything it already learned during pretraining.
+
+Sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
 ## Prefix and Suffix Tags (only work for FIM generation)
 
@@ -212,7 +216,7 @@ There is an exclusive stop sequence option as well with [[[N]]] tags. It just us
 
 With exclusive stop sequences, the stop sequence itself won't be included in the text that was generated. It gets cut off the end.
 
-One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the instruction tuning safety alignment stuff seems somewhat bypassed.
+One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the safety alignment stuff seems somewhat bypassed. FIM can use the model’s base reasoning more directly, because you’re not invoking its chat/instruction patterns, you're asking it to complete structure.
 
 Still, sometimes it is nice to just have a good old-fashioned chat with an instruct model. Which brings us to chat tags.
 
@@ -263,7 +267,7 @@ A LLM chat containing these elements usually goes in this order: system prompt, 
 
 It can go on indefinitely. With each new user prompt, all of the elements that came before, going back to the system prompt, make up what is called the CHAT HISTORY.
 
-Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. The server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means that the server will have to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
+Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. For a well-designed LLM server like llama.cpp llama-server, the server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means that the server will have to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
 
 Next we can get into ways than you can reduce the amount of typing you need to do to get a chat started. First, opening and closing chat tags can be on the same line, so the "beginner way" to start a chat that I described earlier can be done like this and get the same result once you hit Ctrl+Enter:
 ```
