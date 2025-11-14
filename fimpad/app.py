@@ -130,6 +130,7 @@ class FIMPad(tk.Tk):
             "stream_buffer": [],
             "stream_flush_job": None,
             "stream_mark": None,
+            "stream_following": False,
             "stops_after": [],
             "stops_after_maxlen": 0,
             "stream_tail": "",
@@ -728,6 +729,7 @@ class FIMPad(tk.Tk):
         st["stream_flush_job"] = None
         st["stream_buffer"].clear()
         st["stream_mark"] = None
+        st["stream_following"] = False
         st["stops_after"] = []
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
@@ -762,10 +764,19 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        should_follow = self._should_follow(text)
+        should_follow = st.get("stream_following", self._should_follow(text))
         text.insert(cur, piece)
         if should_follow:
             text.see(mark)
+            try:
+                if text.dlineinfo(mark) is None:
+                    st["stream_following"] = False
+                else:
+                    st["stream_following"] = True
+            except Exception:
+                st["stream_following"] = False
+        elif self._should_follow(text):
+            st["stream_following"] = True
         self._set_dirty(st, True)
 
     def _force_flush_stream_buffer(self, frame, mark):
@@ -1229,6 +1240,7 @@ class FIMPad(tk.Tk):
 
         text = st["text"]
         st["chat_star_mode"] = block.star_mode
+        st["stream_following"] = self._should_follow(text)
 
         (
             replacement,
@@ -1250,6 +1262,8 @@ class FIMPad(tk.Tk):
         stream_index = text.index(f"{start_idx}+{stream_offset}c")
         text.mark_set("stream_here", stream_index)
         text.mark_gravity("stream_here", tk.RIGHT)
+        if st.get("stream_following"):
+            text.see("stream_here")
 
         after_close_index = text.index(f"{start_idx}+{after_close_offset}c")
         text.mark_set("chat_after_placeholder", after_close_index)
