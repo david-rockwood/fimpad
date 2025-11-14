@@ -293,9 +293,10 @@ You can copy the output of one function and paste it into the input of another f
 
 Here is one to start you off:
 
-Generate Imagist Stanzas
-[[[system]]]The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry.
-
+generateImagistStanzas
+[[[system]]]
+The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry.
+[[[/system]]]
 [[[user]]]
 
 [[[/user]]]
