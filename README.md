@@ -244,7 +244,7 @@ As of 2021, the estimated population of Oklahoma is approximately 3,959,353 peop
 [[[/user]]]
 ```
 
-It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and hit Ctrl+Enter to go again.
+It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates new [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and hit Ctrl+Enter to go again.
 
 The text between [[[assistant]]] and [[[/assistant]]] is the ASSISTANT RESPONSE.
 
