@@ -27,6 +27,15 @@ def test_parse_chat_alias_normalizes_roles():
     ]
 
 
+def test_star_mode_treats_inner_tags_as_text():
+    app = make_app()
+    content = "[[[system*]]]Inner [[[user]]]tag[[[/user]]] text[[[/system*]]]"
+    messages = app._parse_chat_messages(content)
+    assert messages == [
+        {"role": "system", "content": "Inner [[[user]]]tag[[[/user]]] text"}
+    ]
+
+
 def test_close_tag_aliases_are_available():
     app = make_app()
     aliases = app._chat_role_aliases()

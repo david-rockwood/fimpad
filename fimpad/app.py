@@ -18,10 +18,8 @@ from tkinter.scrolledtext import ScrolledText
 from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .help import get_help_template
+from .parser import TagToken, TextToken, parse_triple_tokens
 from .utils import offset_to_tkindex
-
-PREFIX_TAG_RE = re.compile(r"\[\[\[\s*prefix\s*\]\]\]", re.IGNORECASE)
-SUFFIX_TAG_RE = re.compile(r"\[\[\[\s*suffix\s*\]\]\]", re.IGNORECASE)
 
 
 class FIMPad(tk.Tk):
@@ -798,26 +796,28 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        match_for_cursor = None
-        for marker_match in MARKER_REGEX.finditer(content):
-            if not self._cursor_within_span(
-                marker_match.start(), marker_match.end(), cursor_offset
-            ):
-                continue
-            if match_for_cursor is None or marker_match.start() >= match_for_cursor.start():
-                match_for_cursor = marker_match
+        role_aliases = self._chat_role_aliases()
+        tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
 
-        if match_for_cursor is not None:
+        marker_token: TagToken | None = None
+        for token in tokens:
+            if not isinstance(token, TagToken) or token.kind != "marker":
+                continue
+            if not self._cursor_within_span(token.start, token.end, cursor_offset):
+                continue
+            if marker_token is None or token.start >= marker_token.start:
+                marker_token = token
+
+        if marker_token is not None:
             self._launch_fim_or_completion_stream(
                 st,
                 content,
-                match_for_cursor.start(),
-                match_for_cursor.end(),
-                match_for_cursor,
+                marker_token,
+                tokens,
             )
             return
 
-        chat_bounds = self._locate_chat_block(content, cursor_offset)
+        chat_bounds = self._locate_chat_block(content, cursor_offset, tokens=tokens)
         if chat_bounds:
             self._reset_stream_state(st)
             messages = self._prepare_chat_block(st, content, chat_bounds[0], chat_bounds[1])
@@ -888,10 +888,10 @@ class FIMPad(tk.Tk):
 
     # ----- FIM/completion streaming -----
 
-    def _launch_fim_or_completion_stream(self, st, content, mstart, mend, marker_match):
+    def _launch_fim_or_completion_stream(self, st, content, marker_token: TagToken, tokens):
         cfg = self.cfg
-        self._last_fim_marker = marker_match.group(0)
-        body = (marker_match.group("body") or "").strip()
+        self._last_fim_marker = marker_token.raw
+        body = (marker_token.body or "").strip()
 
         remainder = body
         token_value: int | str | None = None
@@ -965,24 +965,32 @@ class FIMPad(tk.Tk):
                 if unescaped:
                     stops_after.append(unescaped)
 
-        pfx_match = None
-        for m in PREFIX_TAG_RE.finditer(content, 0, mstart):
-            pfx_match = m
+        prefix_token: TagToken | None = None
+        suffix_token: TagToken | None = None
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if token.kind == "prefix" and token.start < marker_token.start:
+                prefix_token = token
+            elif token.kind == "suffix" and token.start >= marker_token.end:
+                suffix_token = token
+                break
 
-        if pfx_match is not None:
-            pfx_used_start = pfx_match.start()
-            pfx_used_end = pfx_match.end()
-            before_region = content[pfx_used_end:mstart]
+        if prefix_token is not None:
+            pfx_used_start = prefix_token.start
+            pfx_used_end = prefix_token.end
+            before_region = content[pfx_used_end:marker_token.start]
         else:
-            before_region = content[:mstart]
+            pfx_used_start = pfx_used_end = None
+            before_region = content[: marker_token.start]
 
-        sfx_match = SUFFIX_TAG_RE.search(content, mend)
-        if sfx_match is not None:
-            sfx_used_start = sfx_match.start()
-            sfx_used_end = sfx_match.end()
-            after_region = content[mend:sfx_used_start]
+        if suffix_token is not None:
+            sfx_used_start = suffix_token.start
+            sfx_used_end = suffix_token.end
+            after_region = content[marker_token.end : sfx_used_start]
         else:
-            after_region = content[mend:]
+            sfx_used_start = sfx_used_end = None
+            after_region = content[marker_token.end :]
 
         safe_suffix = MARKER_REGEX.sub("", after_region)
         use_completion = after_region.strip() == ""
@@ -1006,8 +1014,8 @@ class FIMPad(tk.Tk):
             payload["stop"] = stops_before
 
         text = st["text"]
-        start_index = offset_to_tkindex(content, mstart)
-        end_index = offset_to_tkindex(content, mend)
+        start_index = offset_to_tkindex(content, marker_token.start)
+        end_index = offset_to_tkindex(content, marker_token.end)
 
         self._reset_stream_state(st)
 
@@ -1021,18 +1029,18 @@ class FIMPad(tk.Tk):
         # Prepare streaming mark
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
-        if sfx_match is not None and not keep_tags:
+        if suffix_token is not None and not keep_tags:
             s_s = offset_to_tkindex(content, sfx_used_start)
             s_e = offset_to_tkindex(content, sfx_used_end)
             with contextlib.suppress(tk.TclError):
                 text.delete(s_s, s_e)
-        if pfx_match is not None and not keep_tags:
+        if prefix_token is not None and not keep_tags:
             p_s = offset_to_tkindex(content, pfx_used_start)
             p_e = offset_to_tkindex(content, pfx_used_end)
             with contextlib.suppress(tk.TclError):
                 text.delete(p_s, p_e)
 
-        marker_len = mend - mstart
+        marker_len = marker_token.end - marker_token.start
         start_index = text.index("stream_here")
         end_index = text.index(f"{start_index}+{marker_len}c")
         text.delete(start_index, end_index)
@@ -1103,25 +1111,25 @@ class FIMPad(tk.Tk):
             cursor_offset > 0 and start <= cursor_offset - 1 < end
         )
 
-    def _locate_chat_block(self, content: str, cursor_offset: int):
+    def _locate_chat_block(self, content: str, cursor_offset: int, tokens=None):
         cursor_offset = max(0, min(len(content), cursor_offset))
-        role_aliases = self._chat_role_aliases()
-        system_names = sorted(
-            {name.lstrip("/") for name, role in role_aliases.items() if role == "system"},
-            key=len,
-            reverse=True,
-        )
-        sys_re = re.compile(
-            rf"\[\[\[\s*(?:{'|'.join(re.escape(name) for name in system_names)})\s*\]\]\]",
-            re.IGNORECASE,
-        )
-        matches = list(sys_re.finditer(content))
-        if not matches:
+        if tokens is None:
+            role_aliases = self._chat_role_aliases()
+            tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
+
+        system_tokens: list[TagToken] = []
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if token.kind == "chat" and not token.is_close and token.role == "system":
+                system_tokens.append(token)
+
+        if not system_tokens:
             return None
 
-        for idx in range(len(matches) - 1, -1, -1):
-            start = matches[idx].start()
-            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(content)
+        for idx, token in enumerate(system_tokens):
+            start = token.start
+            end = system_tokens[idx + 1].start if idx + 1 < len(system_tokens) else len(content)
             if self._cursor_within_span(start, end, cursor_offset):
                 return start, end
 
@@ -1129,51 +1137,65 @@ class FIMPad(tk.Tk):
 
     def _parse_chat_messages(self, content: str):
         role_aliases = self._chat_role_aliases()
-        tag_names = self._chat_tag_names()
-        tag_re = re.compile(
-            rf"(\[\[\[\s*(/)?\s*({'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\])",
-            re.IGNORECASE,
-        )
-        tokens = []
-        last_end = 0
-        for m in tag_re.finditer(content):
-            if m.start() > last_end:
-                tokens.append(("TEXT", content[last_end : m.start()]))
-            tokens.append(("TAG", m.group(0), m.group(2) is not None, m.group(3)))
-            last_end = m.end()
-        if last_end < len(content):
-            tokens.append(("TEXT", content[last_end:]))
+        tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
 
-        messages = []
-        cur_role = None
-        buf = []
+        messages: list[dict[str, str]] = []
+        cur_role: str | None = None
+        buf: list[str] = []
+        star_stack: list[bool] = []
+        star_depth = 0
 
         def flush():
             nonlocal cur_role, buf
             if cur_role is not None:
                 messages.append({"role": cur_role.lower(), "content": "".join(buf)})
-                cur_role = None
-                buf = []
+            cur_role = None
+            buf = []
 
-        for t in tokens:
-            if t[0] == "TEXT":
+        for token in tokens:
+            if isinstance(token, TextToken):
                 if cur_role is not None:
-                    buf.append(t[1])
+                    buf.append(token.text)
+                continue
+
+            if not isinstance(token, TagToken):
+                continue
+
+            if token.kind != "chat":
+                if cur_role is not None:
+                    buf.append(token.raw)
+                continue
+
+            if star_depth > 0 and not token.is_star:
+                if cur_role is not None:
+                    buf.append(token.raw)
+                continue
+
+            role = token.role
+            if not role:
+                if cur_role is not None:
+                    buf.append(token.raw)
+                continue
+
+            if not token.is_close:
+                flush()
+                cur_role = role
+                buf = []
+                star_stack.append(token.is_star)
+                if token.is_star:
+                    star_depth += 1
             else:
-                _, _raw, is_close, role = t
-                role_key = role.lower()
-                role = role_aliases.get(role_key, role_aliases.get(f"/{role_key}", role_key))
-                if not is_close:
+                if star_stack:
+                    closing_star = star_stack.pop()
+                    if closing_star:
+                        star_depth = max(0, star_depth - 1)
+                if cur_role == role:
                     flush()
-                    cur_role = role
-                    buf = []
                 else:
-                    if cur_role == role:
-                        flush()
-                    else:
-                        flush()
-                        cur_role = None
-                        buf = []
+                    flush()
+                    cur_role = None
+                    buf = []
+
         flush()
         return messages
 
