@@ -285,7 +285,7 @@ One liners are possible, but probably overly confusing:
 [[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
 ```
 
-You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
+You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history. However, any chat tags that appear within other chat tags will be ignored by the FIMpad generation parser. So you won't be able to execute chat tags that are within other chat tags.
 
 You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
 
