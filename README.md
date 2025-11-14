@@ -23,7 +23,7 @@ python -m fimpad
 
 ## AI Help In FIMpad
 
-Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Hit Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server working yet, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
+Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server working yet, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
 
 This is a long and thorough README, so on some machines and on larger models the first prompt may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
 
@@ -71,7 +71,7 @@ To do a FIM generation, make a FIM tag like this:
 ```
 [[[N]]]
 ```
-where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Hit Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
+where N is the max number of tokens that you want to be generated and inserted into the text file by the LLM. N must be a positive integer greater than zero. Press Ctrl+Enter to generate and the FIM tag will be deleted. Then text from the LLM will be streamed into the text file at the location where the [[[N]]] tag was before it was deleted.
 
 FIM generations are stateless: the model only sees the prefix and suffix you give it each time. But the information in the prefix and suffix can be a kind of state that builds over time, and that state is on display before you in the text editor.
 
@@ -235,7 +235,7 @@ What is the population of Oklahoma?
 
 And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you press Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
 
-The text between [[[system]]] and [[[/system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Hit Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
+The text between [[[system]]] and [[[/system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Press Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
 
 ```
 [[[system]]]
