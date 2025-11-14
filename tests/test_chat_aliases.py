@@ -50,6 +50,22 @@ def test_star_mode_placeholder_uses_star_tags():
     assert replacement.rstrip().endswith("[[[/assistant*]]]")
 
 
+def test_star_mode_normalization_preserves_inner_tags():
+    app = make_app()
+    content = (
+        "[[[system*]]]\n"
+        "Outer star message with [[[user]]]plain[[[/user]]] tags.\n"
+        "[[[/system*]]]"
+    )
+
+    block = app._parse_chat_messages(content)
+    rendered, *_ = app._render_chat_block(block)
+
+    assert "[[[system*]]]" in rendered
+    assert "[[[user]]]plain[[[/user]]]" in rendered
+    assert "[[[user*]]]plain" not in rendered
+
+
 def test_close_tag_aliases_are_available():
     app = make_app()
     aliases = app._chat_role_aliases()
@@ -64,4 +80,18 @@ def test_locate_chat_block_with_alias():
     cursor_offset = content.index("[[[s]]]") + 2
     block = app._locate_chat_block(content, cursor_offset)
     assert block == (content.index("[[[s]]]"), len(content))
+
+
+def test_chat_user_followup_block_respects_star_mode():
+    app = make_app()
+
+    star_block, star_offset = app._chat_user_followup_block(True)
+    assert "[[[user*]]]" in star_block
+    assert star_block.rstrip().endswith("[[[/user*]]]")
+    assert star_offset == len("\n\n[[[user*]]]\n")
+
+    plain_block, plain_offset = app._chat_user_followup_block(False)
+    assert "[[[user*]]]" not in plain_block
+    assert plain_block.rstrip().endswith("[[[/user]]]")
+    assert plain_offset == len("\n\n[[[user]]]\n")
 

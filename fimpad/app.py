@@ -136,6 +136,7 @@ class FIMPad(tk.Tk):
             "stream_cancelled": False,
             "chat_after_placeholder_mark": None,
             "chat_stream_active": False,
+            "chat_star_mode": False,
         }
 
         def on_modified(event=None):
@@ -717,6 +718,7 @@ class FIMPad(tk.Tk):
                 text.mark_unset(mark_name)
         st["chat_after_placeholder_mark"] = None
         st["chat_stream_active"] = False
+        st["chat_star_mode"] = False
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -1145,6 +1147,13 @@ class FIMPad(tk.Tk):
         suffix = "*" if star_mode else ""
         return (f"[[[{base_name}{suffix}]]]", f"[[[/{base_name}{suffix}]]]")
 
+    def _chat_user_followup_block(self, star_mode: bool) -> tuple[str, int]:
+        user_tag = self.cfg["chat_user"]
+        open_tag, close_tag = self._chat_tag_wrappers_for_name(user_tag, star_mode)
+        block = f"\n\n{open_tag}\n\n{close_tag}"
+        cursor_offset = len("\n\n" + open_tag + "\n")
+        return block, cursor_offset
+
     def _render_chat_block(
         self, block: ChatBlock
     ) -> tuple[str, list[dict[str, str]], int, int, int]:
@@ -1203,6 +1212,7 @@ class FIMPad(tk.Tk):
             return []
 
         text = st["text"]
+        st["chat_star_mode"] = block.star_mode
 
         (
             replacement,
@@ -1395,11 +1405,10 @@ class FIMPad(tk.Tk):
                             except tk.TclError:
                                 after_idx = None
                         if after_idx:
-                            urole = self.cfg["chat_user"]
-                            open_tag = f"[[[{urole}]]]"
-                            user_block = f"\n\n{open_tag}\n\n[[[/{urole}]]]"
+                            user_block, cursor_offset = self._chat_user_followup_block(
+                                st.get("chat_star_mode", False)
+                            )
                             text.insert(after_idx, user_block)
-                            cursor_offset = len("\n\n" + open_tag + "\n")
                             insert_target = text.index(f"{after_idx}+{cursor_offset}c")
                             text.mark_set(tk.INSERT, insert_target)
                             text.see(tk.INSERT)
