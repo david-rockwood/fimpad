@@ -1092,10 +1092,9 @@ class FIMPad(tk.Tk):
     def _contains_chat_tags(self, content: str) -> bool:
         tag_names = self._chat_tag_names()
         base_pattern = "|".join(re.escape(name) for name in tag_names)
-        if base_pattern:
-            combined_pattern = f"(?:{base_pattern}|system\\d+)"
-        else:
-            combined_pattern = "system\\d+"
+        combined_pattern = (
+            f"(?:{base_pattern}|system\\d+)" if base_pattern else "system\\d+"
+        )
         pat = re.compile(
             rf"\[\[\[\s*/?\s*{combined_pattern}\s*\]\]\]",
             re.IGNORECASE,
@@ -1117,10 +1116,9 @@ class FIMPad(tk.Tk):
             reverse=True,
         )
         base_pattern = "|".join(re.escape(name) for name in system_names)
-        if base_pattern:
-            combined_pattern = f"(?:{base_pattern}|system\\d+)"
-        else:
-            combined_pattern = "system\\d+"
+        combined_pattern = (
+            f"(?:{base_pattern}|system\\d+)" if base_pattern else "system\\d+"
+        )
         sys_re = re.compile(
             rf"\[\[\[\s*{combined_pattern}\s*\]\]\]",
             re.IGNORECASE,
@@ -1141,10 +1139,9 @@ class FIMPad(tk.Tk):
         role_aliases = self._chat_role_aliases()
         tag_names = self._chat_tag_names()
         base_pattern = "|".join(re.escape(name) for name in tag_names)
-        if base_pattern:
-            combined_pattern = f"(?:{base_pattern}|system\\d+)"
-        else:
-            combined_pattern = "system\\d+"
+        combined_pattern = (
+            f"(?:{base_pattern}|system\\d+)" if base_pattern else "system\\d+"
+        )
         tag_re = re.compile(
             rf"(\[\[\[\s*(/)?\s*({combined_pattern})\s*\]\]\])",
             re.IGNORECASE,
