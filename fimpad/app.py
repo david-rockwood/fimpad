@@ -138,6 +138,7 @@ class FIMPad(tk.Tk):
             "stream_cancelled": False,
             "chat_after_placeholder_mark": None,
             "chat_stream_active": False,
+            "chat_star_mode": False,
         }
 
         def on_modified(event=None):
@@ -719,6 +720,7 @@ class FIMPad(tk.Tk):
                 text.mark_unset(mark_name)
         st["chat_after_placeholder_mark"] = None
         st["chat_stream_active"] = False
+        st["chat_star_mode"] = False
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -1234,6 +1236,7 @@ class FIMPad(tk.Tk):
     def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
         block_text = full_content[block_start:block_end]
         star_mode = self._is_star_chat_block(block_text)
+        st["chat_star_mode"] = star_mode
         parsed = self._parse_chat_messages(block_text, star_mode=star_mode)
         if not parsed:
             return []
@@ -1471,7 +1474,10 @@ class FIMPad(tk.Tk):
                             except tk.TclError:
                                 after_idx = None
                         if after_idx:
+                            star_mode = bool(st.get("chat_star_mode"))
                             urole = self.cfg["chat_user"]
+                            if star_mode and not urole.endswith("*"):
+                                urole = f"{urole}*"
                             open_tag = f"[[[{urole}]]]"
                             user_block = f"\n\n{open_tag}\n\n[[[/{urole}]]]"
                             text.insert(after_idx, user_block)
