@@ -1146,28 +1146,45 @@ class FIMPad(tk.Tk):
         return None
 
     def _is_star_chat_block(self, block_text: str) -> bool:
-        role_aliases = self._chat_role_aliases()
-        system_base_names = {
-            name.lstrip("/") for name, role in role_aliases.items() if role == "system"
-        }
-        system_names = set()
-        for name in system_base_names:
-            system_names.add(name)
-            if not name.endswith("*"):
-                system_names.add(f"{name}*")
-        if not system_names:
-            return False
+        """
+        Determine whether a chat block is in 'star mode' by looking for the
+        first *opening* system tag in the block and checking whether its name
+        ends with '*'.
 
-        system_names = sorted(system_names, key=len, reverse=True)
-        pattern = re.compile(
-            rf"^\[\[\[\s*(?:({'|'.join(re.escape(name) for name in system_names)}))\s*\]\]\]",
+        This is based purely on the block's text, so it works for saved/reloaded
+        files as well as freshly-typed blocks.
+        """
+        role_aliases = self._chat_role_aliases()
+        tag_names = self._chat_tag_names()
+
+        # Match any chat tag (opening or closing) with one of our tag names.
+        tag_re = re.compile(
+            rf"\[\[\[\s*(/)?\s*({'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\]",
             re.IGNORECASE,
         )
-        match = pattern.match(block_text)
-        if not match:
-            return False
-        tag_name = match.group(1) or ""
-        return tag_name.endswith("*")
+
+        for m in tag_re.finditer(block_text):
+            is_close = m.group(1) is not None
+            raw_name = m.group(2) or ""
+            name_lower = raw_name.lower()
+
+            # Strip star + leading slash for lookup
+            base_key = name_lower.lstrip("/")
+            base_key_nostar = base_key[:-1] if base_key.endswith("*") else base_key
+
+            role = (
+                role_aliases.get(name_lower)
+                or role_aliases.get(base_key)
+                or role_aliases.get(base_key_nostar)
+                or role_aliases.get(f"/{base_key}")
+                or role_aliases.get(f"/{base_key_nostar}")
+            )
+
+            # We only care about the FIRST *opening* system tag.
+            if role == "system" and not is_close:
+                return raw_name.endswith("*")
+
+        return False
 
     def _parse_chat_messages(self, content: str, star_mode: bool = False):
         role_aliases = self._chat_role_aliases()
