@@ -831,6 +831,7 @@ class FIMPad(tk.Tk):
 
         chat_bounds = self._locate_chat_block(content, cursor_offset, tokens=tokens)
         if chat_bounds:
+            st["_pending_stream_follow"] = self._should_follow(text_widget)
             self._reset_stream_state(st)
             messages = self._prepare_chat_block(st, content, chat_bounds[0], chat_bounds[1])
             if not messages:
@@ -1240,7 +1241,10 @@ class FIMPad(tk.Tk):
 
         text = st["text"]
         st["chat_star_mode"] = block.star_mode
-        st["stream_following"] = self._should_follow(text)
+        pending_follow = st.pop("_pending_stream_follow", None)
+        if pending_follow is None:
+            pending_follow = self._should_follow(text)
+        st["stream_following"] = pending_follow
 
         (
             replacement,

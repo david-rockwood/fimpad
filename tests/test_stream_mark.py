@@ -179,3 +179,60 @@ def test_chat_block_follow_and_flush_keeps_stream_visible():
     assert text.last_seen == "stream_here"
     assert st["stream_following"] is True
     assert st["dirty"] is True
+
+
+def test_chat_block_follow_persists_across_turns():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText("[[[assistant]]]\n\n[[[/assistant]]]")
+
+    app._should_follow = lambda widget: False
+
+    class DummyBlock:
+        pass
+
+    dummy_block = DummyBlock()
+    dummy_block.messages = [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "there"},
+        {"role": "user", "content": "again"},
+    ]
+    dummy_block.star_mode = False
+
+    app._parse_chat_messages = lambda content: dummy_block
+
+    normalized_history = "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\nthere\n[[[/assistant]]]\n\n[[[user]]]\nagain\n[[[/user]]]\n\n"
+
+    def fake_render(block):
+        replacement = normalized_history + "[[[assistant]]]\n\n[[[/assistant]]]"
+        normalized_messages = [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "there"},
+            {"role": "user", "content": "again"},
+        ]
+        normalized_len = len(normalized_history)
+        open_len = len("[[[assistant]]]")
+        close_len = len("[[[/assistant]]]")
+        return replacement, normalized_messages, normalized_len, open_len, close_len
+
+    app._render_chat_block = fake_render
+
+    st = {
+        "text": text,
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_following": False,
+        "dirty": False,
+        "chat_after_placeholder_mark": None,
+    }
+
+    st["_pending_stream_follow"] = True
+
+    app._reset_stream_state(st)
+
+    messages = app._prepare_chat_block(st, text.content, 0, len(text.content))
+
+    assert st.get("_pending_stream_follow") is None
+    assert st["stream_following"] is True
+    assert text.last_seen == "stream_here"
+    assert messages[-1] == {"role": "assistant", "content": ""}
