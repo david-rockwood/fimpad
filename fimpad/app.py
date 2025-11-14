@@ -1320,7 +1320,7 @@ class FIMPad(tk.Tk):
         st["stream_mark"] = "stream_here"
         st["chat_stream_active"] = True
 
-        if self._should_follow(text):
+        if st.get("stream_following") or self._should_follow(text):
             text.see("stream_here")
 
         def worker(tab_id):

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import queue
+
+from fimpad import app as app_module
 from fimpad.app import FIMPad
 
 
@@ -380,3 +383,59 @@ def test_stream_follow_detects_manual_scroll_after_prime_cleared():
     app._flush_stream_buffer(frame, "stream_here")
 
     assert st["stream_following"] is False
+
+
+def test_launch_chat_stream_respects_stored_follow_flag():
+    app = object.__new__(FIMPad)
+    text = FakeText(
+        "[[[user]]]\nhello\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
+    )
+
+    st = {
+        "text": text,
+        "stream_following": True,
+        "_stream_follow_primed": True,
+    }
+
+    app.cfg = {
+        "chat_assistant": "assistant",
+        "chat_system": "system",
+        "chat_user": "user",
+        "model": "dummy",
+        "temperature": 0.5,
+        "top_p": 1.0,
+        "endpoint": "http://example",
+    }
+    app.nb = type("DummyNotebook", (), {"select": lambda self: "tab1"})()
+    app._set_busy = lambda busy: None
+    app._result_queue = queue.SimpleQueue()
+    app._should_follow = lambda widget: False
+
+    original_stream_chat = app_module.stream_chat
+    original_thread = app_module.threading.Thread
+
+    class ImmediateThread:
+        def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+            self._target = target
+            self._args = args
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            if self._target is not None:
+                self._target(*self._args, **self._kwargs)
+
+    try:
+        app_module.stream_chat = lambda endpoint, payload: []
+        app_module.threading.Thread = ImmediateThread
+        app._launch_chat_stream(
+            st,
+            [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": ""},
+            ],
+        )
+    finally:
+        app_module.stream_chat = original_stream_chat
+        app_module.threading.Thread = original_thread
+
+    assert text.last_seen == "stream_here"
