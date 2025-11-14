@@ -33,6 +33,10 @@ I suggest using a recent build of llama.cpp llama-server available at:
 https://github.com/ggml-org/llama.cpp
 ```
 
+When you start llama-server, set a higher context size than the default 4096. Try 20000 to start. Smaller runs faster, bigger allows for longer documents and chats.
+
+## The LLMs
+
 I suggest the Q6 version of Granite Small available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
