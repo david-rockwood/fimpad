@@ -1334,12 +1334,15 @@ class FIMPad(tk.Tk):
         cfg = self.cfg
         text = st["text"]
 
-        assistant_role = cfg["chat_assistant"].lower()
+        # Roles are normalized to canonical names ("system", "user", "assistant")
+        assistant_role = "assistant"
+
         payload_messages = [
             {"role": msg["role"], "content": msg["content"]}
             for msg in messages
             if not (
-                msg["role"].lower() == assistant_role and not (msg["content"] or "").strip()
+                msg["role"].lower() == assistant_role
+                and not (msg["content"] or "").strip()
             )
         ]
 
