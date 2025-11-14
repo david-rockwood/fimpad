@@ -295,17 +295,17 @@ And, you cannot use chat tags within chat tags. No nested chat tags, unless...
 
 Star Mode is an advanced option you can use for a chat block when you want the internal contents of that block to be treated purely as literal text, rather than as active chat tags. In normal chat blocks, opening and closing tags determine the structure of messages, and nested tags inside the block will also be recognized. This is usually what you want.
 
-But sometimes you need to show chat tags to the model, or include code. Chat tags inside of chat tags. Normally if you put [[[/system]]] inside of a system tag, it closes the system tag right there. But in star mode, those inner chat tags are ignored by the FIMpad generation parser.
+But sometimes you need to show chat tags to the model, or include code. Chat tags inside of chat tags. Normally if you put [[[/system]]] inside of a system tag, it closes the system tag right there. But in Star Mode, those inner chat tags are ignored by the FIMpad generation parser unless they have a trailing `*`.
 
 When you mark a chat block as being in Star Mode, the block becomes “self-contained”:
 
-Only the outermost opening and closing tags (the ones that declare the block is in Star Mode) control the block’s structure.
+Only the outermost opening and closing tags (the ones that declare the block is in Star Mode) control the block’s structure, and they themselves must end with `*`.
 
-Any chat tags inside that block, other than star mode chat tags, are treated as plain text. They do not start or end roles, and they don’t interfere with message parsing.
+Inside a Star Mode block, **only** chat tags whose names end with `*` (for example `[[[user*]]]`) retain any structural meaning. All other chat-looking sequences are treated as plain text; they do not start or end roles, and they don’t interfere with message parsing.
 
-All auto-inserted tags that FIMpad emits for that block are also placed into Star Mode automatically, so the structure stays consistent.
+All auto-inserted tags that FIMpad emits for that block are also placed into Star Mode automatically (they include the `*` suffix), so the structure stays consistent.
 
-Nested tags—no matter how many—are treated as literal characters, not chat markers.
+Nested non-star tags—no matter how many—are treated as literal characters, not chat markers. This is what allows you to show raw chat syntax safely.
 
 In other words: Star Mode lets you safely include examples, documentation, meta-instructions, or anything containing tag-like sequences, without breaking the chat parser.
 
@@ -330,9 +330,11 @@ Hello! How can I assist you today?
 [[[/user*]]]
 ```
 
-You can initialte star mode by opening a block with [[[system*]]]
+Inside that block you can safely include ordinary tags such as `[[[assistant]]]` or `[[[/user]]]` and they will be treated as text on the page, not as structure, because they lack the `*` suffix.
 
-Upon generation, the rest of the chat tags will be normalized to be star mode chat tags, and tags that are automaically created for that block will be star mode chat tags.
+You can initiate Star Mode by opening a block with a star-suffixed tag such as `[[[system*]]]`. From that point on, stay consistent—if you accidentally add a plain `[[[user]]]` inside the block, it will be treated as literal text, not as a new message.
+
+Upon generation, the rest of the chat tags will be normalized to be star mode chat tags, and tags that are automatically created for that block will include the star suffix.
 
 ## Chat Blocks As Functions
 
