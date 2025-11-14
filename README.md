@@ -211,6 +211,79 @@ Still, sometimes it is nice to just have a good old-fashioned chat with an instr
 
 ## Chat Tags
 
+The beginner way to start a chat the following example, this is what it looks like before hitting Ctrl+Enter:
+
+```
+[[[system]]]
+Assist concisely.
+[[[/system]]]
+[[[user]]]
+What is the population of Oklahoma?
+[[[/user]]]
+```
+
+And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you hit Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
+
+The text between [[[system]]] and [[[system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Hit Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
+
+```
+[[[system]]]
+Assist concisely.
+[[[/system]]]
+
+[[[user]]]
+What is the population of Oklahoma?
+[[[/user]]]
+
+[[[assistant]]]
+As of 2021, the estimated population of Oklahoma is approximately 3,959,353 people.
+[[[/assistant]]]
+
+[[[user]]]
+
+[[[/user]]]
+```
+
+It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and hit Ctrl+Enter to go again.
+
+The text between [[[assistant]]] and [[[/assistant]]] is the ASSISTANT RESPONSE.
+
+If you are familiar with LLMs, you already know the above all-caps terms. If you are new to LLMs, I put those terms in all caps so that you will notice and remember them. System prompts, user prompts, and assistant responses are the way that LLM chats are organized.
+
+User prompts are human input to the model. System prompts describe what the model should do with the human input. Assistant responses are the output from the model.
+
+A LLM chat containing these elements usually goes in this order: system prompt, user prompt, assistant response, user prompt, assistant response, user prompt, assistant response...
+
+It can go on indefinitely. With each new user prompt, all of the elements that came before, going back to the system prompt, make up what is called the CHAT HISTORY.
+
+Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. The server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means that the server will have to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
+
+Next we can get into ways than you can reduce the amount of typing you need to do to get a chat started. First, opening and closing chat tags can be on the same line, so the "beginner way" to start a chat that I described earlier can be done like this and get the same result once you hit Ctrl+Enter:
+```
+[[[system]]]Assist concisely.[[[/system]]]
+[[[user]]]What is the population of Oklahoma?[[[/user]]]
+```
+
+Second, a new opening tag without a closing tag automatically closes the previously opened chat tag within a chat block, so this is also equivalent:
+```
+[[[system]]]Assist concisely.
+[[[user]]]What is the population of Oklahoma?[[[/user]]]
+```
+
+Third, there one letter aliases for chat tags, so you can to this:
+```
+[[[s]]]Assist concisely.
+[[[u]]]What is the population of Oklahoma?[[[/u]]]
+```
+
+One liners are possible, but probably overly confusing:
+```
+[[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
+```
+
+## Chat Blocks As Functions
+
+
 
 
 
