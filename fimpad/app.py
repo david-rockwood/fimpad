@@ -18,7 +18,7 @@ from tkinter.scrolledtext import ScrolledText
 from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .help import get_help_template
-from .parser import TagToken, TextToken, parse_triple_tokens
+from .parser import ChatBlock, TagToken, TextToken, parse_chat_block, parse_triple_tokens
 from .utils import offset_to_tkindex
 
 
@@ -1135,79 +1135,20 @@ class FIMPad(tk.Tk):
 
         return None
 
-    def _parse_chat_messages(self, content: str):
+    def _parse_chat_messages(self, content: str) -> ChatBlock:
         role_aliases = self._chat_role_aliases()
-        tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
+        return parse_chat_block(content, role_aliases=role_aliases)
 
-        messages: list[dict[str, str]] = []
-        cur_role: str | None = None
-        buf: list[str] = []
-        star_stack: list[bool] = []
-        star_depth = 0
+    @staticmethod
+    def _chat_tag_wrappers_for_name(tag_name: str, star_mode: bool) -> tuple[str, str]:
+        base_name = tag_name.rstrip("*")
+        suffix = "*" if star_mode else ""
+        return (f"[[[{base_name}{suffix}]]]", f"[[[/{base_name}{suffix}]]]")
 
-        def flush():
-            nonlocal cur_role, buf
-            if cur_role is not None:
-                messages.append({"role": cur_role.lower(), "content": "".join(buf)})
-            cur_role = None
-            buf = []
-
-        for token in tokens:
-            if isinstance(token, TextToken):
-                if cur_role is not None:
-                    buf.append(token.text)
-                continue
-
-            if not isinstance(token, TagToken):
-                continue
-
-            if token.kind != "chat":
-                if cur_role is not None:
-                    buf.append(token.raw)
-                continue
-
-            if star_depth > 0 and not token.is_star:
-                if cur_role is not None:
-                    buf.append(token.raw)
-                continue
-
-            role = token.role
-            if not role:
-                if cur_role is not None:
-                    buf.append(token.raw)
-                continue
-
-            if not token.is_close:
-                flush()
-                cur_role = role
-                buf = []
-                star_stack.append(token.is_star)
-                if token.is_star:
-                    star_depth += 1
-            else:
-                if star_stack:
-                    closing_star = star_stack.pop()
-                    if closing_star:
-                        star_depth = max(0, star_depth - 1)
-                if cur_role == role:
-                    flush()
-                else:
-                    flush()
-                    cur_role = None
-                    buf = []
-
-        flush()
-        return messages
-
-    def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
-        block_text = full_content[block_start:block_end]
-        parsed = self._parse_chat_messages(block_text)
-        if not parsed:
-            return []
-
+    def _render_chat_block(
+        self, block: ChatBlock
+    ) -> tuple[str, list[dict[str, str]], int, int, int]:
         cfg = self.cfg
-        text = st["text"]
-
         role_lookup = {
             cfg["chat_system"].lower(): cfg["chat_system"],
             cfg["chat_user"].lower(): cfg["chat_user"],
@@ -1217,9 +1158,10 @@ class FIMPad(tk.Tk):
         role_lookup.setdefault("user", cfg["chat_user"])
         role_lookup.setdefault("assistant", cfg["chat_assistant"])
 
-        normalized_messages = []
+        normalized_messages: list[dict[str, str]] = []
         pieces: list[str] = []
-        for msg in parsed:
+
+        for msg in block.messages:
             role = (msg.get("role") or "").lower()
             body = (msg.get("content") or "").rstrip("\n")
             if body.startswith("\n"):
@@ -1227,8 +1169,7 @@ class FIMPad(tk.Tk):
             normalized_messages.append({"role": role, "content": body})
 
             tag_name = role_lookup.get(role, role)
-            open_tag = f"[[[{tag_name}]]]"
-            close_tag = f"[[[/{tag_name}]]]"
+            open_tag, close_tag = self._chat_tag_wrappers_for_name(tag_name, block.star_mode)
 
             pieces.append(open_tag)
             pieces.append("\n")
@@ -1241,21 +1182,41 @@ class FIMPad(tk.Tk):
         normalized_text = "".join(pieces)
 
         assistant_tag = cfg["chat_assistant"]
-        placeholder_open = f"[[[{assistant_tag}]]]"
-        placeholder_close = f"[[[/{assistant_tag}]]]"
+        placeholder_open, placeholder_close = self._chat_tag_wrappers_for_name(
+            assistant_tag, block.star_mode
+        )
         placeholder = f"{placeholder_open}\n\n{placeholder_close}"
-
         replacement = normalized_text + placeholder
+
+        return (
+            replacement,
+            normalized_messages,
+            len(normalized_text),
+            len(placeholder_open),
+            len(placeholder_close),
+        )
+
+    def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
+        block_text = full_content[block_start:block_end]
+        block = self._parse_chat_messages(block_text)
+        if not block.messages:
+            return []
+
+        text = st["text"]
+
+        (
+            replacement,
+            normalized_messages,
+            normalized_len,
+            open_len,
+            close_len,
+        ) = self._render_chat_block(block)
 
         start_idx = offset_to_tkindex(full_content, block_start)
         end_idx = offset_to_tkindex(full_content, block_end)
 
         text.delete(start_idx, end_idx)
         text.insert(start_idx, replacement)
-
-        normalized_len = len(normalized_text)
-        open_len = len(placeholder_open)
-        close_len = len(placeholder_close)
 
         stream_offset = normalized_len + open_len + 1
         after_close_offset = normalized_len + open_len + 2 + close_len
