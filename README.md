@@ -285,9 +285,56 @@ One liners are possible, but probably overly confusing:
 [[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
 ```
 
-You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history. However, any chat tags that appear within other chat tags will be ignored by the FIMpad generation parser. So you won't be able to execute chat tags that are within other chat tags.
+You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
 You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
+
+And, you cannot use chat tags within chat tags. No nested chat tags, unless...
+
+## Advanced: Star Mode
+
+Star Mode is an advanced option you can use for a chat block when you want the internal contents of that block to be treated purely as literal text, rather than as active chat tags. In normal chat blocks, opening and closing tags determine the structure of messages, and nested tags inside the block will also be recognized. This is usually what you want.
+
+But sometimes you need to show chat tags to the model, or include code. Chat tags inside of chat tags. Normally if you put [[[/system]]] inside of a system tag, it closes the system tag right there. But in star mode, those inner chat tags are ignored by the FIMpad generation parser.
+
+When you mark a chat block as being in Star Mode, the block becomes “self-contained”:
+
+Only the outermost opening and closing tags (the ones that declare the block is in Star Mode) control the block’s structure.
+
+Any chat tags inside that block are treated as plain text. They do not start or end roles, and they don’t interfere with message parsing.
+
+All auto-inserted tags that FIMpad emits for that block are also placed into Star Mode automatically, so the structure stays consistent.
+
+Nested tags—no matter how many—are treated as literal characters, not chat markers.
+
+In other words: Star Mode lets you safely include examples, documentation, meta-instructions, or anything containing tag-like sequences, without breaking the chat parser.
+
+Use Star Mode only when needed—most users will never touch it—but when you do need to embed tag-shaped text that must remain inert, it’s the correct tool.
+
+For star mode chat blocks, the system, user, and assistant blocks all look like this:
+```
+[[[system*]]]
+Assist.
+[[[/system*]]]
+
+[[[user*]]]
+Hi!
+[[[/user*]]]
+
+[[[assistant*]]]
+Hello! How can I assist you today?
+[[[/assistant*]]]
+
+[[[user*]]]
+
+[[[/user*]]]
+```
+
+You can initialte star mode by opening a block with [[[system*]]]
+
+Upon generation, the rest of the chat tags will be normalized to be star mode chat tags, and tags that are automaically created for that block will be star mode chat tags.
+
+The one thing tag that you cannot put in a star mode chat block is a star mode chat tag. Any star mode chat tag found in any chat block, star mode or not, will be applied as a chat tag.
 
 ## Chat Blocks As Functions
 
