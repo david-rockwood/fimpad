@@ -1,4 +1,4 @@
-from fimpad.parser import TagToken, TextToken, parse_triple_tokens
+from fimpad.parser import ChatBlock, TagToken, TextToken, parse_chat_block, parse_triple_tokens
 
 
 def test_parse_tokens_marker_and_regions():
@@ -46,3 +46,33 @@ def test_parse_tokens_handles_adjacent_tags():
     assert [t.kind for t in tokens] == ["prefix", "marker", "suffix"]
     assert tokens[0].end == tokens[1].start
     assert tokens[1].end == tokens[2].start
+
+
+def test_parse_chat_block_star_mode_nested_tags():
+    role_aliases = {
+        "system": "system",
+        "/system": "system",
+        "user": "user",
+        "/user": "user",
+        "assistant": "assistant",
+        "/assistant": "assistant",
+        "s": "system",
+        "/s": "system",
+        "u": "user",
+        "/u": "user",
+    }
+
+    content = (
+        "[[[system*]]]System text [[[user]]]should stay[[[/user]]]!\n"
+        "[[[u*]]]User sees [[[assistant]]] code[[[/assistant]]] here[[[/u*]]]"
+        "[[[/system*]]]"
+    )
+
+    block = parse_chat_block(content, role_aliases=role_aliases)
+
+    assert isinstance(block, ChatBlock)
+    assert block.star_mode is True
+    assert list(block.messages) == [
+        {"role": "system", "content": "System text [[[user]]]should stay[[[/user]]]!\n"},
+        {"role": "user", "content": "User sees [[[assistant]]] code[[[/assistant]]] here"},
+    ]
