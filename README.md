@@ -248,7 +248,7 @@ It normalizes your chat block to a nice clean format, streams the response betwe
 
 The text between [[[assistant]]] and [[[/assistant]]] is the ASSISTANT RESPONSE.
 
-If you are familiar with LLMs, you already know the above all-caps terms. If you are new to LLMs, I put those terms in all caps so that you will notice and remember them. System prompts, user prompts, and assistant responses are the way that LLM chats are organized.
+If you are familiar with LLMs, you already know the above all-caps terms. If you are new to LLMs, I put those terms in all-caps so that you will notice and remember them. System prompts, user prompts, and assistant responses are the way that LLM chats are organized.
 
 User prompts are human input to the model. System prompts describe what the model should do with the human input. Assistant responses are the output from the model.
 
@@ -283,30 +283,45 @@ One liners are possible, but probably overly confusing:
 
 You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
+And you can use [[[N]]] tags within chat blocks if you want. But you cannot use chat tags within [[[N]]] tags.
+
 ## Chat Blocks As Functions
 
+Try thinking of chat blocks as functions. Input goes in [[user]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you hit Ctrl+Enter.
 
+You can copy the output of one function and paste it into the input of another function. You can make a text file with fifty  functions, and copy and paste a few of them into a new tab for a specific project. They are like macros.
 
+Here is one to start you off:
+```
+Generate Imagist Stanzas
+************************
+[[[system]]]The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry.
+[[[user]]]
 
+[[[/user]]]
+```
 
+Here is what it gave me on the first try:
 
+```
+[[[system]]]
+The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry.
+[[[/system]]]
 
+[[[user]]]
+spending a stormy night in a Paris apartment alone
+[[[/user]]]
 
+[[[assistant]]]
+Rain lashes the windows, a ceaseless drum,
+Echoes of distant thunder, a somber hum.
+In shadows, memories dance, flickering light,
+A solitary soul, adrift in the night.
+[[[/assistant]]]
 
+[[[user]]]
 
+[[[/user]]]
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-DKR
