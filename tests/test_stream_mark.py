@@ -106,6 +106,7 @@ def test_flush_stream_buffer_respects_right_gravity():
         "text": text,
         "stream_buffer": ["foo", "\r\n", "bar"],
         "dirty": False,
+        "_stream_follow_primed": False,
     }
 
     app.tabs = {frame: st}
@@ -155,6 +156,7 @@ def test_chat_block_follow_and_flush_keeps_stream_visible():
         "stream_buffer": [],
         "stream_flush_job": None,
         "stream_following": False,
+        "_stream_follow_primed": False,
         "dirty": False,
     }
 
@@ -227,6 +229,7 @@ def test_chat_block_follow_persists_across_turns():
         "stream_following": False,
         "dirty": False,
         "chat_after_placeholder_mark": None,
+        "_stream_follow_primed": False,
     }
 
     st["_pending_stream_follow"] = True
@@ -237,5 +240,143 @@ def test_chat_block_follow_persists_across_turns():
 
     assert st.get("_pending_stream_follow") is None
     assert st["stream_following"] is True
+    assert st["_stream_follow_primed"] is True
     assert text.last_seen == "stream_here"
     assert messages[-1] == {"role": "assistant", "content": ""}
+
+
+def test_stream_follow_survives_transient_hidden_mark():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText(
+        "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
+    )
+
+    app._should_follow = lambda widget: False
+
+    class DummyBlock:
+        pass
+
+    dummy_block = DummyBlock()
+    dummy_block.messages = [{"role": "user", "content": "hi"}]
+    dummy_block.star_mode = False
+
+    app._parse_chat_messages = lambda content: dummy_block
+
+    def fake_render(block):
+        replacement = (
+            "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
+        )
+        normalized_messages = [{"role": "user", "content": "hi"}]
+        normalized_len = len("[[[user]]]\nhi\n[[[/user]]]\n\n")
+        open_len = len("[[[assistant]]]")
+        close_len = len("[[[/assistant]]]")
+        return replacement, normalized_messages, normalized_len, open_len, close_len
+
+    app._render_chat_block = fake_render
+
+    st = {
+        "text": text,
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_following": False,
+        "dirty": False,
+        "chat_after_placeholder_mark": None,
+        "_stream_follow_primed": False,
+    }
+
+    st["_pending_stream_follow"] = True
+    app._reset_stream_state(st)
+
+    app._prepare_chat_block(st, text.content, 0, len(text.content))
+
+    assert st["stream_following"] is True
+    assert st["_stream_follow_primed"] is True
+
+    app.tabs = {frame: st}
+
+    def _set_dirty(state, dirty):
+        state["dirty"] = dirty
+
+    app._set_dirty = _set_dirty
+
+    text.hidden_marks.add("stream_here")
+
+    st["stream_buffer"] = ["chunk"]
+    app._flush_stream_buffer(frame, "stream_here")
+
+    assert st["stream_following"] is True
+    assert st.get("_stream_follow_primed", False) is False
+
+    text.hidden_marks.discard("stream_here")
+
+    st["stream_buffer"] = ["more"]
+    app._flush_stream_buffer(frame, "stream_here")
+
+    assert st["stream_following"] is True
+
+
+def test_stream_follow_detects_manual_scroll_after_prime_cleared():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText(
+        "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
+    )
+
+    app._should_follow = lambda widget: False
+
+    class DummyBlock:
+        pass
+
+    dummy_block = DummyBlock()
+    dummy_block.messages = [{"role": "user", "content": "hi"}]
+    dummy_block.star_mode = False
+
+    app._parse_chat_messages = lambda content: dummy_block
+
+    def fake_render(block):
+        replacement = (
+            "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
+        )
+        normalized_messages = [{"role": "user", "content": "hi"}]
+        normalized_len = len("[[[user]]]\nhi\n[[[/user]]]\n\n")
+        open_len = len("[[[assistant]]]")
+        close_len = len("[[[/assistant]]]")
+        return replacement, normalized_messages, normalized_len, open_len, close_len
+
+    app._render_chat_block = fake_render
+
+    st = {
+        "text": text,
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_following": False,
+        "dirty": False,
+        "chat_after_placeholder_mark": None,
+        "_stream_follow_primed": False,
+    }
+
+    st["_pending_stream_follow"] = True
+    app._reset_stream_state(st)
+
+    app._prepare_chat_block(st, text.content, 0, len(text.content))
+
+    assert st["stream_following"] is True
+    assert st["_stream_follow_primed"] is True
+
+    st["stream_following"] = True
+    st["_stream_follow_primed"] = False
+    st["stream_buffer"] = ["chunk"]
+
+    app.tabs = {frame: st}
+
+    def _set_dirty(state, dirty):
+        state["dirty"] = dirty
+
+    app._set_dirty = _set_dirty
+
+    text.hidden_marks.add("stream_here")
+
+    app._flush_stream_buffer(frame, "stream_here")
+
+    assert st["stream_following"] is False

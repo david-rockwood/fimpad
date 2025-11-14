@@ -131,6 +131,7 @@ class FIMPad(tk.Tk):
             "stream_flush_job": None,
             "stream_mark": None,
             "stream_following": False,
+            "_stream_follow_primed": False,
             "stops_after": [],
             "stops_after_maxlen": 0,
             "stream_tail": "",
@@ -730,6 +731,7 @@ class FIMPad(tk.Tk):
         st["stream_buffer"].clear()
         st["stream_mark"] = None
         st["stream_following"] = False
+        st["_stream_follow_primed"] = False
         st["stops_after"] = []
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
@@ -768,15 +770,23 @@ class FIMPad(tk.Tk):
         text.insert(cur, piece)
         if should_follow:
             text.see(mark)
-            try:
-                if text.dlineinfo(mark) is None:
+            primed = st.pop("_stream_follow_primed", False)
+            if primed:
+                st["stream_following"] = True
+            else:
+                try:
+                    if text.dlineinfo(mark) is None:
+                        st["stream_following"] = False
+                        st["_stream_follow_primed"] = False
+                    else:
+                        st["stream_following"] = True
+                        st["_stream_follow_primed"] = False
+                except Exception:
                     st["stream_following"] = False
-                else:
-                    st["stream_following"] = True
-            except Exception:
-                st["stream_following"] = False
+                    st["_stream_follow_primed"] = False
         elif self._should_follow(text):
             st["stream_following"] = True
+            st["_stream_follow_primed"] = False
         self._set_dirty(st, True)
 
     def _force_flush_stream_buffer(self, frame, mark):
@@ -1245,6 +1255,7 @@ class FIMPad(tk.Tk):
         if pending_follow is None:
             pending_follow = self._should_follow(text)
         st["stream_following"] = pending_follow
+        st["_stream_follow_primed"] = pending_follow
 
         (
             replacement,
