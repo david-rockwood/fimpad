@@ -301,7 +301,7 @@ When you mark a chat block as being in Star Mode, the block becomes “self-cont
 
 Only the outermost opening and closing tags (the ones that declare the block is in Star Mode) control the block’s structure.
 
-Any chat tags inside that block are treated as plain text. They do not start or end roles, and they don’t interfere with message parsing.
+Any chat tags inside that block, other than star mode chat tags, are treated as plain text. They do not start or end roles, and they don’t interfere with message parsing.
 
 All auto-inserted tags that FIMpad emits for that block are also placed into Star Mode automatically, so the structure stays consistent.
 
@@ -333,8 +333,6 @@ Hello! How can I assist you today?
 You can initialte star mode by opening a block with [[[system*]]]
 
 Upon generation, the rest of the chat tags will be normalized to be star mode chat tags, and tags that are automaically created for that block will be star mode chat tags.
-
-The one thing tag that you cannot put in a star mode chat block is a star mode chat tag. Any star mode chat tag found in any chat block, star mode or not, will be applied as a chat tag.
 
 ## Chat Blocks As Functions
 
