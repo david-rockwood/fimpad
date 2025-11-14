@@ -42,3 +42,28 @@ def test_locate_chat_block_with_alias():
     block = app._locate_chat_block(content, cursor_offset)
     assert block == (content.index("[[[s]]]"), len(content))
 
+
+def test_nested_chat_tags_treated_as_literal():
+    app = make_app()
+    content = (
+        "[[[system]]]"
+        "Explain [[[user]]] and [[[/user]]] placeholders."
+        "[[[/system]]]"
+        "[[[user]]]"
+        "Please include [[[N]]] inside this response."
+        "[[[/user]]]"
+    )
+
+    messages = app._parse_chat_messages(content)
+
+    assert messages == [
+        {
+            "role": "system",
+            "content": "Explain [[[user]]] and [[[/user]]] placeholders.",
+        },
+        {
+            "role": "user",
+            "content": "Please include [[[N]]] inside this response.",
+        },
+    ]
+

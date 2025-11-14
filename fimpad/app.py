@@ -1134,47 +1134,50 @@ class FIMPad(tk.Tk):
             rf"(\[\[\[\s*(/)?\s*({'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\])",
             re.IGNORECASE,
         )
-        tokens = []
-        last_end = 0
-        for m in tag_re.finditer(content):
-            if m.start() > last_end:
-                tokens.append(("TEXT", content[last_end : m.start()]))
-            tokens.append(("TAG", m.group(0), m.group(2) is not None, m.group(3)))
-            last_end = m.end()
-        if last_end < len(content):
-            tokens.append(("TEXT", content[last_end:]))
-
         messages = []
-        cur_role = None
-        buf = []
+        cur_role: str | None = None
+        expected_close: str | None = None
+        buf: list[str] = []
 
-        def flush():
-            nonlocal cur_role, buf
-            if cur_role is not None:
-                messages.append({"role": cur_role.lower(), "content": "".join(buf)})
-                cur_role = None
-                buf = []
-
-        for t in tokens:
-            if t[0] == "TEXT":
+        pos = 0
+        while True:
+            m = tag_re.search(content, pos)
+            if not m:
                 if cur_role is not None:
-                    buf.append(t[1])
-            else:
-                _, _raw, is_close, role = t
-                role_key = role.lower()
-                role = role_aliases.get(role_key, role_aliases.get(f"/{role_key}", role_key))
+                    buf.append(content[pos:])
+                break
+
+            if cur_role is not None and m.start() > pos:
+                buf.append(content[pos:m.start()])
+
+            raw = m.group(1)
+            is_close = bool(m.group(2))
+            tag_name = m.group(3)
+            role_key = tag_name.lower()
+            normalized_role = role_aliases.get(
+                role_key, role_aliases.get(f"/{role_key}", role_key)
+            )
+
+            if cur_role is None:
                 if not is_close:
-                    flush()
-                    cur_role = role
+                    cur_role = normalized_role
+                    expected_close = normalized_role
+                    buf = []
+                # Ignore stray close tags outside of a chat message
+            else:
+                if is_close and normalized_role == expected_close:
+                    messages.append({"role": cur_role.lower(), "content": "".join(buf)})
+                    cur_role = None
+                    expected_close = None
                     buf = []
                 else:
-                    if cur_role == role:
-                        flush()
-                    else:
-                        flush()
-                        cur_role = None
-                        buf = []
-        flush()
+                    buf.append(raw)
+
+            pos = m.end()
+
+        if cur_role is not None:
+            messages.append({"role": cur_role.lower(), "content": "".join(buf)})
+
         return messages
 
     def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
