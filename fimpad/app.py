@@ -1118,8 +1118,21 @@ class FIMPad(tk.Tk):
         )
 
     def _locate_chat_block(self, content: str, cursor_offset: int):
+        """
+        Locate the chat block that contains the given cursor offset.
+
+        Behavior:
+        - A "chat block" is a region from one system tag to the next system tag (or EOF).
+        - System tags include any alias that maps to the 'system' role.
+        - When multiple candidate blocks contain the cursor, we *prefer* a block whose
+          opening system tag is a star-mode tag (name ending in '*'). This prevents
+          earlier literal examples like [[[system]]] from stealing the block when
+          you're actually inside a [[[system*]]] help block.
+        """
         cursor_offset = max(0, min(len(content), cursor_offset))
         role_aliases = self._chat_role_aliases()
+
+        # Collect all base names that map to 'system', e.g. 'system', 's', 'system*', 's*'
         system_base_names = {
             name.lstrip("/") for name, role in role_aliases.items() if role == "system"
         }
@@ -1129,21 +1142,43 @@ class FIMPad(tk.Tk):
             if not name.endswith("*"):
                 system_names.add(f"{name}*")
         system_names = sorted(system_names, key=len, reverse=True)
+
+        # Capture the tag name so we can see if it's starred.
         sys_re = re.compile(
-            rf"\[\[\[\s*(?:{'|'.join(re.escape(name) for name in system_names)})\s*\]\]\]",
+            rf"\[\[\[\s*((?:{'|'.join(re.escape(name) for name in system_names)}))\s*\]\]\]",
             re.IGNORECASE,
         )
         matches = list(sys_re.finditer(content))
         if not matches:
             return None
 
-        for idx in range(len(matches) - 1, -1, -1):
-            start = matches[idx].start()
-            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(content)
-            if self._cursor_within_span(start, end, cursor_offset):
-                return start, end
+        def find_block(prefer_star: bool):
+            """
+            Walk matches from last to first, returning the block whose start/end
+            span contains the cursor. If prefer_star is True, we only consider
+            system tags whose name ends with '*'.
+            """
+            for idx in range(len(matches) - 1, -1, -1):
+                m = matches[idx]
+                name = (m.group(1) or "").strip()
+                is_star = name.endswith("*")
 
-        return None
+                if prefer_star and not is_star:
+                    continue
+
+                start = m.start()
+                end = matches[idx + 1].start() if idx + 1 < len(matches) else len(content)
+                if self._cursor_within_span(start, end, cursor_offset):
+                    return start, end
+            return None
+
+        # First try to find a star-mode system tag block containing the cursor.
+        block = find_block(prefer_star=True)
+        if block is not None:
+            return block
+
+        # Fallback: any system tag block.
+        return find_block(prefer_star=False)
 
     def _is_star_chat_block(self, block_text: str) -> bool:
         """
