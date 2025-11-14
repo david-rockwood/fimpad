@@ -130,6 +130,8 @@ class FIMPad(tk.Tk):
             "stream_buffer": [],
             "stream_flush_job": None,
             "stream_mark": None,
+            "stream_following": False,
+            "_stream_follow_primed": False,
             "stops_after": [],
             "stops_after_maxlen": 0,
             "stream_tail": "",
@@ -728,6 +730,8 @@ class FIMPad(tk.Tk):
         st["stream_flush_job"] = None
         st["stream_buffer"].clear()
         st["stream_mark"] = None
+        st["stream_following"] = False
+        st["_stream_follow_primed"] = False
         st["stops_after"] = []
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
@@ -762,10 +766,27 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        should_follow = self._should_follow(text)
+        should_follow = st.get("stream_following", self._should_follow(text))
         text.insert(cur, piece)
         if should_follow:
             text.see(mark)
+            primed = st.pop("_stream_follow_primed", False)
+            if primed:
+                st["stream_following"] = True
+            else:
+                try:
+                    if text.dlineinfo(mark) is None:
+                        st["stream_following"] = False
+                        st["_stream_follow_primed"] = False
+                    else:
+                        st["stream_following"] = True
+                        st["_stream_follow_primed"] = False
+                except Exception:
+                    st["stream_following"] = False
+                    st["_stream_follow_primed"] = False
+        elif self._should_follow(text):
+            st["stream_following"] = True
+            st["_stream_follow_primed"] = False
         self._set_dirty(st, True)
 
     def _force_flush_stream_buffer(self, frame, mark):
@@ -820,6 +841,7 @@ class FIMPad(tk.Tk):
 
         chat_bounds = self._locate_chat_block(content, cursor_offset, tokens=tokens)
         if chat_bounds:
+            st["_pending_stream_follow"] = self._should_follow(text_widget)
             self._reset_stream_state(st)
             messages = self._prepare_chat_block(st, content, chat_bounds[0], chat_bounds[1])
             if not messages:
@@ -1229,6 +1251,11 @@ class FIMPad(tk.Tk):
 
         text = st["text"]
         st["chat_star_mode"] = block.star_mode
+        pending_follow = st.pop("_pending_stream_follow", None)
+        if pending_follow is None:
+            pending_follow = self._should_follow(text)
+        st["stream_following"] = pending_follow
+        st["_stream_follow_primed"] = pending_follow
 
         (
             replacement,
@@ -1250,6 +1277,8 @@ class FIMPad(tk.Tk):
         stream_index = text.index(f"{start_idx}+{stream_offset}c")
         text.mark_set("stream_here", stream_index)
         text.mark_gravity("stream_here", tk.RIGHT)
+        if st.get("stream_following"):
+            text.see("stream_here")
 
         after_close_index = text.index(f"{start_idx}+{after_close_offset}c")
         text.mark_set("chat_after_placeholder", after_close_index)
@@ -1291,7 +1320,7 @@ class FIMPad(tk.Tk):
         st["stream_mark"] = "stream_here"
         st["chat_stream_active"] = True
 
-        if self._should_follow(text):
+        if st.get("stream_following") or self._should_follow(text):
             text.see("stream_here")
 
         def worker(tab_id):
