@@ -287,7 +287,7 @@ One liners are possible, but probably overly confusing:
 
 You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
-You can use [[[N]]] tags within chat blocks. But you cannot use chat tags within [[[N]]] tags.
+You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
 
 ## Chat Blocks As Functions
 
