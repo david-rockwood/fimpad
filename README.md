@@ -25,7 +25,7 @@ python -m fimpad
 
 Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server working yet, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
 
-This is a long and thorough README, so on some machines and on larger models the first prompt may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
+This is a long README, so on some machines and on larger models the first prompt may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
 
 ## The Server
 
