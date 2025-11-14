@@ -18,7 +18,7 @@ from tkinter.scrolledtext import ScrolledText
 from .client import stream_chat, stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .help import get_help_template
-from .parser import ChatBlock, TagToken, TextToken, parse_chat_block, parse_triple_tokens
+from .parser import ChatBlock, TagToken, parse_chat_block, parse_triple_tokens
 from .utils import offset_to_tkindex
 
 
