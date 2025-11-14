@@ -764,7 +764,6 @@ class FIMPad(tk.Tk):
             cur = text.index(tk.END)
         should_follow = self._should_follow(text)
         text.insert(cur, piece)
-        text.mark_set(mark, f"{cur}+{len(piece)}c")
         if should_follow:
             text.see(mark)
         self._set_dirty(st, True)
