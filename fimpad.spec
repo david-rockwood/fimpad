@@ -5,12 +5,7 @@ a = Analysis(
     ['fimpad/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        (
-            'fimpad/data/help_tab_template.txt',
-            'fimpad/data',
-        ),
-    ],
+    datas=[],
     hiddenimports=['tkinter', 'tkinter.scrolledtext'],
     hookspath=[],
     hooksconfig={},
