@@ -1,3 +1,5 @@
+import queue
+
 from fimpad.app import FIMPad
 from fimpad.config import DEFAULTS
 
@@ -95,3 +97,100 @@ def test_chat_user_followup_block_inserts_plain_tags():
     assert "[[[user]]]" in block_text
     assert block_text.rstrip().endswith("[[[/user]]]")
     assert cursor_offset == len("\n\n[[[user]]]\n")
+
+
+def test_chat_config_star_suffixes_are_normalized():
+    app = make_app()
+    app.cfg["chat_system"] = "System*"
+    app.cfg["chat_user"] = "User*"
+    app.cfg["chat_assistant"] = "Assistant*"
+
+    content = "[[[system]]]Hello[[[/system]]]"
+    block = app._parse_chat_messages(content)
+
+    assert list(block.messages) == [("system", "Hello")]
+
+    rendered, normalized_messages, *_ = app._render_chat_block(block)
+
+    assert normalized_messages == [{"role": "system", "content": "Hello"}]
+    assert "[[[System]]]" in rendered
+    assert rendered.rstrip().endswith("[[[/Assistant]]]")
+    assert "[[[Assistant*]]]" not in rendered
+
+
+def test_chat_user_followup_block_normalizes_config_tags():
+    app = make_app()
+    app.cfg["chat_user"] = "User*"
+
+    block_text, cursor_offset = app._chat_user_followup_block()
+
+    assert "[[[User]]]" in block_text
+    assert block_text.rstrip().endswith("[[[/User]]]")
+    assert cursor_offset == len("\n\n[[[User]]]\n")
+
+
+def test_launch_chat_stream_filters_starred_assistant_placeholder():
+    app = make_app()
+    app.cfg["chat_assistant"] = "Assistant*"
+    app.nb = type("NB", (), {"select": staticmethod(lambda: "dummy-tab")})()
+    app._result_queue = queue.Queue()
+    app._set_busy = lambda busy: None
+    app._should_follow = lambda text: True
+
+    class DummyText:
+        def mark_set(self, name, index):
+            pass
+
+        def mark_gravity(self, name, gravity):
+            pass
+
+        def see(self, mark):
+            pass
+
+    st = {
+        "text": DummyText(),
+        "stream_buffer": [],
+        "stream_following": False,
+        "stream_mark": None,
+        "chat_stream_active": False,
+    }
+
+    messages = [
+        {"role": "system", "content": "Hello"},
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": ""},
+    ]
+
+    calls = []
+
+    import fimpad.app as appmod
+
+    original_stream_chat = appmod.stream_chat
+    original_thread = appmod.threading.Thread
+
+    class ImmediateThread:
+        def __init__(self, target, args=(), kwargs=None, daemon=None):
+            self._target = target
+            self._args = args
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            self._target(*self._args, **self._kwargs)
+
+    def fake_stream_chat(endpoint, payload):
+        calls.append(payload["messages"])
+        return []
+
+    try:
+        appmod.stream_chat = fake_stream_chat
+        appmod.threading.Thread = ImmediateThread
+        app._launch_chat_stream(st, messages)
+    finally:
+        appmod.stream_chat = original_stream_chat
+        appmod.threading.Thread = original_thread
+
+    assert calls
+    assert calls[0] == [
+        {"role": "system", "content": "Hello"},
+        {"role": "user", "content": "Hi"},
+    ]
