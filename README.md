@@ -14,10 +14,6 @@ pip install -e ".[dev]"
 python -m fimpad
 ```
 
-## AI Help In FIMpad
-
-Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. You can read it, or if your LLM server is running, you can scroll to the bottom, type a question in between the user tags at the very bottom of the help file, and press Ctrl+Enter while the carat is between those tags to get a response from a LLM that knows what is in the README.
-
 ## The Server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
