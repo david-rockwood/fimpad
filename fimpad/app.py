@@ -1287,14 +1287,10 @@ class FIMPad(tk.Tk):
 
         # Ensure the end of the normalized block is visible before streaming
         if not st.get("stream_following"):
-            try:
+            with contextlib.suppress(tk.TclError):
                 text.see("chat_after_placeholder")
-            except tk.TclError:
-                pass
-            try:
+            with contextlib.suppress(tk.TclError):
                 text.see(tk.INSERT)
-            except tk.TclError:
-                pass
 
         normalized_messages.append({"role": "assistant", "content": ""})
 
