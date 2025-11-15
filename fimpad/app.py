@@ -130,7 +130,6 @@ class FIMPad(tk.Tk):
             "stream_cancelled": False,
             "chat_after_placeholder_mark": None,
             "chat_stream_active": False,
-            "chat_star_mode": False,
         }
 
         def on_modified(event=None):
@@ -667,7 +666,6 @@ class FIMPad(tk.Tk):
                 text.mark_unset(mark_name)
         st["chat_after_placeholder_mark"] = None
         st["chat_stream_active"] = False
-        st["chat_star_mode"] = False
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -1088,28 +1086,18 @@ class FIMPad(tk.Tk):
             tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
 
         system_tokens: list[TagToken] = []
-        star_stack: list[bool] = []
-        star_depth = 0
         for token in tokens:
             if not isinstance(token, TagToken):
                 continue
             if token.kind != "chat":
                 continue
 
-            if star_depth > 0 and not token.is_star:
+            if token.is_close:
                 continue
 
-            if not token.is_close:
-                if token.role == "system":
-                    system_tokens.append(token)
-                star_stack.append(token.is_star)
-                if token.is_star:
-                    star_depth += 1
-            else:
-                if star_stack:
-                    closing_star = star_stack.pop()
-                    if closing_star:
-                        star_depth = max(0, star_depth - 1)
+            role = (token.role or "").lower()
+            if role == "system":
+                system_tokens.append(token)
 
         if not system_tokens:
             return None
@@ -1127,14 +1115,13 @@ class FIMPad(tk.Tk):
         return parse_chat_block(content, role_aliases=role_aliases)
 
     @staticmethod
-    def _chat_tag_wrappers_for_name(tag_name: str, star_mode: bool) -> tuple[str, str]:
+    def _chat_tag_wrappers_for_name(tag_name: str) -> tuple[str, str]:
         base_name = tag_name.rstrip("*")
-        suffix = "*" if star_mode else ""
-        return (f"[[[{base_name}{suffix}]]]", f"[[[/{base_name}{suffix}]]]")
+        return (f"[[[{base_name}]]]", f"[[[/{base_name}]]]")
 
-    def _chat_user_followup_block(self, star_mode: bool) -> tuple[str, int]:
+    def _chat_user_followup_block(self) -> tuple[str, int]:
         user_tag = self.cfg["chat_user"]
-        open_tag, close_tag = self._chat_tag_wrappers_for_name(user_tag, star_mode)
+        open_tag, close_tag = self._chat_tag_wrappers_for_name(user_tag)
         block = f"\n\n{open_tag}\n\n{close_tag}"
         cursor_offset = len("\n\n" + open_tag + "\n")
         return block, cursor_offset
@@ -1155,15 +1142,15 @@ class FIMPad(tk.Tk):
         normalized_messages: list[dict[str, str]] = []
         pieces: list[str] = []
 
-        for msg in block.messages:
-            role = (msg.get("role") or "").lower()
-            body = (msg.get("content") or "").rstrip("\n")
+        for role_value, content_value in block.messages:
+            role = (role_value or "").lower()
+            body = (content_value or "").rstrip("\n")
             if body.startswith("\n"):
                 body = body[1:]
             normalized_messages.append({"role": role, "content": body})
 
             tag_name = role_lookup.get(role, role)
-            open_tag, close_tag = self._chat_tag_wrappers_for_name(tag_name, block.star_mode)
+            open_tag, close_tag = self._chat_tag_wrappers_for_name(tag_name)
 
             pieces.append(open_tag)
             pieces.append("\n")
@@ -1177,7 +1164,7 @@ class FIMPad(tk.Tk):
 
         assistant_tag = cfg["chat_assistant"]
         placeholder_open, placeholder_close = self._chat_tag_wrappers_for_name(
-            assistant_tag, block.star_mode
+            assistant_tag
         )
         placeholder = f"{placeholder_open}\n\n{placeholder_close}"
         replacement = normalized_text + placeholder
@@ -1197,7 +1184,6 @@ class FIMPad(tk.Tk):
             return []
 
         text = st["text"]
-        st["chat_star_mode"] = block.star_mode
         pending_follow = st.pop("_pending_stream_follow", None)
         if pending_follow is None:
             pending_follow = self._should_follow(text)
@@ -1404,9 +1390,7 @@ class FIMPad(tk.Tk):
                             except tk.TclError:
                                 after_idx = None
                         if after_idx:
-                            user_block, cursor_offset = self._chat_user_followup_block(
-                                st.get("chat_star_mode", False)
-                            )
+                            user_block, cursor_offset = self._chat_user_followup_block()
                             block_length = len(user_block)
                             text.insert(after_idx, user_block)
                             close_target = None

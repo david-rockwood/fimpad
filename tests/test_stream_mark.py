@@ -139,8 +139,7 @@ def test_chat_block_follow_and_flush_keeps_stream_visible():
         pass
 
     dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
+    dummy_block.messages = (("user", "hi"),)
 
     app._parse_chat_messages = lambda content: dummy_block
 
@@ -196,12 +195,11 @@ def test_chat_block_follow_persists_across_turns():
         pass
 
     dummy_block = DummyBlock()
-    dummy_block.messages = [
-        {"role": "user", "content": "hi"},
-        {"role": "assistant", "content": "there"},
-        {"role": "user", "content": "again"},
-    ]
-    dummy_block.star_mode = False
+    dummy_block.messages = (
+        ("user", "hi"),
+        ("assistant", "there"),
+        ("user", "again"),
+    )
 
     app._parse_chat_messages = lambda content: dummy_block
 
@@ -261,8 +259,7 @@ def test_stream_follow_survives_transient_hidden_mark():
         pass
 
     dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
+    dummy_block.messages = (("user", "hi"),)
 
     app._parse_chat_messages = lambda content: dummy_block
 
@@ -332,8 +329,7 @@ def test_stream_follow_detects_manual_scroll_after_prime_cleared():
         pass
 
     dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
+    dummy_block.messages = (("user", "hi"),)
 
     app._parse_chat_messages = lambda content: dummy_block
 

@@ -27,7 +27,6 @@ class TagToken:
     name: str | None = None
     role: str | None = None
     is_close: bool = False
-    is_star: bool = False
 
 
 Token = TextToken | TagToken
@@ -35,10 +34,9 @@ Token = TextToken | TagToken
 
 @dataclass(frozen=True)
 class ChatBlock:
-    """Parsed chat block containing normalized message records."""
+    """Parsed chat block containing normalized ``(role, content)`` pairs."""
 
-    messages: tuple[dict[str, str], ...]
-    star_mode: bool = False
+    messages: tuple[tuple[str, str], ...]
 
 
 def parse_triple_tokens(
@@ -89,11 +87,6 @@ def _classify_tag(
         is_close = True
         body = body[1:].lstrip()
 
-    is_star = False
-    if body.endswith("*"):
-        is_star = True
-        body = body[:-1].rstrip()
-
     name = body.strip()
     name_key = name.casefold()
 
@@ -106,7 +99,6 @@ def _classify_tag(
             kind=name_key,
             name=name_key,
             is_close=is_close,
-            is_star=is_star,
         )
 
     role = _resolve_role(name_key, role_aliases)
@@ -120,7 +112,6 @@ def _classify_tag(
             name=name_key,
             role=role,
             is_close=is_close,
-            is_star=is_star,
         )
 
     return TagToken(
@@ -131,7 +122,6 @@ def _classify_tag(
         kind="unknown",
         name=name_key if name_key else None,
         is_close=is_close,
-        is_star=is_star,
     )
 
 
@@ -149,25 +139,21 @@ def parse_chat_block(
 ) -> ChatBlock:
     """Parse ``content`` into a :class:`ChatBlock`.
 
-    The resulting ``ChatBlock`` contains role/content dictionaries that mirror
-    the legacy ``_parse_chat_messages`` return structure, along with a
-    ``star_mode`` flag indicating whether the outer block used star-tagged chat
-    wrappers.
+    The resulting ``ChatBlock`` contains normalized ``(role, content)`` tuples
+    mirroring the order that chat tags appear within the content.
     """
 
     tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
 
-    messages: list[dict[str, str]] = []
+    messages: list[tuple[str, str]] = []
     cur_role: str | None = None
     buf: list[str] = []
-    star_stack: list[bool] = []
-    star_depth = 0
-    star_mode = False
+    role_stack: list[str] = []
 
     def flush() -> None:
         nonlocal cur_role, buf
         if cur_role is not None:
-            messages.append({"role": cur_role, "content": "".join(buf)})
+            messages.append((cur_role, "".join(buf)))
         cur_role = None
         buf = []
 
@@ -185,11 +171,6 @@ def parse_chat_block(
                 buf.append(token.raw)
             continue
 
-        if star_depth > 0 and not token.is_star:
-            if cur_role is not None:
-                buf.append(token.raw)
-            continue
-
         role = token.role
         if not role:
             if cur_role is not None:
@@ -200,28 +181,22 @@ def parse_chat_block(
 
         if not token.is_close:
             flush()
-            if not star_stack:
-                star_mode = token.is_star
-            star_stack.append(token.is_star)
-            if token.is_star:
-                star_depth += 1
+            role_stack.append(role)
             cur_role = role
             buf = []
         else:
-            if star_stack:
-                closing_star = star_stack.pop()
-                if closing_star:
-                    star_depth = max(0, star_depth - 1)
-            if cur_role == role:
-                flush()
-            else:
-                flush()
-                cur_role = None
-                buf = []
+            flush()
+            if role_stack:
+                if role_stack[-1] == role:
+                    role_stack.pop()
+                else:
+                    role_stack.pop()
+            cur_role = role_stack[-1] if role_stack else None
+            buf = []
 
     flush()
 
-    return ChatBlock(messages=tuple(messages), star_mode=star_mode)
+    return ChatBlock(messages=tuple(messages))
 
 
 __all__ = [
