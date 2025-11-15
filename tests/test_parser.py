@@ -15,8 +15,8 @@ def test_parse_tokens_marker_and_regions():
     assert texts == ["foo", "bar"]
 
 
-def test_parse_tokens_resolves_star_aliases():
-    content = "[[[system*]]]hi[[[/system*]]]"
+def test_parse_tokens_resolves_role_aliases():
+    content = "[[[system]]]hi[[[/system]]]"
     role_aliases = {
         "system": "system",
         "/system": "system",
@@ -32,11 +32,9 @@ def test_parse_tokens_resolves_star_aliases():
 
     assert tokens[0].kind == "chat"
     assert tokens[0].role == "system"
-    assert tokens[0].is_star is True
     assert tokens[0].is_close is False
 
     assert tokens[-1].is_close is True
-    assert tokens[-1].is_star is True
 
 
 def test_parse_tokens_handles_adjacent_tags():
@@ -48,7 +46,7 @@ def test_parse_tokens_handles_adjacent_tags():
     assert tokens[1].end == tokens[2].start
 
 
-def test_parse_chat_block_star_mode_nested_tags():
+def test_parse_chat_block_handles_nested_tags():
     role_aliases = {
         "system": "system",
         "/system": "system",
@@ -63,16 +61,35 @@ def test_parse_chat_block_star_mode_nested_tags():
     }
 
     content = (
-        "[[[system*]]]System text [[[user]]]should stay[[[/user]]]!\n"
-        "[[[u*]]]User sees [[[assistant]]] code[[[/assistant]]] here[[[/u*]]]"
-        "[[[/system*]]]"
+        "[[[system]]]System text [[[user]]]should stay[[[/user]]]!\n"
+        "[[[u]]]User sees [[[assistant]]] code[[[/assistant]]] here[[[/u]]]"
+        "[[[/system]]]"
     )
 
     block = parse_chat_block(content, role_aliases=role_aliases)
 
     assert isinstance(block, ChatBlock)
-    assert block.star_mode is True
     assert list(block.messages) == [
-        {"role": "system", "content": "System text [[[user]]]should stay[[[/user]]]!\n"},
-        {"role": "user", "content": "User sees [[[assistant]]] code[[[/assistant]]] here"},
+        ("system", "System text "),
+        ("user", "should stay"),
+        ("system", "!\n"),
+        ("user", "User sees "),
+        ("assistant", " code"),
+        ("user", " here"),
+        ("system", ""),
     ]
+
+
+def test_parse_chat_block_accepts_star_suffix_tags():
+    role_aliases = {
+        "system": "system",
+        "/system": "system",
+        "user": "user",
+        "/user": "user",
+    }
+
+    content = "[[[system*]]]One[[[/system*]]][[[user*]]]Two[[[/user*]]]"
+
+    block = parse_chat_block(content, role_aliases=role_aliases)
+
+    assert list(block.messages) == [("system", "One"), ("user", "Two")]
