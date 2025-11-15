@@ -8,24 +8,24 @@ from typing import Final
 from . import data as _help_data
 
 _TEMPLATE_NAME: Final[str] = "help_tab_template.txt"
-_FALLBACK_TEMPLATE: Final[str] = """[[[system]]]
-You are the help assistant for FIMpad. FIMpad is a text editor that can insert LLM responses into a text document via FIM (fill-in-the-middle) and Chat tags.
+_FALLBACK_TEMPLATE: Final[str] = """This is the FIMpad README file. It is also one big chat block, so not only can you read, you can also prompt an LLM that receives this README in its system prompt. To ask a question about the README, scroll to the very bottom, type your message on the blank line between the user tags, and then press Ctrl+Enter while the carat is between the user tags.
 
-Since FIMpad is AI-equipped, it has an AI help function, and you are it. The user can press the Alt+h shortcut for help, or select help through the menu at AI->Help, and a new tab is created and filled with the text necessary to make this help chat possible. The user's cursor for this tab is placed on an empty line in between an opening user chat tag and a closing user chat tag, all of which are beneath a lengthy system prompt. As a result, all the user has to do is type their question and press Ctrl+Enter, and their question will be sent to you as a user prompt.
 
-FIMpad has a longh README.md file, and the contents of this README.md file are below. This should give you quite a bit of info that will be useful in assisting the user.
 
-Be affable. Try to figure out the user's comfort level with computing by analyzing the chat history as it builds up, and tailor your responses accordingly.
+[[[system*]]]
+You are the help assistant for FIMpad. FIMpad is a text editor that can insert LLM responses into a text document via FIM (fill-in-the-middle) tags and Chat tags. FIM insertion in a text editor is a unique feature.
 
-FIMpad was written by David K Rockwood of southern Utah in 2025, using OpenAI Codex and ChatGPT5.
+The README file for FIMpad is given below. Use this information to help the user. You are not expected to know everything about FIMpad, just give the best info you can based on the README.
 
-The README.md from that repository at the time that this version of FIMpad was released follows:
+
+
+(BEGIN README)
 
 # FIMpad
 
 A lightweight text editor that can do LLM FIM (fill-in-the-middle) and LLM chat within a text file.
 
-This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer, and the lack (as far as I know so far) of very many instruct models that are set up for FIM.
+This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer. Other models may be supported in the future.
 
 ## Quick start
 
@@ -39,9 +39,7 @@ python -m fimpad
 
 ## AI Help In FIMpad
 
-Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server working yet, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
-
-This is a long README, so on some machines and on larger models the first prompt to the AI help assistant may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
+Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. You can read it, or if your LLM server is running, you can scroll to the bottom, type a question in between the user tags at the very bottom of the help file, and press Ctrl+Enter while the carat is between those tags to get a response from a LLM that knows what is in the README.
 
 ## The Server
 
@@ -69,7 +67,7 @@ and the Q6 version of Granite Tiny available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models choose a small number of expert subnetworks per token, so they don’t activate all parameters on every step. That’s why Granite 4.0 H Small (~32B total, ~9B active) runs faster than it would if it were not a MoE. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
+Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models choose a small number of expert subnetworks per token, so they don’t activate all parameters on every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
 ## Overview
 
@@ -103,7 +101,7 @@ FIM generations are stateless in that the model only sees the prefix and suffix 
 
 Sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
-## Prefix and Suffix Tags (only work for FIM generation)
+## Prefix and Suffix Tags (only used with FIM generation)
 
 In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]]] tag is placed in the document, that marks the end of the suffix.
 
@@ -303,14 +301,21 @@ Third, there are one letter aliases for chat tags, so you can do this too and ge
 [[[u]]]What is the population of Oklahoma?[[[/u]]]
 ```
 
-One liners are possible, but probably overly confusing:
+One liners are possible:
 ```
 [[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
 ```
 
-You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history. However, any chat tags that appear within other chat tags will be ignored by the FIMpad generation parser. So you won't be able to execute chat tags that are within other chat tags.
+In an empty text file where there is not text after the end of your user prompt, you can omit the closing user chat tag. The end of the file closes the user chat tag:
+```
+[[[s]]]Assist.[[[u]]]Sup?
+```
+
+You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
 You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
+
+You should not put chat tags within chat tags. There is a way to do it with special chat tags if you really need to put chat tags literals inside a chat tag, but it's a little tricky. Probably more complicated than the average user of FIMpad needs to get into. See the way that the help file is structured if you need an example of how to do it.
 
 ## Chat Blocks As Functions
 
@@ -346,70 +351,13 @@ A solitary soul, adrift in the night.
 
 [[[/user]]]
 ```
-[[[/system]]]
 
+(END README)
+[[[system*]]]
 
+[[[user*]]]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-[[[user]]]
-
-[[[/user]]]
-
+[[[/user*]]]
 """
 _HELP_TEMPLATE: str | None = None
 
