@@ -8,7 +8,7 @@ from typing import Final
 from . import data as _help_data
 
 _TEMPLATE_NAME: Final[str] = "help_tab_template.txt"
-_FALLBACK_TEMPLATE: Final[str] = """This is the FIMpad README file. It is also one big chat block, so not only can you read, you can also prompt an LLM that receives this README in its system prompt. To ask a question about the README, scroll to the very bottom, type your message on the blank line between the user tags, and then press Ctrl+Enter while the carat is between the user tags.
+_FALLBACK_TEMPLATE: Final[str] = """This is the FIMpad README file. It is also one big chat block, so not only can you read, you can also prompt an LLM that receives this README in its system prompt. To ask a question about the README, scroll to the very bottom, type your message on the blank line between the user tags, and then press Ctrl+Enter while the carat is between the user tags. It's about 5000 tokens, so the first prompt might take a while if your LLM server is on a slower machine. And the readme is too complicated to be understood by a 7B model. 30B would be better.
 
 
 
