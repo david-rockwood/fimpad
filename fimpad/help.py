@@ -353,7 +353,7 @@ A solitary soul, adrift in the night.
 ```
 
 (END README)
-[[[system*]]]
+[[[/system*]]]
 
 [[[user*]]]
 
