@@ -292,23 +292,8 @@ class FIMPad(tk.Tk):
             return
         self._focus_help_blank_line(st["text"], template)
 
-    def _focus_help_blank_line(self, text_widget: ScrolledText, template: str) -> None:
-        user_open = "[[[user]]]"
-        user_close = "[[[/user]]]"
-        start = template.find(user_open)
-        end = template.find(user_close, start + len(user_open) if start != -1 else 0)
-        if start == -1 or end == -1:
-            insert_offset = 0
-        else:
-            region = template[start + len(user_open) : end]
-            rel = region.find("\n\n")
-            if rel == -1:
-                insert_offset = start + len(user_open)
-            else:
-                insert_offset = start + len(user_open) + rel + 1
-
-        index = offset_to_tkindex(template, insert_offset)
-        text_widget.mark_set(tk.INSERT, index)
+    def _focus_help_blank_line(self, text_widget: ScrolledText, _template: str) -> None:
+        text_widget.mark_set(tk.INSERT, "1.0")
         text_widget.tag_remove("sel", "1.0", tk.END)
         text_widget.see(tk.INSERT)
         text_widget.focus_set()
