@@ -1254,7 +1254,14 @@ class FIMPad(tk.Tk):
         cfg = self.cfg
         text = st["text"]
 
-        assistant_role = cfg["chat_assistant"].lower()
+        raw_assistant = cfg.get("chat_assistant")
+        normalized_assistant = self._normalize_chat_tag_name(raw_assistant)
+        assistant_role_source = (
+            normalized_assistant
+            or (raw_assistant.strip() if isinstance(raw_assistant, str) else "")
+            or "assistant"
+        )
+        assistant_role = assistant_role_source.lower()
         payload_messages = [
             {"role": msg["role"], "content": msg["content"]}
             for msg in messages
