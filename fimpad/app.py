@@ -1460,15 +1460,26 @@ class FIMPad(tk.Tk):
                             user_block, cursor_offset = self._chat_user_followup_block(
                                 st.get("chat_star_mode", False)
                             )
+                            block_length = len(user_block)
                             text.insert(after_idx, user_block)
+                            close_target = None
                             try:
-                                text.mark_set(tk.INSERT, after_idx)
-                                text.see(tk.INSERT)
+                                close_target = text.index(f"{after_idx}+{block_length}c")
                             except tk.TclError:
-                                pass
-                            insert_target = text.index(f"{after_idx}+{cursor_offset}c")
-                            text.mark_set(tk.INSERT, insert_target)
-                            text.see(tk.INSERT)
+                                close_target = None
+                            if close_target:
+                                with contextlib.suppress(tk.TclError):
+                                    text.mark_set(tk.INSERT, close_target)
+                                    text.see(tk.INSERT)
+                            insert_target = None
+                            try:
+                                insert_target = text.index(f"{after_idx}+{cursor_offset}c")
+                            except tk.TclError:
+                                insert_target = None
+                            if insert_target:
+                                with contextlib.suppress(tk.TclError):
+                                    text.mark_set(tk.INSERT, insert_target)
+                                    text.see(tk.INSERT)
                         self._clear_chat_state(st)
                     self._set_busy(False)
 
