@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import queue
+import tkinter as tk
 
 from fimpad import app as app_module
 from fimpad.app import FIMPad
+from fimpad.config import DEFAULTS
+from fimpad.parser import TagToken, parse_triple_tokens
 
 
 class FakeText:
@@ -97,6 +100,78 @@ class FakeText:
             return (self.marks[mark],)
         return None
 
+
+def test_launch_fim_stream_ignores_tab_title_errors():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText("[[[20]]]")
+
+    st = {
+        "text": text,
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_following": False,
+        "_stream_follow_primed": False,
+        "dirty": False,
+        "stops_after": [],
+        "stops_after_maxlen": 0,
+        "stream_tail": "",
+        "stream_cancelled": False,
+        "chat_after_placeholder_mark": None,
+        "chat_stream_active": False,
+        "path": None,
+    }
+
+    app.cfg = DEFAULTS.copy()
+    app._result_queue = queue.SimpleQueue()
+    app.tabs = {frame: st}
+
+    class BadNotebook:
+        def select(self):
+            return "tab1"
+
+        def tab(self, tab_id, **kwargs):  # pragma: no cover - exercised via context suppress
+            raise tk.TclError("tab update failed")
+
+    app.nb = BadNotebook()
+    app.nametowidget = lambda tab_id: frame
+    app.after = lambda *args, **kwargs: None
+    app.after_cancel = lambda *args, **kwargs: None
+    app._should_follow = lambda widget: False
+    app._set_busy = lambda busy: None
+    app._set_dirty = FIMPad._set_dirty.__get__(app)
+    app._reset_stream_state = FIMPad._reset_stream_state.__get__(app)
+
+    tokens = list(parse_triple_tokens(text.content, role_aliases={}))
+    marker = next(t for t in tokens if isinstance(t, TagToken) and t.kind == "marker")
+
+    calls: list[tuple[str, dict]] = []
+
+    def fake_stream(endpoint, payload):
+        calls.append((endpoint, payload))
+        yield "chunk"
+
+    class ImmediateThread:
+        def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+            self._target = target
+            self._args = args
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            if self._target:
+                self._target(*self._args, **self._kwargs)
+
+    original_stream = app_module.stream_completion
+    original_thread = app_module.threading.Thread
+    try:
+        app_module.stream_completion = fake_stream
+        app_module.threading.Thread = ImmediateThread
+        app._launch_fim_or_completion_stream(st, text.content, marker, tokens)
+    finally:
+        app_module.stream_completion = original_stream
+        app_module.threading.Thread = original_thread
+
+    assert calls and calls[0][0] == DEFAULTS["endpoint"]
 
 def test_flush_stream_buffer_respects_right_gravity():
     app = object.__new__(FIMPad)

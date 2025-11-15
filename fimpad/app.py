@@ -165,14 +165,24 @@ class FIMPad(tk.Tk):
         tab = self.nb.select()
         if not tab:
             return
+        try:
+            frame = self.nametowidget(tab)
+        except (tk.TclError, KeyError):
+            frame = None
+        if frame is not None and frame not in self.tabs:
+            return
         title = os.path.basename(st["path"]) if st["path"] else "Untitled"
         if st.get("dirty"):
             title = f"• {title}"
-        self.nb.tab(tab, text=title)
+        with contextlib.suppress(tk.TclError):
+            self.nb.tab(tab, text=title)
 
     def _set_dirty(self, st, dirty: bool):
         st["dirty"] = dirty
-        self._update_tab_title(st)
+        try:
+            self._update_tab_title(st)
+        except (tk.TclError, KeyError):
+            pass
 
     def _close_current_tab(self):
         st = self._current_tab_state()
