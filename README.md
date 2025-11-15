@@ -2,7 +2,7 @@
 
 A lightweight text editor that can do LLM FIM (fill-in-the-middle) and LLM chat within a text file.
 
-This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer, and the lack (as far as I know so far) of very many instruct models that are set up for FIM.
+This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer. Other models may be supported in the future.
 
 ## Quick start
 
@@ -16,9 +16,7 @@ python -m fimpad
 
 ## AI Help In FIMpad
 
-Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. Your caret will be placed in the right place for you to just begin typing, then press Ctrl+Enter, and then get an informed response from the LLM in chat, as long as you have a good connection to a LLM server. If you don't have a connection to a LLM server working yet, you can scroll up and read the README with your brain, like a surprisingly literate caveman.
-
-This is a long README, so on some machines and on larger models the first prompt to the AI help assistant may take a while to get a response. But the LLM will then know a lot about how FIMpad works.
+Because FIMpad is essentially an AI sandbox, it has an AI help assistant that lives in a text file. Press Alt+h and a new tab will be opened in FIMpad. That tab will be filled with a long system prompt that contains this README. You can read it, or if your LLM server is running, you can scroll to the bottom, type a question in between the user tags at the very bottom of the help file, and press Ctrl+Enter while the carat is between those tags to get a response from a LLM that knows what is in the README.
 
 ## The Server
 
@@ -46,7 +44,7 @@ and the Q6 version of Granite Tiny available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models choose a small number of expert subnetworks per token, so they don’t activate all parameters on every step. That’s why Granite 4.0 H Small (~32B total, ~9B active) runs faster than it would if it were not a MoE. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
+Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models choose a small number of expert subnetworks per token, so they don’t activate all parameters on every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
 ## Overview
 
@@ -280,61 +278,21 @@ Third, there are one letter aliases for chat tags, so you can do this too and ge
 [[[u]]]What is the population of Oklahoma?[[[/u]]]
 ```
 
-One liners are possible, but probably overly confusing:
+One liners are possible:
 ```
 [[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
+```
+
+In an empty text file where there is not text after the end of your user prompt, you can omit the closing user chat tag. The end of the file closes the user chat tag:
+```
+[[[s]]]Assist.[[[u]]]Sup?
 ```
 
 You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
 
 You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
 
-And, you cannot use chat tags within chat tags. No nested chat tags, unless...
-
-## Advanced: Star Mode
-
-Star Mode is an advanced option you can use for a chat block when you want the internal contents of that block to be treated purely as literal text, rather than as active chat tags. In normal chat blocks, opening and closing tags determine the structure of messages, and nested tags inside the block will also be recognized. This is usually what you want.
-
-But sometimes you need to show chat tags to the model, or include code. Chat tags inside of chat tags. Normally if you put [[[/system]]] inside of a system tag, it closes the system tag right there. But in Star Mode, those inner chat tags are ignored by the FIMpad generation parser unless they have a trailing `*`.
-
-When you mark a chat block as being in Star Mode, the block becomes “self-contained”:
-
-Only the outermost opening and closing tags (the ones that declare the block is in Star Mode) control the block’s structure, and they themselves must end with `*`.
-
-Inside a Star Mode block, **only** chat tags whose names end with `*` (for example `[[[user*]]]`) retain any structural meaning. All other chat-looking sequences are treated as plain text; they do not start or end roles, and they don’t interfere with message parsing.
-
-All auto-inserted tags that FIMpad emits for that block are also placed into Star Mode automatically (they include the `*` suffix), so the structure stays consistent.
-
-Nested non-star tags—no matter how many—are treated as literal characters, not chat markers. This is what allows you to show raw chat syntax safely.
-
-In other words: Star Mode lets you safely include examples, documentation, meta-instructions, or anything containing tag-like sequences, without breaking the chat parser.
-
-Use Star Mode only when needed—most users will never touch it—but when you do need to embed tag-shaped text that must remain inert, it’s the correct tool.
-
-For star mode chat blocks, the system, user, and assistant blocks all look like this:
-```
-[[[system*]]]
-Assist.
-[[[/system*]]]
-
-[[[user*]]]
-Hi!
-[[[/user*]]]
-
-[[[assistant*]]]
-Hello! How can I assist you today?
-[[[/assistant*]]]
-
-[[[user*]]]
-
-[[[/user*]]]
-```
-
-Inside that block you can safely include ordinary tags such as `[[[assistant]]]` or `[[[/user]]]` and they will be treated as text on the page, not as structure, because they lack the `*` suffix.
-
-You can initiate Star Mode by opening a block with a star-suffixed tag such as `[[[system*]]]`. From that point on, stay consistent—if you accidentally add a plain `[[[user]]]` inside the block, it will be treated as literal text, not as a new message.
-
-Upon generation, the rest of the chat tags will be normalized to be star mode chat tags, and tags that are automatically created for that block will include the star suffix.
+You cannot use put chat tags within chat tags. There is a way to do it with special chat tags if you really need to put chat tags literals inside the chat tag, but it's a little tricky. See the way that the help file is structured for an example of how to do it.
 
 ## Chat Blocks As Functions
 
