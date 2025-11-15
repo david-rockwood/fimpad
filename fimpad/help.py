@@ -10,8 +10,6 @@ from . import data as _help_data
 _TEMPLATE_NAME: Final[str] = "help_tab_template.txt"
 _FALLBACK_TEMPLATE: Final[str] = """To ask a question to the FIMpad help assistant, scroll to the bottom, type your message on the blank line between the user tags, and then press Ctrl+Enter while the carat is between the user tags.
 
-
-
 [[[system*]]]
 -------------------------------------------------------------------------------
 SECTION 0 — IDENTITY AND MISSION
