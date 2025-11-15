@@ -292,7 +292,7 @@ You can have multiple chat blocks in a single text document. A new [[[system]]] 
 
 You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
 
-You cannot use put chat tags within chat tags. There is a way to do it with special chat tags if you really need to put chat tags literals inside the chat tag, but it's a little tricky. See the way that the help file is structured for an example of how to do it.
+You should not put chat tags within chat tags. There is a way to do it with special chat tags if you really need to put chat tags literals inside a chat tag, but it's a little tricky. Probably more complicated than the average user of FIMpad needs to get into. See the way that the help file is structured if you need an example of how to do it.
 
 ## Chat Blocks As Functions
 
