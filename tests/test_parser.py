@@ -78,3 +78,18 @@ def test_parse_chat_block_handles_nested_tags():
         ("user", " here"),
         ("system", ""),
     ]
+
+
+def test_parse_chat_block_accepts_star_suffix_tags():
+    role_aliases = {
+        "system": "system",
+        "/system": "system",
+        "user": "user",
+        "/user": "user",
+    }
+
+    content = "[[[system*]]]One[[[/system*]]][[[user*]]]Two[[[/user*]]]"
+
+    block = parse_chat_block(content, role_aliases=role_aliases)
+
+    assert list(block.messages) == [("system", "One"), ("user", "Two")]

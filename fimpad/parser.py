@@ -129,9 +129,24 @@ def _resolve_role(name: str, role_aliases: dict[str, str]) -> str | None:
     role = role_aliases.get(name)
     if role:
         return role
+
+    # Backwards compatibility: legacy chat blocks may include a trailing "*"
+    # suffix from the previous star-tag mode. Accept those tags as aliases for
+    # their starless counterparts so older documents continue to parse.
+    if name.endswith("*"):
+        trimmed = name.rstrip("*")
+        role = role_aliases.get(trimmed)
+        if role:
+            return role
+
     # Allow lookup against "/alias" entries if callers provide only
     # closing-tag aliases.
-    return role_aliases.get(f"/{name}")
+    close = role_aliases.get(f"/{name}")
+    if close:
+        return close
+    if name.endswith("*"):
+        return role_aliases.get(f"/{name.rstrip('*')}")
+    return None
 
 
 def parse_chat_block(
