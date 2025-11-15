@@ -120,6 +120,7 @@ def test_launch_fim_stream_ignores_tab_title_errors():
         "chat_after_placeholder_mark": None,
         "chat_stream_active": False,
         "path": None,
+        "tab_id": "tab1",
     }
 
     app.cfg = DEFAULTS.copy()
@@ -193,6 +194,7 @@ def test_launch_fim_stream_ignores_nametowidget_runtime_error():
         "chat_after_placeholder_mark": None,
         "chat_stream_active": False,
         "path": None,
+        "tab_id": "tab1",
     }
 
     app.cfg = DEFAULTS.copy()
@@ -216,6 +218,86 @@ def test_launch_fim_stream_ignores_nametowidget_runtime_error():
 
     app.nb = BadNotebook()
     app.nametowidget = flaky_nametowidget
+    app.after = lambda *args, **kwargs: None
+    app.after_cancel = lambda *args, **kwargs: None
+    app._should_follow = lambda widget: False
+    app._set_busy = lambda busy: None
+    app._set_dirty = FIMPad._set_dirty.__get__(app)
+    app._reset_stream_state = FIMPad._reset_stream_state.__get__(app)
+
+    tokens = list(parse_triple_tokens(text.content, role_aliases={}))
+    marker = next(t for t in tokens if isinstance(t, TagToken) and t.kind == "marker")
+
+    calls: list[tuple[str, dict]] = []
+
+    def fake_stream(endpoint, payload):
+        calls.append((endpoint, payload))
+        yield "chunk"
+
+    class ImmediateThread:
+        def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+            self._target = target
+            self._args = args
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            if self._target:
+                self._target(*self._args, **self._kwargs)
+
+    original_stream = app_module.stream_completion
+    original_thread = app_module.threading.Thread
+    try:
+        app_module.stream_completion = fake_stream
+        app_module.threading.Thread = ImmediateThread
+        app._launch_fim_or_completion_stream(st, text.content, marker, tokens)
+    finally:
+        app_module.stream_completion = original_stream
+        app_module.threading.Thread = original_thread
+
+    assert calls and calls[0][0] == DEFAULTS["endpoint"]
+
+
+def test_launch_fim_stream_handles_select_runtime_error():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText("[[[20]]]")
+
+    st = {
+        "text": text,
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_following": False,
+        "_stream_follow_primed": False,
+        "dirty": False,
+        "stops_after": [],
+        "stops_after_maxlen": 0,
+        "stream_tail": "",
+        "stream_cancelled": False,
+        "chat_after_placeholder_mark": None,
+        "chat_stream_active": False,
+        "path": None,
+        "tab_id": "tab1",
+    }
+
+    app.cfg = DEFAULTS.copy()
+    app._result_queue = queue.SimpleQueue()
+    app.tabs = {frame: st}
+
+    class FlakyNotebook:
+        def __init__(self):
+            self.calls = 0
+
+        def select(self):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("main thread is not in main loop")
+            return "tab1"
+
+        def tab(self, tab_id, **kwargs):  # pragma: no cover - exercised via suppress
+            return None
+
+    app.nb = FlakyNotebook()
+    app.nametowidget = lambda tab_id: frame
     app.after = lambda *args, **kwargs: None
     app.after_cancel = lambda *args, **kwargs: None
     app._should_follow = lambda widget: False
@@ -547,6 +629,7 @@ def test_launch_chat_stream_respects_stored_follow_flag():
         "text": text,
         "stream_following": True,
         "_stream_follow_primed": True,
+        "tab_id": "tab1",
     }
 
     app.cfg = {
@@ -591,3 +674,83 @@ def test_launch_chat_stream_respects_stored_follow_flag():
         app_module.threading.Thread = original_thread
 
     assert text.last_seen == "stream_here"
+
+
+def test_launch_chat_stream_handles_select_runtime_error():
+    app = object.__new__(FIMPad)
+    frame = object()
+    text = FakeText("[[[assistant]]]\n\n[[[/assistant]]]")
+
+    st = {
+        "text": text,
+        "stream_following": False,
+        "_stream_follow_primed": False,
+        "tab_id": "tab1",
+        "stream_buffer": [],
+        "stream_flush_job": None,
+        "stream_mark": None,
+        "chat_stream_active": False,
+    }
+
+    app.cfg = {
+        "chat_assistant": "assistant",
+        "chat_system": "system",
+        "chat_user": "user",
+        "model": "dummy",
+        "temperature": 0.5,
+        "top_p": 1.0,
+        "endpoint": "http://example",
+    }
+    app.tabs = {frame: st}
+    app._set_busy = lambda busy: None
+    app._result_queue = queue.SimpleQueue()
+    app._should_follow = lambda widget: False
+    app._set_dirty = FIMPad._set_dirty.__get__(app)
+
+    class FlakyNotebook:
+        def __init__(self):
+            self.calls = 0
+
+        def select(self):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("main thread is not in main loop")
+            return "tab1"
+
+    app.nb = FlakyNotebook()
+    app.nametowidget = lambda tab_id: frame
+
+    original_stream_chat = app_module.stream_chat
+    original_thread = app_module.threading.Thread
+
+    class ImmediateThread:
+        def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+            self._target = target
+            self._args = args
+            self._kwargs = kwargs or {}
+
+        def start(self):
+            if self._target is not None:
+                self._target(*self._args, **self._kwargs)
+
+    calls: list[tuple[str, dict]] = []
+
+    def fake_stream_chat(endpoint, payload):
+        calls.append((endpoint, payload))
+        yield "chunk"
+
+    try:
+        app_module.stream_chat = fake_stream_chat
+        app_module.threading.Thread = ImmediateThread
+        app._launch_chat_stream(
+            st,
+            [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": ""},
+            ],
+        )
+    finally:
+        app_module.stream_chat = original_stream_chat
+        app_module.threading.Thread = original_thread
+
+    assert calls and calls[0][0] == "http://example"

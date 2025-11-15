@@ -112,6 +112,8 @@ class FIMPad(tk.Tk):
         text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
         text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
 
+        tab_id = str(frame)
+
         st = {
             "path": None,
             "text": text,
@@ -130,6 +132,7 @@ class FIMPad(tk.Tk):
             "stream_cancelled": False,
             "chat_after_placeholder_mark": None,
             "chat_stream_active": False,
+            "tab_id": tab_id,
         }
 
         def on_modified(event=None):
@@ -155,21 +158,23 @@ class FIMPad(tk.Tk):
         self._schedule_spellcheck_for_frame(frame, delay_ms=250)
 
     def _current_tab_state(self):
-        tab = self.nb.select()
+        tab = self._safe_notebook_select()
         if not tab:
             return None
-        frame = self.nametowidget(tab)
-        return self.tabs.get(frame)
-
-    def _update_tab_title(self, st):
-        tab = self.nb.select()
-        if not tab:
-            return
         try:
             frame = self.nametowidget(tab)
         except Exception:
             frame = None
-        if frame is not None and frame not in self.tabs:
+        if frame is not None:
+            return self.tabs.get(frame)
+        for candidate_frame, candidate_state in self.tabs.items():
+            if candidate_state.get("tab_id") == tab:
+                return candidate_state
+        return None
+
+    def _update_tab_title(self, st):
+        tab = st.get("tab_id") or self._safe_notebook_select()
+        if not tab:
             return
         title = os.path.basename(st["path"]) if st["path"] else "Untitled"
         if st.get("dirty"):
@@ -181,6 +186,15 @@ class FIMPad(tk.Tk):
         st["dirty"] = dirty
         with contextlib.suppress(Exception):
             self._update_tab_title(st)
+
+    def _safe_notebook_select(self):
+        if not hasattr(self, "nb"):
+            return None
+        with contextlib.suppress(Exception):
+            tab = self.nb.select()
+            if tab:
+                return tab
+        return None
 
     def _close_current_tab(self):
         st = self._current_tab_state()
@@ -1042,7 +1056,8 @@ class FIMPad(tk.Tk):
                 self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
                 self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
 
-        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
+        tab_id = st.get("tab_id") or self._safe_notebook_select()
+        threading.Thread(target=worker, args=(tab_id,), daemon=True).start()
 
     # ----- Chat streaming -----
 
@@ -1317,7 +1332,8 @@ class FIMPad(tk.Tk):
                 self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
                 self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
 
-        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
+        tab_id = st.get("tab_id") or self._safe_notebook_select()
+        threading.Thread(target=worker, args=(tab_id,), daemon=True).start()
 
     # ---------- Queue handling ----------
 
