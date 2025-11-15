@@ -1038,12 +1038,18 @@ class FIMPad(tk.Tk):
 
     # ----- Chat streaming -----
 
+    @staticmethod
+    def _normalize_chat_tag_name(tag_name: str | None) -> str:
+        if not tag_name:
+            return ""
+        return tag_name.strip().rstrip("*")
+
     def _chat_role_aliases(self) -> dict[str, str]:
         cfg = self.cfg
-        base_aliases = {
-            cfg["chat_system"].lower(): "system",
-            cfg["chat_user"].lower(): "user",
-            cfg["chat_assistant"].lower(): "assistant",
+        primary_names = {
+            cfg["chat_system"]: "system",
+            cfg["chat_user"]: "user",
+            cfg["chat_assistant"]: "assistant",
             "system": "system",
             "user": "user",
             "assistant": "assistant",
@@ -1052,11 +1058,21 @@ class FIMPad(tk.Tk):
             "a": "assistant",
         }
 
-        aliases = {}
-        for name, role in base_aliases.items():
-            aliases[name] = role
-            if not name.startswith("/"):
-                aliases[f"/{name}"] = role
+        aliases: dict[str, str] = {}
+        for raw_name, role in primary_names.items():
+            if not raw_name:
+                continue
+            normalized = self._normalize_chat_tag_name(raw_name)
+            candidates = {raw_name, normalized}
+            for candidate in candidates:
+                if not candidate:
+                    continue
+                key = candidate.casefold()
+                aliases.setdefault(key, role)
+                if candidate.startswith("/"):
+                    continue
+                close_key = f"/{candidate}".casefold()
+                aliases.setdefault(close_key, role)
 
         return aliases
 
@@ -1114,30 +1130,35 @@ class FIMPad(tk.Tk):
         role_aliases = self._chat_role_aliases()
         return parse_chat_block(content, role_aliases=role_aliases)
 
-    @staticmethod
-    def _chat_tag_wrappers_for_name(tag_name: str) -> tuple[str, str]:
-        base_name = tag_name.rstrip("*")
+    @classmethod
+    def _chat_tag_wrappers_for_name(cls, tag_name: str) -> tuple[str, str]:
+        raw = (tag_name or "").strip()
+        base_name = cls._normalize_chat_tag_name(raw) or raw
         return (f"[[[{base_name}]]]", f"[[[/{base_name}]]]")
 
     def _chat_user_followup_block(self) -> tuple[str, int]:
-        user_tag = self.cfg["chat_user"]
-        open_tag, close_tag = self._chat_tag_wrappers_for_name(user_tag)
+        raw_user_tag = self.cfg.get("chat_user", "user")
+        normalized_user = self._normalize_chat_tag_name(raw_user_tag)
+        tag_name = normalized_user or (raw_user_tag.strip() if raw_user_tag else "") or "user"
+        open_tag, close_tag = self._chat_tag_wrappers_for_name(tag_name)
         block = f"\n\n{open_tag}\n\n{close_tag}"
-        cursor_offset = len("\n\n" + open_tag + "\n")
+        cursor_offset = len(f"\n\n{open_tag}\n")
         return block, cursor_offset
 
     def _render_chat_block(
         self, block: ChatBlock
     ) -> tuple[str, list[dict[str, str]], int, int, int]:
         cfg = self.cfg
-        role_lookup = {
-            cfg["chat_system"].lower(): cfg["chat_system"],
-            cfg["chat_user"].lower(): cfg["chat_user"],
-            cfg["chat_assistant"].lower(): cfg["chat_assistant"],
-        }
-        role_lookup.setdefault("system", cfg["chat_system"])
-        role_lookup.setdefault("user", cfg["chat_user"])
-        role_lookup.setdefault("assistant", cfg["chat_assistant"])
+        role_lookup: dict[str, str] = {}
+        for role_key, cfg_key in (
+            ("system", "chat_system"),
+            ("user", "chat_user"),
+            ("assistant", "chat_assistant"),
+        ):
+            raw_name = cfg.get(cfg_key, role_key)
+            normalized = self._normalize_chat_tag_name(raw_name)
+            fallback = (raw_name or "").strip() or role_key
+            role_lookup[role_key] = normalized or fallback
 
         normalized_messages: list[dict[str, str]] = []
         pieces: list[str] = []
@@ -1162,7 +1183,7 @@ class FIMPad(tk.Tk):
 
         normalized_text = "".join(pieces)
 
-        assistant_tag = cfg["chat_assistant"]
+        assistant_tag = role_lookup.get("assistant", "assistant")
         placeholder_open, placeholder_close = self._chat_tag_wrappers_for_name(
             assistant_tag
         )

@@ -95,3 +95,33 @@ def test_chat_user_followup_block_inserts_plain_tags():
     assert "[[[user]]]" in block_text
     assert block_text.rstrip().endswith("[[[/user]]]")
     assert cursor_offset == len("\n\n[[[user]]]\n")
+
+
+def test_chat_config_star_suffixes_are_normalized():
+    app = make_app()
+    app.cfg["chat_system"] = "System*"
+    app.cfg["chat_user"] = "User*"
+    app.cfg["chat_assistant"] = "Assistant*"
+
+    content = "[[[system]]]Hello[[[/system]]]"
+    block = app._parse_chat_messages(content)
+
+    assert list(block.messages) == [("system", "Hello")]
+
+    rendered, normalized_messages, *_ = app._render_chat_block(block)
+
+    assert normalized_messages == [{"role": "system", "content": "Hello"}]
+    assert "[[[System]]]" in rendered
+    assert rendered.rstrip().endswith("[[[/Assistant]]]")
+    assert "[[[Assistant*]]]" not in rendered
+
+
+def test_chat_user_followup_block_normalizes_config_tags():
+    app = make_app()
+    app.cfg["chat_user"] = "User*"
+
+    block_text, cursor_offset = app._chat_user_followup_block()
+
+    assert "[[[User]]]" in block_text
+    assert block_text.rstrip().endswith("[[[/User]]]")
+    assert cursor_offset == len("\n\n[[[User]]]\n")
