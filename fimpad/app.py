@@ -179,10 +179,8 @@ class FIMPad(tk.Tk):
 
     def _set_dirty(self, st, dirty: bool):
         st["dirty"] = dirty
-        try:
+        with contextlib.suppress(tk.TclError, KeyError):
             self._update_tab_title(st)
-        except (tk.TclError, KeyError):
-            pass
 
     def _close_current_tab(self):
         st = self._current_tab_state()
