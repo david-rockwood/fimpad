@@ -80,16 +80,46 @@ def test_parse_chat_block_handles_nested_tags():
     ]
 
 
-def test_parse_chat_block_accepts_star_suffix_tags():
+def test_parse_tokens_resolves_star_aliases():
+    role_aliases = {
+        "system": "system",
+        "user": "user",
+    }
+
+    content = "[[[system*]]]One[[[/system*]]][[[user*]]]Two[[[/user*]]]"
+
+    tokens = [
+        token
+        for token in parse_triple_tokens(content, role_aliases=role_aliases)
+        if isinstance(token, TagToken)
+    ]
+
+    assert [t.role for t in tokens if not t.is_close] == ["system", "user"]
+    assert [t.role for t in tokens if t.is_close] == ["system", "user"]
+    assert tokens[0].name == "system*"
+    assert tokens[-1].name == "user*"
+
+
+def test_parse_chat_block_star_mode_nested_tags():
     role_aliases = {
         "system": "system",
         "/system": "system",
         "user": "user",
         "/user": "user",
+        "assistant": "assistant",
+        "/assistant": "assistant",
     }
 
-    content = "[[[system*]]]One[[[/system*]]][[[user*]]]Two[[[/user*]]]"
+    content = (
+        "[[[system*]]]System [[[user*]]]nest[[[/user*]]] text[[[/system*]]]"
+        "[[[assistant*]]]Reply[[[/assistant*]]]"
+    )
 
     block = parse_chat_block(content, role_aliases=role_aliases)
 
-    assert list(block.messages) == [("system", "One"), ("user", "Two")]
+    assert list(block.messages) == [
+        ("system", "System "),
+        ("user", "nest"),
+        ("system", " text"),
+        ("assistant", "Reply"),
+    ]
