@@ -61,7 +61,3 @@ pretty = true
 warn_unused_ignores = true
 strict = false
 
-[tool.hatch.build]
-include = [
-  "fimpad/data/*.txt",
-]
