@@ -1285,6 +1285,17 @@ class FIMPad(tk.Tk):
         text.mark_gravity("chat_after_placeholder", tk.RIGHT)
         st["chat_after_placeholder_mark"] = "chat_after_placeholder"
 
+        # Ensure the end of the normalized block is visible before streaming
+        if not st.get("stream_following"):
+            try:
+                text.see("chat_after_placeholder")
+            except tk.TclError:
+                pass
+            try:
+                text.see(tk.INSERT)
+            except tk.TclError:
+                pass
+
         normalized_messages.append({"role": "assistant", "content": ""})
 
         return normalized_messages
@@ -1454,6 +1465,11 @@ class FIMPad(tk.Tk):
                                 st.get("chat_star_mode", False)
                             )
                             text.insert(after_idx, user_block)
+                            try:
+                                text.mark_set(tk.INSERT, after_idx)
+                                text.see(tk.INSERT)
+                            except tk.TclError:
+                                pass
                             insert_target = text.index(f"{after_idx}+{cursor_offset}c")
                             text.mark_set(tk.INSERT, insert_target)
                             text.see(tk.INSERT)
