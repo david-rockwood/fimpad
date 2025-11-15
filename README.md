@@ -78,7 +78,7 @@ FIM generations are stateless in that the model only sees the prefix and suffix 
 
 Sometimes you won't want all the text in the text file to be sent as prefix or suffix text. This is where the [[[prefix]]] and [[[suffix]]] tags come in.
 
-## Prefix and Suffix Tags (only work for FIM generation)
+## Prefix and Suffix Tags (only used with FIM generation)
 
 In order to control which text is sent to the LLM as context for FIM generation, you can use the [[[prefix]]] and [[[suffix]]] tags. These tags are optional companions to [[[N]]] tags. Wherever the [[[prefix]]] tag is placed in the document, that marks the start of the prefix. Wherever the [[[suffix]]] tag is placed in the document, that marks the end of the suffix.
 
