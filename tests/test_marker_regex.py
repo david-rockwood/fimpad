@@ -1,6 +1,6 @@
 import pytest
 
-from fimpad.config import MARKER_REGEX
+from fimpad.parser import MARKER_REGEX
 
 
 @pytest.mark.parametrize(
