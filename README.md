@@ -1,6 +1,6 @@
 # FIMpad
 
-A lightweight text editor focused on LLM FIM (fill-in-the-middle) workflows within a text file.
+A lightweight text editor focused on LLM FIM (fill-in-the-middle) workflows within a text file. FIMpad operates in a single, FIM-only mode so there are no alternate generation styles to toggle between.
 
 This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer. Other models may be supported in the future.
 

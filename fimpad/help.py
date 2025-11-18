@@ -11,7 +11,7 @@ _TEMPLATE_NAME: Final[str] = "help_tab_template.txt"
 _FALLBACK_TEMPLATE: Final[str] = """FIMpad Help
 ============
 
-Welcome to FIM-only mode. Insert a triple-bracket marker like `[[[120]]]` where you want text generated. Use [[[prefix]]] and [[[suffix]]] tags to bound the context that should be sent to the model.
+FIMpad focuses solely on fill-in-the-middle generation. Insert a triple-bracket marker like `[[[120]]]` where you want text generated. Use [[[prefix]]] and [[[suffix]]] tags to bound the context that should be sent to the model.
 """
 _HELP_TEMPLATE: str | None = None
 
