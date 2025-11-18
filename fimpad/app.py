@@ -7,7 +7,6 @@ with FIM streaming, dirty tracking, and aspell spellcheck.
 import contextlib
 import os
 import queue
-import re
 import subprocess
 import threading
 import tkinter as tk
@@ -16,9 +15,8 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .client import stream_completion
-
 from .config import DEFAULTS, WORD_RE, load_config, save_config
-from .parser import FIMRequest, MARKER_REGEX, parse_fim_request
+from .parser import MARKER_REGEX, FIMRequest, parse_fim_request
 from .utils import offset_to_tkindex
 
 
