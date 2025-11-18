@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import queue
-
-from fimpad import app as app_module
 from fimpad.app import FIMPad
 
 
@@ -32,13 +29,8 @@ class FakeText:
             raise ValueError(f"Unsupported index delta: {index}")
         if "." in index:
             line_str, col_str = index.split(".", 1)
-            try:
-                line_no = int(line_str)
-                col = int(col_str)
-            except ValueError as exc:  # pragma: no cover - defensive
-                raise ValueError(f"Unsupported index: {index}") from exc
-            if line_no <= 0:
-                raise ValueError(f"Unsupported line: {index}")
+            line_no = int(line_str)
+            col = int(col_str)
             lines = self.content.splitlines(keepends=True)
             offset = 0
             for i in range(min(line_no - 1, len(lines))):
@@ -78,24 +70,30 @@ class FakeText:
         for name, pos in list(self.marks.items()):
             if pos > end_offset:
                 self.marks[name] = pos - removed
-            elif pos >= start_offset:
+            elif start_offset <= pos <= end_offset:
                 self.marks[name] = start_offset
 
-    def mark_set(self, name: str, index: str) -> None:
-        self.marks[name] = self._parse_index(index)
+    def mark_set(self, name: str, where: str) -> None:
+        self.marks[name] = self._parse_index(where)
+        self.gravities.setdefault(name, "right")
+        self.last_seen = name
 
     def mark_gravity(self, name: str, gravity: str) -> None:
         self.gravities[name] = gravity
 
-    def see(self, mark: str) -> None:  # pragma: no cover - debug aid
+    def see(self, mark: str) -> None:  # pragma: no cover - trivial
         self.last_seen = mark
 
-    def dlineinfo(self, mark: str):
+    def tag_add(self, name: str, start: str, end: str) -> None:  # pragma: no cover
+        pass
+
+    def tag_remove(self, name: str, start: str, end: str) -> None:  # pragma: no cover
+        pass
+
+    def dlineinfo(self, mark: str):  # pragma: no cover - minimal stub
         if mark in self.hidden_marks:
             return None
-        if mark in self.marks:
-            return (self.marks[mark],)
-        return None
+        return (0, 0, 0, 0)
 
 
 def test_flush_stream_buffer_respects_right_gravity():
@@ -126,316 +124,3 @@ def test_flush_stream_buffer_respects_right_gravity():
     assert text.content == "foo\nbar[[[/assistant]]]"
     assert text.marks["stream_here"] == text.content.index("[[[/assistant]]]")
     assert st["dirty"] is True
-
-
-def test_chat_block_follow_and_flush_keeps_stream_visible():
-    app = object.__new__(FIMPad)
-    frame = object()
-    text = FakeText("[[[assistant]]]\n\n[[[/assistant]]]")
-
-    app._should_follow = lambda widget: True
-
-    class DummyBlock:
-        pass
-
-    dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
-
-    app._parse_chat_messages = lambda content: dummy_block
-
-    def fake_render(block):
-        replacement = "[[[assistant]]]\n\n[[[/assistant]]]"
-        normalized_messages = [{"role": "user", "content": "hi"}]
-        normalized_len = 0
-        open_len = len("[[[assistant]]]")
-        close_len = len("[[[/assistant]]]")
-        return replacement, normalized_messages, normalized_len, open_len, close_len
-
-    app._render_chat_block = fake_render
-
-    st = {
-        "text": text,
-        "stream_buffer": [],
-        "stream_flush_job": None,
-        "stream_following": False,
-        "_stream_follow_primed": False,
-        "dirty": False,
-    }
-
-    messages = app._prepare_chat_block(st, text.content, 0, len(text.content))
-
-    assert st["stream_following"] is True
-    assert text.last_seen == "stream_here"
-    assert messages[-1] == {"role": "assistant", "content": ""}
-
-    app.tabs = {frame: st}
-
-    def _set_dirty(state, dirty):
-        state["dirty"] = dirty
-
-    app._set_dirty = _set_dirty
-
-    st["stream_buffer"] = ["chunk"]
-
-    app._flush_stream_buffer(frame, "stream_here")
-
-    assert st["stream_buffer"] == []
-    assert text.last_seen == "stream_here"
-    assert st["stream_following"] is True
-    assert st["dirty"] is True
-
-
-def test_chat_block_follow_persists_across_turns():
-    app = object.__new__(FIMPad)
-    text = FakeText("[[[assistant]]]\n\n[[[/assistant]]]")
-
-    app._should_follow = lambda widget: False
-
-    class DummyBlock:
-        pass
-
-    dummy_block = DummyBlock()
-    dummy_block.messages = [
-        {"role": "user", "content": "hi"},
-        {"role": "assistant", "content": "there"},
-        {"role": "user", "content": "again"},
-    ]
-    dummy_block.star_mode = False
-
-    app._parse_chat_messages = lambda content: dummy_block
-
-    normalized_history = (
-        "[[[user]]]\nhi\n[[[/user]]]\n\n"
-        "[[[assistant]]]\nthere\n[[[/assistant]]]\n\n"
-        "[[[user]]]\nagain\n[[[/user]]]\n\n"
-    )
-
-    def fake_render(block):
-        replacement = normalized_history + "[[[assistant]]]\n\n[[[/assistant]]]"
-        normalized_messages = [
-            {"role": "user", "content": "hi"},
-            {"role": "assistant", "content": "there"},
-            {"role": "user", "content": "again"},
-        ]
-        normalized_len = len(normalized_history)
-        open_len = len("[[[assistant]]]")
-        close_len = len("[[[/assistant]]]")
-        return replacement, normalized_messages, normalized_len, open_len, close_len
-
-    app._render_chat_block = fake_render
-
-    st = {
-        "text": text,
-        "stream_buffer": [],
-        "stream_flush_job": None,
-        "stream_following": False,
-        "dirty": False,
-        "chat_after_placeholder_mark": None,
-        "_stream_follow_primed": False,
-    }
-
-    st["_pending_stream_follow"] = True
-
-    app._reset_stream_state(st)
-
-    messages = app._prepare_chat_block(st, text.content, 0, len(text.content))
-
-    assert st.get("_pending_stream_follow") is None
-    assert st["stream_following"] is True
-    assert st["_stream_follow_primed"] is True
-    assert text.last_seen == "stream_here"
-    assert messages[-1] == {"role": "assistant", "content": ""}
-
-
-def test_stream_follow_survives_transient_hidden_mark():
-    app = object.__new__(FIMPad)
-    frame = object()
-    text = FakeText(
-        "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
-    )
-
-    app._should_follow = lambda widget: False
-
-    class DummyBlock:
-        pass
-
-    dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
-
-    app._parse_chat_messages = lambda content: dummy_block
-
-    def fake_render(block):
-        replacement = (
-            "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
-        )
-        normalized_messages = [{"role": "user", "content": "hi"}]
-        normalized_len = len("[[[user]]]\nhi\n[[[/user]]]\n\n")
-        open_len = len("[[[assistant]]]")
-        close_len = len("[[[/assistant]]]")
-        return replacement, normalized_messages, normalized_len, open_len, close_len
-
-    app._render_chat_block = fake_render
-
-    st = {
-        "text": text,
-        "stream_buffer": [],
-        "stream_flush_job": None,
-        "stream_following": False,
-        "dirty": False,
-        "chat_after_placeholder_mark": None,
-        "_stream_follow_primed": False,
-    }
-
-    st["_pending_stream_follow"] = True
-    app._reset_stream_state(st)
-
-    app._prepare_chat_block(st, text.content, 0, len(text.content))
-
-    assert st["stream_following"] is True
-    assert st["_stream_follow_primed"] is True
-
-    app.tabs = {frame: st}
-
-    def _set_dirty(state, dirty):
-        state["dirty"] = dirty
-
-    app._set_dirty = _set_dirty
-
-    text.hidden_marks.add("stream_here")
-
-    st["stream_buffer"] = ["chunk"]
-    app._flush_stream_buffer(frame, "stream_here")
-
-    assert st["stream_following"] is True
-    assert st.get("_stream_follow_primed", False) is False
-
-    text.hidden_marks.discard("stream_here")
-
-    st["stream_buffer"] = ["more"]
-    app._flush_stream_buffer(frame, "stream_here")
-
-    assert st["stream_following"] is True
-
-
-def test_stream_follow_detects_manual_scroll_after_prime_cleared():
-    app = object.__new__(FIMPad)
-    frame = object()
-    text = FakeText(
-        "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
-    )
-
-    app._should_follow = lambda widget: False
-
-    class DummyBlock:
-        pass
-
-    dummy_block = DummyBlock()
-    dummy_block.messages = [{"role": "user", "content": "hi"}]
-    dummy_block.star_mode = False
-
-    app._parse_chat_messages = lambda content: dummy_block
-
-    def fake_render(block):
-        replacement = (
-            "[[[user]]]\nhi\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
-        )
-        normalized_messages = [{"role": "user", "content": "hi"}]
-        normalized_len = len("[[[user]]]\nhi\n[[[/user]]]\n\n")
-        open_len = len("[[[assistant]]]")
-        close_len = len("[[[/assistant]]]")
-        return replacement, normalized_messages, normalized_len, open_len, close_len
-
-    app._render_chat_block = fake_render
-
-    st = {
-        "text": text,
-        "stream_buffer": [],
-        "stream_flush_job": None,
-        "stream_following": False,
-        "dirty": False,
-        "chat_after_placeholder_mark": None,
-        "_stream_follow_primed": False,
-    }
-
-    st["_pending_stream_follow"] = True
-    app._reset_stream_state(st)
-
-    app._prepare_chat_block(st, text.content, 0, len(text.content))
-
-    assert st["stream_following"] is True
-    assert st["_stream_follow_primed"] is True
-
-    st["stream_following"] = True
-    st["_stream_follow_primed"] = False
-    st["stream_buffer"] = ["chunk"]
-
-    app.tabs = {frame: st}
-
-    def _set_dirty(state, dirty):
-        state["dirty"] = dirty
-
-    app._set_dirty = _set_dirty
-
-    text.hidden_marks.add("stream_here")
-
-    app._flush_stream_buffer(frame, "stream_here")
-
-    assert st["stream_following"] is False
-
-
-def test_launch_chat_stream_respects_stored_follow_flag():
-    app = object.__new__(FIMPad)
-    text = FakeText(
-        "[[[user]]]\nhello\n[[[/user]]]\n\n[[[assistant]]]\n\n[[[/assistant]]]"
-    )
-
-    st = {
-        "text": text,
-        "stream_following": True,
-        "_stream_follow_primed": True,
-    }
-
-    app.cfg = {
-        "chat_assistant": "assistant",
-        "chat_system": "system",
-        "chat_user": "user",
-        "model": "dummy",
-        "temperature": 0.5,
-        "top_p": 1.0,
-        "endpoint": "http://example",
-    }
-    app.nb = type("DummyNotebook", (), {"select": lambda self: "tab1"})()
-    app._set_busy = lambda busy: None
-    app._result_queue = queue.SimpleQueue()
-    app._should_follow = lambda widget: False
-
-    original_stream_chat = app_module.stream_chat
-    original_thread = app_module.threading.Thread
-
-    class ImmediateThread:
-        def __init__(self, target=None, args=(), kwargs=None, daemon=None):
-            self._target = target
-            self._args = args
-            self._kwargs = kwargs or {}
-
-        def start(self):
-            if self._target is not None:
-                self._target(*self._args, **self._kwargs)
-
-    try:
-        app_module.stream_chat = lambda endpoint, payload: []
-        app_module.threading.Thread = ImmediateThread
-        app._launch_chat_stream(
-            st,
-            [
-                {"role": "user", "content": "hello"},
-                {"role": "assistant", "content": ""},
-            ],
-        )
-    finally:
-        app_module.stream_chat = original_stream_chat
-        app_module.threading.Thread = original_thread
-
-    assert text.last_seen == "stream_here"

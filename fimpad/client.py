@@ -40,10 +40,3 @@ def stream_completion(endpoint: str, payload: dict) -> Iterable[str]:
     with requests.post(url, json=payload, stream=True, timeout=5000) as resp:
         resp.raise_for_status()
         yield from _sse_chunks(resp)
-
-
-def stream_chat(endpoint: str, payload: dict) -> Iterable[str]:
-    url = f"{endpoint}/v1/chat/completions"
-    with requests.post(url, json=payload, stream=True, timeout=5000) as resp:
-        resp.raise_for_status()
-        yield from _sse_chunks(resp)

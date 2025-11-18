@@ -1,6 +1,6 @@
 # FIMpad
 
-A lightweight text editor that can do LLM FIM (fill-in-the-middle) and LLM chat within a text file.
+A lightweight text editor focused on LLM FIM (fill-in-the-middle) workflows within a text file.
 
 This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer. Other models may be supported in the future.
 
@@ -20,7 +20,7 @@ FIMpad requires a connection to a LLM server that provides an OpenAI compatible 
 
 I use llama.cpp llama-server to serve the LLM, but it is my understanding that other servers should be able to work with FIMpad if they provide an OpenAI compatible endpoint.
 
-The LLM served should be IBM Granite 4.0 H. FIMpad requires that FIM tokens be in the model's tokenizer. Granite is the best smaller-sized generalist model that I have found that does this so far. With other LLMs, you should still be able to do chat in FIMpad, but if you try to do fill-in-the-middle generation with a model other than Granite 4.0 H you will likely run into problems. However, I did try FIM with a variant of Mistral-Nemo and it worked. But then I tried Mistral Small and FIM did not work. The FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. But at the moment I am only focused on supporting IBM Granite 4.0 H.
+The LLM served should be IBM Granite 4.0 H. FIMpad requires that FIM tokens be in the model's tokenizer. Granite is the best smaller-sized generalist model that I have found that does this so far. However, I did try FIM with a variant of Mistral-Nemo and it worked. But then I tried Mistral Small and FIM did not work. The FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. But at the moment I am only focused on supporting IBM Granite 4.0 H.
 
 I suggest using a recent build of llama.cpp llama-server available at:
 ```
@@ -46,11 +46,9 @@ Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE mod
 
 With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the-middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file, it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
 
-FIMpad can also chat with the LLM. A text document is a good interface for LLM chat because you can edit chat history, and because you can save a text file that works as a save state for the session. You can save prefills the same way. You can resume a session at a later date by simply reopening the text file. You can save notes outside the chat blocks.
+## Tag Basics
 
-## The Two Tag Classes
-
-There are two classes of tags in FIMpad: FIM tags and Chat tags. The FIM tags enable fill-in-the-middle insertion of text from a LLM into the text file. The Chat tags enable chat with a LLM using system, user, and assistant messages.
+FIMpad uses triple-bracket tags to trigger and control fill-in-the-middle insertion of text from an LLM into the text file.
 
 ## FIM tags
 
@@ -204,124 +202,4 @@ There is an exclusive stop sequence option as well with [[[N]]] tags. It just us
 With exclusive stop sequences, the stop sequence itself won't be included in the text that was generated. It gets cut off the end.
 
 One of the nice things about FIM generation is that it seems to be relatively unbiased and uncensored, other than any bias in the selection of materials that the model was trained on. But the safety alignment stuff seems somewhat bypassed. FIM can use the model’s base reasoning more directly, because you’re not invoking its chat/instruction patterns, you're asking it to complete structure.
-
-Still, sometimes it is nice to just have a good old-fashioned chat with an instruct model. Which brings us to chat tags.
-
-## Chat Tags
-
-The beginner way to start a chat is seen in the following example, this is what it looks like before pressing Ctrl+Enter:
-
-```
-[[[system]]]
-Assist concisely.
-[[[/system]]]
-[[[user]]]
-What is the population of Oklahoma?
-[[[/user]]]
-```
-
-And, similar to [[[N]]] tags, your caret needs to be within the "chat block" when you press Ctrl+Enter. The chat block shown above starts with the opening [[[system]]] tag and ends with the closing [[[/user]]] tag.
-
-The text between [[[system]]] and [[[/system]]] is the SYSTEM PROMPT. The text between [[[user]]] and [[[/user]]] is the USER PROMPT. Press Ctrl+Enter in the example above and you get a streaming response that results in something like the example below.
-
-```
-[[[system]]]
-Assist concisely.
-[[[/system]]]
-
-[[[user]]]
-What is the population of Oklahoma?
-[[[/user]]]
-
-[[[assistant]]]
-As of 2021, the estimated population of Oklahoma is approximately 3,959,353 people.
-[[[/assistant]]]
-
-[[[user]]]
-
-[[[/user]]]
-```
-
-It normalizes your chat block to a nice clean format, streams the response between the [[[assistant]]] and [[[/assistant]]] tags, then it creates new [[[user]]] and [[[/user]]] tags and places your caret on the blank line between them, ready to go for you to type your next prompt and press Ctrl+Enter to go again.
-
-The text between [[[assistant]]] and [[[/assistant]]] is the ASSISTANT RESPONSE.
-
-If you are familiar with LLMs, you already know the above all-caps terms. If you are new to LLMs, I put those terms in all-caps so that you will notice and remember them. System prompts, user prompts, and assistant responses are the way that LLM chats are organized.
-
-User prompts are human input to the model. System prompts describe what the model should do with the human input. Assistant responses are the output from the model.
-
-A LLM chat containing these elements usually goes in this order: system prompt, user prompt, assistant response, user prompt, assistant response, user prompt, assistant response...
-
-It can go on indefinitely. With each new user prompt, all of the elements that came before, going back to the system prompt, make up what is called the CHAT HISTORY.
-
-Every time you send a new user prompt to the LLM, the chat history is also sent, so that the LLM knows the full context of the conversation. For a well-designed LLM server like llama.cpp llama-server, the server then compares the sent chat history with what it has saved from the computations done for your previous prompts. Often it can reuse much of the computations already done, as long as the chat history is the same. But since FIMpad is a text editor, you can easily edit the chat history. Changing messages in the chat history means the server will need to recompute part or all of the previous prompts. So be aware, when you edit the chat history before sending a new user prompt, it can make it take a bit longer to get the assistant response.
-
-Next we can look at ways you can reduce the amount of typing needed to start a chat. First, opening and closing chat tags can be on the same line, so the "beginner way" to start a chat that I described earlier can be done like this and get the same result once you press Ctrl+Enter:
-```
-[[[system]]]Assist concisely.[[[/system]]]
-[[[user]]]What is the population of Oklahoma?[[[/user]]]
-```
-
-Second, a new opening tag without a closing tag from the chat tag that precedes it automatically closes the previously opened chat tag within a chat block. So this is also equivalent:
-```
-[[[system]]]Assist concisely.
-[[[user]]]What is the population of Oklahoma?[[[/user]]]
-```
-
-Third, there are one letter aliases for chat tags, so you can do this too and get the same result:
-```
-[[[s]]]Assist concisely.
-[[[u]]]What is the population of Oklahoma?[[[/u]]]
-```
-
-One liners are possible:
-```
-[[[s]]]Assist.[[[u]]]Sup?[[[/u]]]
-```
-
-In an empty text file where there is not text after the end of your user prompt, you can omit the closing user chat tag. The end of the file closes the user chat tag:
-```
-[[[s]]]Assist.[[[u]]]Sup?
-```
-
-You can have multiple chat blocks in a single text document. A new [[[system]]] tag denotes a new independent chat with its own chat history.
-
-You can use [[[N]]] tags within chat blocks. But you cannot use chat blocks within [[[N]]] tags.
-
-You should not put chat tags within chat tags. There is a way to do it with special chat tags if you really need to put chat tags literals inside a chat tag, but it's a little tricky. Probably more complicated than the average user of FIMpad needs to get into. See the way that the help file is structured if you need an example of how to do it.
-
-## Chat Blocks As Functions
-
-Try thinking of chat blocks as functions. Input goes in [[[user]]], the function definition (written in natural language) goes in [[[system]]], and the output will be put into [[[assistant]]] when you press Ctrl+Enter.
-
-You can copy the output of one function and paste it into the input of another function. You can make a text file with fifty functions, and copy and paste a few of them into a new tab for a specific project. They are like macros.
-
-A system prompt for a stanza generator:
-
-
-"The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry."
-
-
-Here is what it gave me on the first try:
-
-```
-[[[system]]]
-The user will prompt you with a word or a phrase. Use this as inspiration to write a long and evocative (and perhaps even a bit alluring) four line stanza. To the extent that it is poetic, it should be the poetry of Imagism and of Amy Lowell. Let this stanza focus upon sensations and/or feelings and/or observations and/or objects. Do not use the word "liminal". Do not send any additional commentary beyond the four line stanza. Godspeed in your quest to generate poetry.
-[[[/system]]]
-
-[[[user]]]
-spending a stormy night in a Paris apartment alone
-[[[/user]]]
-
-[[[assistant]]]
-Rain lashes the windows, a ceaseless drum,
-Echoes of distant thunder, a somber hum.
-In shadows, memories dance, flickering light,
-A solitary soul, adrift in the night.
-[[[/assistant]]]
-
-[[[user]]]
-
-[[[/user]]]
-```
 
