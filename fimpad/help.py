@@ -8,15 +8,10 @@ from typing import Final
 from . import data as _help_data
 
 _TEMPLATE_NAME: Final[str] = "help_tab_template.txt"
-_FALLBACK_TEMPLATE: Final[str] = """To ask a question to the FIMpad help assistant, scroll to the bottom, type your message on the blank line between the user tags, and then press Ctrl+Enter while the carat is between the user tags.
+_FALLBACK_TEMPLATE: Final[str] = """FIMpad Help
+============
 
-[[[system*]]]
-
-[[[/system*]]]
-
-[[[user*]]]
-
-[[[/user*]]]
+Welcome to FIM-only mode. Insert a triple-bracket marker like `[[[120]]]` where you want text generated. Use [[[prefix]]] and [[[suffix]]] tags to bound the context that should be sent to the model.
 """
 _HELP_TEMPLATE: str | None = None
 

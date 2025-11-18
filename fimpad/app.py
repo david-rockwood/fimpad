@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FIMpad — Tabbed Tkinter editor for llama-server
-with FIM + Chat, streaming, dirty tracking, and aspell spellcheck.
+with FIM streaming, dirty tracking, and aspell spellcheck.
 """
 
 import contextlib
@@ -15,10 +15,10 @@ import tkinter.font as tkfont
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
-from .client import stream_chat, stream_completion
+from .client import stream_completion
 from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
 from .help import get_help_template
-from .parser import ChatBlock, TagToken, parse_chat_block, parse_triple_tokens
+from .parser import TagToken, parse_triple_tokens
 from .utils import offset_to_tkindex
 
 
@@ -136,9 +136,6 @@ class FIMPad(tk.Tk):
             "stops_after_maxlen": 0,
             "stream_tail": "",
             "stream_cancelled": False,
-            "chat_after_placeholder_mark": None,
-            "chat_stream_active": False,
-            "chat_star_mode": False,
         }
 
         def on_modified(event=None):
@@ -541,10 +538,6 @@ class FIMPad(tk.Tk):
         fim_suf_var = tk.StringVar(value=cfg["fim_suffix"])
         fim_mid_var = tk.StringVar(value=cfg["fim_middle"])
 
-        chat_sys_var = tk.StringVar(value=cfg["chat_system"])
-        chat_usr_var = tk.StringVar(value=cfg["chat_user"])
-        chat_ast_var = tk.StringVar(value=cfg["chat_assistant"])
-
         fontfam_var = tk.StringVar(value=cfg["font_family"])
         fontsize_var = tk.StringVar(value=str(cfg["font_size"]))
         pad_var = tk.StringVar(
@@ -577,17 +570,6 @@ class FIMPad(tk.Tk):
         add_row(row, "fim_suffix:", fim_suf_var)
         row += 1
         add_row(row, "fim_middle:", fim_mid_var)
-        row += 1
-
-        tk.Label(
-            w, text="Chat Roles (inside triple brackets)", font=("TkDefaultFont", 10, "bold")
-        ).grid(row=row, column=0, padx=8, pady=(10, 4), sticky="w")
-        row += 1
-        add_row(row, "[[[system]]]: role name", chat_sys_var)
-        row += 1
-        add_row(row, "[[[user]]]: role name", chat_usr_var)
-        row += 1
-        add_row(row, "[[[assistant]]]: role name", chat_ast_var)
         row += 1
 
         tk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
@@ -652,9 +634,6 @@ class FIMPad(tk.Tk):
                 self.cfg["fim_prefix"] = fim_pref_var.get()
                 self.cfg["fim_suffix"] = fim_suf_var.get()
                 self.cfg["fim_middle"] = fim_mid_var.get()
-                self.cfg["chat_system"] = chat_sys_var.get().strip()
-                self.cfg["chat_user"] = chat_usr_var.get().strip()
-                self.cfg["chat_assistant"] = chat_ast_var.get().strip()
                 self.cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
                 self.cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
                 self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
@@ -697,15 +676,11 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
-    def _clear_chat_state(self, st):
-        text = st.get("text")
-        mark_name = st.get("chat_after_placeholder_mark")
-        if text is not None and mark_name:
-            with contextlib.suppress(tk.TclError):
-                text.mark_unset(mark_name)
-        st["chat_after_placeholder_mark"] = None
-        st["chat_stream_active"] = False
-        st["chat_star_mode"] = False
+    @staticmethod
+    def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
+        return (start <= cursor_offset <= end) or (
+            cursor_offset > 0 and start <= cursor_offset - 1 < end
+        )
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -721,7 +696,6 @@ class FIMPad(tk.Tk):
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
-        self._clear_chat_state(st)
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -803,8 +777,7 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        role_aliases = self._chat_role_aliases()
-        tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
+        tokens = list(parse_triple_tokens(content))
 
         marker_token: TagToken | None = None
         for token in tokens:
@@ -824,25 +797,9 @@ class FIMPad(tk.Tk):
             )
             return
 
-        chat_bounds = self._locate_chat_block(content, cursor_offset, tokens=tokens)
-        if chat_bounds:
-            st["_pending_stream_follow"] = self._should_follow(text_widget)
-            self._reset_stream_state(st)
-            messages = self._prepare_chat_block(st, content, chat_bounds[0], chat_bounds[1])
-            if not messages:
-                messagebox.showinfo("Chat", "No parsed chat messages in this block.")
-                return
-
-            self._launch_chat_stream(st, messages)
-            return
-
-        if self._contains_chat_tags(content):
-            messagebox.showinfo("Chat", "Place the cursor inside a chat block.")
-            return
-
         messagebox.showinfo(
             "Generate",
-            "Place the caret inside a [[[N]]] marker or chat tag block.",
+            "Place the caret inside a [[[N]]] marker to generate.",
         )
 
     def _on_generate_shortcut(self, event):
@@ -1076,265 +1033,6 @@ class FIMPad(tk.Tk):
 
         threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
 
-    # ----- Chat streaming -----
-
-    def _chat_role_aliases(self) -> dict[str, str]:
-        cfg = self.cfg
-        base_aliases = {
-            cfg["chat_system"].lower(): "system",
-            cfg["chat_user"].lower(): "user",
-            cfg["chat_assistant"].lower(): "assistant",
-            "system": "system",
-            "user": "user",
-            "assistant": "assistant",
-            "s": "system",
-            "u": "user",
-            "a": "assistant",
-        }
-
-        aliases = {}
-        for name, role in base_aliases.items():
-            aliases[name] = role
-            if not name.startswith("/"):
-                aliases[f"/{name}"] = role
-
-        return aliases
-
-    def _chat_tag_names(self) -> list[str]:
-        role_aliases = self._chat_role_aliases()
-        tag_names = {name.lstrip("/") for name in role_aliases}
-        return sorted(tag_names, key=len, reverse=True)
-
-    def _contains_chat_tags(self, content: str) -> bool:
-        tag_names = self._chat_tag_names()
-        pat = re.compile(
-            rf"\[\[\[\s*/?\s*(?:{'|'.join(re.escape(name) for name in tag_names)})\s*\]\]\]",
-            re.IGNORECASE,
-        )
-        return bool(pat.search(content))
-
-    @staticmethod
-    def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        return (start <= cursor_offset <= end) or (
-            cursor_offset > 0 and start <= cursor_offset - 1 < end
-        )
-
-    def _locate_chat_block(self, content: str, cursor_offset: int, tokens=None):
-        cursor_offset = max(0, min(len(content), cursor_offset))
-        if tokens is None:
-            role_aliases = self._chat_role_aliases()
-            tokens = list(parse_triple_tokens(content, role_aliases=role_aliases))
-
-        system_tokens: list[TagToken] = []
-        star_stack: list[bool] = []
-        star_depth = 0
-        for token in tokens:
-            if not isinstance(token, TagToken):
-                continue
-            if token.kind != "chat":
-                continue
-
-            if star_depth > 0 and not token.is_star:
-                continue
-
-            if not token.is_close:
-                if token.role == "system":
-                    system_tokens.append(token)
-                star_stack.append(token.is_star)
-                if token.is_star:
-                    star_depth += 1
-            else:
-                if star_stack:
-                    closing_star = star_stack.pop()
-                    if closing_star:
-                        star_depth = max(0, star_depth - 1)
-
-        if not system_tokens:
-            return None
-
-        for idx, token in enumerate(system_tokens):
-            start = token.start
-            end = system_tokens[idx + 1].start if idx + 1 < len(system_tokens) else len(content)
-            if self._cursor_within_span(start, end, cursor_offset):
-                return start, end
-
-        return None
-
-    def _parse_chat_messages(self, content: str) -> ChatBlock:
-        role_aliases = self._chat_role_aliases()
-        return parse_chat_block(content, role_aliases=role_aliases)
-
-    @staticmethod
-    def _chat_tag_wrappers_for_name(tag_name: str, star_mode: bool) -> tuple[str, str]:
-        base_name = tag_name.rstrip("*")
-        suffix = "*" if star_mode else ""
-        return (f"[[[{base_name}{suffix}]]]", f"[[[/{base_name}{suffix}]]]")
-
-    def _chat_user_followup_block(self, star_mode: bool) -> tuple[str, int]:
-        user_tag = self.cfg["chat_user"]
-        open_tag, close_tag = self._chat_tag_wrappers_for_name(user_tag, star_mode)
-        block = f"\n\n{open_tag}\n\n{close_tag}"
-        cursor_offset = len("\n\n" + open_tag + "\n")
-        return block, cursor_offset
-
-    def _render_chat_block(
-        self, block: ChatBlock
-    ) -> tuple[str, list[dict[str, str]], int, int, int]:
-        cfg = self.cfg
-        role_lookup = {
-            cfg["chat_system"].lower(): cfg["chat_system"],
-            cfg["chat_user"].lower(): cfg["chat_user"],
-            cfg["chat_assistant"].lower(): cfg["chat_assistant"],
-        }
-        role_lookup.setdefault("system", cfg["chat_system"])
-        role_lookup.setdefault("user", cfg["chat_user"])
-        role_lookup.setdefault("assistant", cfg["chat_assistant"])
-
-        normalized_messages: list[dict[str, str]] = []
-        pieces: list[str] = []
-
-        for msg in block.messages:
-            role = (msg.get("role") or "").lower()
-            body = (msg.get("content") or "").rstrip("\n")
-            if body.startswith("\n"):
-                body = body[1:]
-            normalized_messages.append({"role": role, "content": body})
-
-            tag_name = role_lookup.get(role, role)
-            open_tag, close_tag = self._chat_tag_wrappers_for_name(tag_name, block.star_mode)
-
-            pieces.append(open_tag)
-            pieces.append("\n")
-            if body:
-                pieces.append(body)
-                pieces.append("\n")
-            pieces.append(close_tag)
-            pieces.append("\n\n")
-
-        normalized_text = "".join(pieces)
-
-        assistant_tag = cfg["chat_assistant"]
-        placeholder_open, placeholder_close = self._chat_tag_wrappers_for_name(
-            assistant_tag, block.star_mode
-        )
-        placeholder = f"{placeholder_open}\n\n{placeholder_close}"
-        replacement = normalized_text + placeholder
-
-        return (
-            replacement,
-            normalized_messages,
-            len(normalized_text),
-            len(placeholder_open),
-            len(placeholder_close),
-        )
-
-    def _prepare_chat_block(self, st, full_content: str, block_start: int, block_end: int):
-        block_text = full_content[block_start:block_end]
-        block = self._parse_chat_messages(block_text)
-        if not block.messages:
-            return []
-
-        text = st["text"]
-        st["chat_star_mode"] = block.star_mode
-        pending_follow = st.pop("_pending_stream_follow", None)
-        if pending_follow is None:
-            pending_follow = self._should_follow(text)
-        st["stream_following"] = pending_follow
-        st["_stream_follow_primed"] = pending_follow
-
-        (
-            replacement,
-            normalized_messages,
-            normalized_len,
-            open_len,
-            close_len,
-        ) = self._render_chat_block(block)
-
-        start_idx = offset_to_tkindex(full_content, block_start)
-        end_idx = offset_to_tkindex(full_content, block_end)
-
-        text.delete(start_idx, end_idx)
-        text.insert(start_idx, replacement)
-
-        stream_offset = normalized_len + open_len + 1
-        after_close_offset = normalized_len + open_len + 2 + close_len
-
-        stream_index = text.index(f"{start_idx}+{stream_offset}c")
-        text.mark_set("stream_here", stream_index)
-        text.mark_gravity("stream_here", tk.RIGHT)
-        if st.get("stream_following"):
-            text.see("stream_here")
-
-        after_close_index = text.index(f"{start_idx}+{after_close_offset}c")
-        text.mark_set("chat_after_placeholder", after_close_index)
-        text.mark_gravity("chat_after_placeholder", tk.RIGHT)
-        st["chat_after_placeholder_mark"] = "chat_after_placeholder"
-
-        # Ensure the end of the normalized block is visible before streaming
-        if not st.get("stream_following"):
-            with contextlib.suppress(tk.TclError):
-                text.see("chat_after_placeholder")
-            with contextlib.suppress(tk.TclError):
-                text.see(tk.INSERT)
-
-        normalized_messages.append({"role": "assistant", "content": ""})
-
-        return normalized_messages
-
-    def _launch_chat_stream(self, st, messages):
-        cfg = self.cfg
-        text = st["text"]
-
-        assistant_role = cfg["chat_assistant"].lower()
-        payload_messages = [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in messages
-            if not (
-                msg["role"].lower() == assistant_role and not (msg["content"] or "").strip()
-            )
-        ]
-
-        if not payload_messages:
-            messagebox.showinfo("Chat", "No parsed chat messages in this block.")
-            self._clear_chat_state(st)
-            return
-
-        payload = {
-            "model": cfg["model"],
-            "messages": payload_messages,
-            "temperature": cfg["temperature"],
-            "top_p": cfg["top_p"],
-            "stream": True,
-        }
-
-        self._set_busy(True)
-
-        st["stream_mark"] = "stream_here"
-        st["chat_stream_active"] = True
-
-        if st.get("stream_following") or self._should_follow(text):
-            text.see("stream_here")
-
-        def worker(tab_id):
-            try:
-                for piece in stream_chat(cfg["endpoint"], payload):
-                    self._result_queue.put(
-                        {
-                            "ok": True,
-                            "kind": "stream_append",
-                            "tab": tab_id,
-                            "mark": "stream_here",
-                            "text": piece,
-                        }
-                    )
-            except Exception as e:
-                self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
-            finally:
-                self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
-                self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
-
-        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
-
     # ---------- Queue handling ----------
 
     def _poll_queue(self):
@@ -1349,7 +1047,6 @@ class FIMPad(tk.Tk):
                         st_err = self.tabs[frame]
                         mark = st_err.get("stream_mark") or "stream_here"
                         self._force_flush_stream_buffer(frame, mark)
-                        self._clear_chat_state(st_err)
                     self._set_busy(False)
                     messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                     continue
@@ -1433,39 +1130,6 @@ class FIMPad(tk.Tk):
                     st["stops_after"] = []
                     st["stops_after_maxlen"] = 0
                     st["stream_tail"] = ""
-                    if st.get("chat_stream_active"):
-                        after_idx = None
-                        mark_name = st.get("chat_after_placeholder_mark")
-                        if mark_name:
-                            try:
-                                after_idx = text.index(mark_name)
-                            except tk.TclError:
-                                after_idx = None
-                        if after_idx:
-                            user_block, cursor_offset = self._chat_user_followup_block(
-                                st.get("chat_star_mode", False)
-                            )
-                            block_length = len(user_block)
-                            text.insert(after_idx, user_block)
-                            close_target = None
-                            try:
-                                close_target = text.index(f"{after_idx}+{block_length}c")
-                            except tk.TclError:
-                                close_target = None
-                            if close_target:
-                                with contextlib.suppress(tk.TclError):
-                                    text.mark_set(tk.INSERT, close_target)
-                                    text.see(tk.INSERT)
-                            insert_target = None
-                            try:
-                                insert_target = text.index(f"{after_idx}+{cursor_offset}c")
-                            except tk.TclError:
-                                insert_target = None
-                            if insert_target:
-                                with contextlib.suppress(tk.TclError):
-                                    text.mark_set(tk.INSERT, insert_target)
-                                    text.see(tk.INSERT)
-                        self._clear_chat_state(st)
                     self._set_busy(False)
 
                 elif kind == "spellcheck_now":
