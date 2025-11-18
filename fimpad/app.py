@@ -16,8 +16,9 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .client import stream_completion
-from .config import DEFAULTS, MARKER_REGEX, WORD_RE, load_config, save_config
-from .parser import TagToken, parse_triple_tokens
+
+from .config import DEFAULTS, WORD_RE, load_config, save_config
+from .parser import FIMRequest, MARKER_REGEX, parse_fim_request
 from .utils import offset_to_tkindex
 
 
@@ -638,12 +639,6 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
-    @staticmethod
-    def _cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-        return (start <= cursor_offset <= end) or (
-            cursor_offset > 0 and start <= cursor_offset - 1 < end
-        )
-
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
         if job is not None:
@@ -739,24 +734,10 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        tokens = list(parse_triple_tokens(content))
+        fim_request = parse_fim_request(content, cursor_offset, self.cfg["default_n"])
 
-        marker_token: TagToken | None = None
-        for token in tokens:
-            if not isinstance(token, TagToken) or token.kind != "marker":
-                continue
-            if not self._cursor_within_span(token.start, token.end, cursor_offset):
-                continue
-            if marker_token is None or token.start >= marker_token.start:
-                marker_token = token
-
-        if marker_token is not None:
-            self._launch_fim_or_completion_stream(
-                st,
-                content,
-                marker_token,
-                tokens,
-            )
+        if fim_request is not None:
+            self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
         messagebox.showinfo(
@@ -815,139 +796,36 @@ class FIMPad(tk.Tk):
 
     # ----- FIM/completion streaming -----
 
-    def _launch_fim_or_completion_stream(self, st, content, marker_token: TagToken, tokens):
+    def _launch_fim_or_completion_stream(self, st, content, fim_request: FIMRequest):
         cfg = self.cfg
-        self._last_fim_marker = marker_token.raw
-        body = (marker_token.body or "").strip()
+        self._last_fim_marker = fim_request.marker.raw
 
-        remainder = body
-        token_value: int | str | None = None
-        keep_tags = False
-        if remainder:
-            n_match = re.match(r"(\d+)", remainder)
-            if n_match:
-                token_value = n_match.group(1)
-                remainder = remainder[n_match.end() :]
-                bang_match = re.match(r"\s*!\s*", remainder)
-                if bang_match:
-                    keep_tags = True
-                    remainder = remainder[bang_match.end() :]
-                remainder = remainder.strip()
-            else:
-                remainder = remainder.strip()
-        else:
-            remainder = ""
-
-        if token_value is None:
-            token_value = cfg["default_n"]
-
-        try:
-            max_tokens = max(1, min(4096, int(token_value)))
-        except Exception:
-            max_tokens = cfg["default_n"]
-
-        def _unescape_stop(s: str) -> str:
-            out: list[str] = []
-            i = 0
-            while i < len(s):
-                c = s[i]
-                if c != "\\":
-                    out.append(c)
-                    i += 1
-                    continue
-                i += 1
-                if i >= len(s):
-                    out.append("\\")
-                    break
-                esc = s[i]
-                i += 1
-                if esc == "n":
-                    out.append("\n")
-                elif esc == "t":
-                    out.append("\t")
-                elif esc == "r":
-                    out.append("\r")
-                elif esc == '"':
-                    out.append('"')
-                elif esc == "'":
-                    out.append("'")
-                elif esc == "\\":
-                    out.append("\\")
-                else:
-                    out.append(esc)
-            return "".join(out)
-
-        stops_before: list[str] = []
-        stops_after: list[str] = []
-        quote_re = re.compile(r"\"((?:\\.|[^\"\\])*)\"|'((?:\\.|[^'\\])*)'")
-        for qmatch in quote_re.finditer(remainder):
-            double_val = qmatch.group(1)
-            single_val = qmatch.group(2)
-            if double_val is not None:
-                unescaped = _unescape_stop(double_val)
-                if unescaped:
-                    stops_before.append(unescaped)
-            elif single_val is not None:
-                unescaped = _unescape_stop(single_val)
-                if unescaped:
-                    stops_after.append(unescaped)
-
-        prefix_token: TagToken | None = None
-        suffix_token: TagToken | None = None
-        for token in tokens:
-            if not isinstance(token, TagToken):
-                continue
-            if token.kind == "prefix" and token.start < marker_token.start:
-                prefix_token = token
-            elif token.kind == "suffix" and token.start >= marker_token.end:
-                suffix_token = token
-                break
-
-        if prefix_token is not None:
-            pfx_used_start = prefix_token.start
-            pfx_used_end = prefix_token.end
-            before_region = content[pfx_used_end:marker_token.start]
-        else:
-            pfx_used_start = pfx_used_end = None
-            before_region = content[: marker_token.start]
-
-        if suffix_token is not None:
-            sfx_used_start = suffix_token.start
-            sfx_used_end = suffix_token.end
-            after_region = content[marker_token.end : sfx_used_start]
-        else:
-            sfx_used_start = sfx_used_end = None
-            after_region = content[marker_token.end :]
-
-        safe_suffix = MARKER_REGEX.sub("", after_region)
-        use_completion = after_region.strip() == ""
-
-        if use_completion:
-            prompt = before_region
+        if fim_request.use_completion:
+            prompt = fim_request.before_region
         else:
             prompt = (
-                f"{cfg['fim_prefix']}{before_region}{cfg['fim_suffix']}{safe_suffix}{cfg['fim_middle']}"
+                f"{cfg['fim_prefix']}{fim_request.before_region}{cfg['fim_suffix']}{fim_request.safe_suffix}{cfg['fim_middle']}"
             )
 
         payload = {
             "model": cfg["model"],
             "prompt": prompt,
-            "max_tokens": max_tokens,
+            "max_tokens": fim_request.max_tokens,
             "temperature": cfg["temperature"],
             "top_p": cfg["top_p"],
             "stream": True,
         }
-        if stops_before:
-            payload["stop"] = stops_before
+        if fim_request.stops_before:
+            payload["stop"] = fim_request.stops_before
 
         text = st["text"]
-        start_index = offset_to_tkindex(content, marker_token.start)
-        end_index = offset_to_tkindex(content, marker_token.end)
+        start_index = offset_to_tkindex(content, fim_request.marker.start)
+        end_index = offset_to_tkindex(content, fim_request.marker.end)
 
         self._reset_stream_state(st)
 
-        st["stops_after"] = stops_after
-        st["stops_after_maxlen"] = max((len(s) for s in stops_after), default=0)
+        st["stops_after"] = fim_request.stops_after
+        st["stops_after_maxlen"] = max((len(s) for s in fim_request.stops_after), default=0)
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
 
@@ -956,18 +834,18 @@ class FIMPad(tk.Tk):
         # Prepare streaming mark
         text.mark_set("stream_here", start_index)
         text.mark_gravity("stream_here", tk.RIGHT)
-        if suffix_token is not None and not keep_tags:
-            s_s = offset_to_tkindex(content, sfx_used_start)
-            s_e = offset_to_tkindex(content, sfx_used_end)
+        if fim_request.suffix_token is not None and not fim_request.keep_tags:
+            s_s = offset_to_tkindex(content, fim_request.suffix_token.start)
+            s_e = offset_to_tkindex(content, fim_request.suffix_token.end)
             with contextlib.suppress(tk.TclError):
                 text.delete(s_s, s_e)
-        if prefix_token is not None and not keep_tags:
-            p_s = offset_to_tkindex(content, pfx_used_start)
-            p_e = offset_to_tkindex(content, pfx_used_end)
+        if fim_request.prefix_token is not None and not fim_request.keep_tags:
+            p_s = offset_to_tkindex(content, fim_request.prefix_token.start)
+            p_e = offset_to_tkindex(content, fim_request.prefix_token.end)
             with contextlib.suppress(tk.TclError):
                 text.delete(p_s, p_e)
 
-        marker_len = marker_token.end - marker_token.start
+        marker_len = fim_request.marker.end - fim_request.marker.start
         start_index = text.index("stream_here")
         end_index = text.index(f"{start_index}+{marker_len}c")
         text.delete(start_index, end_index)

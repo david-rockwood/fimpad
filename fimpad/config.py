@@ -26,17 +26,6 @@ DEFAULTS = {
     "spell_lang": "en_US",
 }
 
-# Reuse your existing patterns
-MARKER_REGEX = re.compile(
-    r"""
-    \[\[\[ \s* (?P<body>
-        \d+
-        (?: \s*! \s* )?
-        (?: \s* (?: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' ) )*
-    ) \s* \]\]\]
-    """,
-    re.VERBOSE,
-)
 WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
 
 

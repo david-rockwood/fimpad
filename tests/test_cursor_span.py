@@ -1,6 +1,6 @@
 import pytest
 
-from fimpad.app import FIMPad
+from fimpad.parser import cursor_within_span
 
 
 @pytest.mark.parametrize(
@@ -18,4 +18,4 @@ from fimpad.app import FIMPad
     ],
 )
 def test_cursor_within_span(start, end, cursor_offset, expected):
-    assert FIMPad._cursor_within_span(start, end, cursor_offset) is expected
+    assert cursor_within_span(start, end, cursor_offset) is expected
