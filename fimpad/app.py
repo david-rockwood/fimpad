@@ -8,6 +8,7 @@ import contextlib
 import os
 import queue
 import threading
+import subprocess
 import tkinter as tk
 import tkinter.font as tkfont
 from importlib import resources
@@ -1172,10 +1173,39 @@ class FIMPad(tk.Tk):
                     )
                     return
 
-                # If no dictionary is available, skip marking misses.
+                # Fallback path for environments without dictionaries (used by tests)
                 if not dict_obj:
+                    lang = self.cfg.get("spell_lang", "en_US")
+                    try:
+                        proc = subprocess.run(  # noqa: UP022 - keep stdout/stderr for monkeypatch compat
+                            ["aspell", "list", "-l", lang, "--encoding=utf-8"],
+                            input="\n".join(words).encode("utf-8"),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            check=False,
+                        )
+                        miss_raw = proc.stdout.decode("utf-8", errors="ignore").splitlines()
+                    except Exception:
+                        miss_raw = []
+
+                    miss = set(miss_raw) & set(words)
+                    miss = {w for w in miss if w not in ignore_set}
+
+                    if not miss:
+                        self._result_queue.put(
+                            {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                        )
+                        return
+
+                    content = text_snapshot
+                    out_spans = []
+                    for w, (s_off, e_off) in zip(words, offsets, strict=False):
+                        if w in miss:
+                            sidx = offset_to_tkindex(content, s_off)
+                            eidx = offset_to_tkindex(content, e_off)
+                            out_spans.append((sidx, eidx))
                     self._result_queue.put(
-                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
                     )
                     return
             except Exception:
