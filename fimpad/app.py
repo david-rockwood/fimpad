@@ -890,6 +890,15 @@ class FIMPad(tk.Tk):
             e.grid(row=r, column=1, padx=8, pady=4)
             return e
 
+        def add_combobox_row(r, label, var, values, width=40):
+            tk.Label(w, text=label, anchor="w").grid(
+                row=r, column=0, sticky="w", padx=8, pady=4
+            )
+            cb = ttk.Combobox(w, textvariable=var, values=values, width=width)
+            cb.grid(row=r, column=1, padx=8, pady=4)
+            cb.bind("<<ComboboxSelected>>", lambda e: var.set(cb.get()))
+            return cb
+
         endpoint_var = tk.StringVar(value=cfg["endpoint"])
         model_var = tk.StringVar(value=cfg["model"])
         temp_var = tk.StringVar(value=str(cfg["temperature"]))
@@ -937,7 +946,11 @@ class FIMPad(tk.Tk):
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
-        add_row(row, "Font family:", fontfam_var)
+        available_fonts = sorted(set(tkfont.families()))
+        current_fontfam = fontfam_var.get().strip()
+        if current_fontfam and current_fontfam not in available_fonts:
+            available_fonts.append(current_fontfam)
+        add_combobox_row(row, "Font family:", fontfam_var, available_fonts)
         row += 1
         add_row(row, "Font size:", fontsize_var)
         row += 1
