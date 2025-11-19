@@ -227,16 +227,28 @@ class FIMPad(tk.Tk):
         if index < 0 or index >= len(tabs):
             return
         tab_id = tabs[index]
+        print(
+            f"[TABCLOSE] click index={index} tab_id={tab_id} support={self._tab_close_support}",
+            flush=True,
+        )
         if self._tab_close_support == "element":
             element_tail = self._identify_tab_element(event.x, event.y)
+            print(f"[TABCLOSE] themed element_tail={element_tail!r}", flush=True)
             if "close" not in element_tail:
+                print("[TABCLOSE] themed click ignored; not on close element", flush=True)
                 return
         else:
-            if not self._is_fallback_close_hit(event.x, event.y, tab_id):
+            hit = self._is_fallback_close_hit(event.x, event.y, tab_id)
+            print(
+                f"[TABCLOSE] fallback hit_test={hit} x={event.x} y={event.y} tab={tab_id}",
+                flush=True,
+            )
+            if not hit:
                 return
         if self._tab_close_support == "compound":
             self._set_close_hover_tab(None)
         self.nb.select(tab_id)
+        print(f"[TABCLOSE] invoking close for tab_id={tab_id}", flush=True)
         self._close_current_tab()
 
     def _handle_tab_motion(self, event):
