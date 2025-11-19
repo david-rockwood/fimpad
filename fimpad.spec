@@ -10,6 +10,10 @@ a = Analysis(
             'fimpad/data/help_tab_template.txt',
             'fimpad/data',
         ),
+        (
+            'fimpad/examples',
+            'fimpad/examples',
+        ),
     ],
     hiddenimports=['tkinter', 'tkinter.scrolledtext'],
     hookspath=[],
