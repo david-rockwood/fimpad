@@ -734,7 +734,12 @@ class FIMPad(tk.Tk):
         pad_px = max(0, int(self.cfg.get("editor_padding_px", 0)))
         number_width = self.app_font.measure("9" * digits)
         canvas_width = number_width + pad_px + 6
-        canvas.configure(width=canvas_width, bg=self.cfg["highlight2"])
+        canvas.configure(
+            width=canvas_width,
+            bg=self.cfg["highlight2"],
+            highlightthickness=0,
+            bd=0,
+        )
         canvas.delete("all")
 
         visible_height = text.winfo_height()
@@ -753,11 +758,11 @@ class FIMPad(tk.Tk):
                 break
             line_no = int(index.split(".")[0])
             is_line_start = text.compare(index, "==", f"{line_no}.0")
-            label = (str(line_no) if is_line_start else "").rjust(digits)
+            label = (str(line_no) if is_line_start else "".rjust(digits))
             canvas.create_text(
-                canvas_width - pad_px - 3,
+                canvas_width - 3,
                 y_px,
-                anchor="nw",
+                anchor="ne",
                 text=label,
                 font=self.app_font,
                 fill=self.cfg["highlight1"],
