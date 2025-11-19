@@ -6,6 +6,7 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 
 import contextlib
 import os
+import subprocess
 import queue
 import threading
 import tkinter as tk
