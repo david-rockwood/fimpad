@@ -1234,10 +1234,8 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             return
 
-        try:
+        with contextlib.suppress(tk.TclError):
             text_widget.mark_set(tk.INSERT, f"{start_index}+{len(marker)}c")
-        except tk.TclError:
-            pass
 
         text_widget.tag_remove("sel", "1.0", tk.END)
         text_widget.see(tk.INSERT)
