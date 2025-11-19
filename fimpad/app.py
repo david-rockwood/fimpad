@@ -1070,8 +1070,9 @@ class FIMPad(tk.Tk):
         Accepts either a ttk.Frame object or a Notebook tab-id string.
         """
         # Respect settings / availability
-        if not self.cfg.get("spellcheck_enabled", True) or not self._dictionary:
-            if not self._dictionary:
+        dictionary = getattr(self, "_dictionary", None)
+        if not self.cfg.get("spellcheck_enabled", True) or not dictionary:
+            if not dictionary:
                 self._notify_spell_unavailable()
             if isinstance(frame, str):
                 with contextlib.suppress(Exception):
@@ -1104,7 +1105,8 @@ class FIMPad(tk.Tk):
         st["_spell_timer"] = self.after(delay_ms, lambda fr=frame: self._spawn_spellcheck(fr))
 
     def _spawn_spellcheck(self, frame):
-        if not self.cfg.get("spellcheck_enabled", True) or not self._dictionary:
+        dictionary = getattr(self, "_dictionary", None)
+        if not self.cfg.get("spellcheck_enabled", True) or not dictionary:
             self._notify_spell_unavailable()
             if frame in self.tabs:
                 st = self.tabs[frame]
