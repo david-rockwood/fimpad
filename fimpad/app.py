@@ -1084,9 +1084,7 @@ class FIMPad(tk.Tk):
         # Snapshot text (must be on main thread)
         txt = t.get("1.0", "end-1c")
         ignore = set(self._spell_ignore)  # copy
-        dictionary = self._dictionary
-        if not dictionary:
-            return
+        dictionary = getattr(self, "_dictionary", None)
 
         def worker(tab_id, text_snapshot, ignore_set, dict_obj):
             try:
@@ -1105,12 +1103,46 @@ class FIMPad(tk.Tk):
                     )
                     return
 
-                miss = set()
-                for w in set(words):
-                    if not dict_obj.check(w):
-                        miss.add(w)
+                if dict_obj:
+                    miss = set()
+                    for w in set(words):
+                        if not dict_obj.check(w):
+                            miss.add(w)
 
-                # Filter ignores
+                    miss = {w for w in miss if w not in ignore_set}
+
+                    if not miss:
+                        self._result_queue.put(
+                            {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
+                        )
+                        return
+
+                    content = text_snapshot
+                    out_spans = []
+                    for w, (s_off, e_off) in zip(words, offsets, strict=False):
+                        if w in miss:
+                            sidx = offset_to_tkindex(content, s_off)
+                            eidx = offset_to_tkindex(content, e_off)
+                            out_spans.append((sidx, eidx))
+                    self._result_queue.put(
+                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
+                    )
+                    return
+
+                # Fallback path for tests or environments without dictionaries
+                lang = self.cfg.get("spell_lang", "en_US")
+                try:
+                    proc = subprocess.run(
+                        ["aspell", "list", "-l", lang, "--encoding=utf-8"],
+                        input="\n".join(words).encode("utf-8"),
+                        capture_output=True,
+                        check=False,
+                    )
+                    miss_raw = proc.stdout.decode("utf-8", errors="ignore").splitlines()
+                except Exception:
+                    miss_raw = []
+
+                miss = set(miss_raw) & set(words)
                 miss = {w for w in miss if w not in ignore_set}
 
                 if not miss:
@@ -1119,7 +1151,6 @@ class FIMPad(tk.Tk):
                     )
                     return
 
-                # Map misspelled words back to spans
                 content = text_snapshot
                 out_spans = []
                 for w, (s_off, e_off) in zip(words, offsets, strict=False):
