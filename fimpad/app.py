@@ -325,29 +325,46 @@ class FIMPad(tk.Tk):
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
 
+        content_frame = tk.Frame(text_frame, bg=self.cfg["bg"])
+        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        content_frame.grid_columnconfigure(3, weight=1)
+
+        left_padding = tk.Frame(
+            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+        )
+        left_padding.grid(row=0, column=0, sticky="ns")
+
         line_numbers = tk.Canvas(
-            text_frame,
+            content_frame,
             width=0,
             highlightthickness=0,
             bd=0,
             bg=self.cfg["highlight2"],
             takefocus=0,
         )
-        line_numbers.pack(side=tk.LEFT, fill=tk.Y)
+        line_numbers.grid(row=0, column=1, sticky="ns")
         for sequence in ("<Button-1>", "<Double-Button-1>", "<B1-Motion>"):
             line_numbers.bind(sequence, lambda e: "break")
 
-        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        gutter_gap = tk.Frame(content_frame, width=20, bg=self.cfg["bg"])
+        gutter_gap.grid(row=0, column=2, sticky="ns")
 
         text = tk.Text(
-            text_frame,
+            content_frame,
             undo=True,
             maxundo=-1,
             wrap=tk.WORD,
             yscrollcommand=lambda f1, f2, fr=frame: self._on_text_scroll(fr, f1, f2),
         )
-        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        text.grid(row=0, column=3, sticky="nsew")
+
+        right_padding = tk.Frame(
+            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+        )
+        right_padding.grid(row=0, column=4, sticky="ns")
+
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         scrollbar.config(command=lambda *args, fr=frame: self._on_scrollbar_scroll(fr, *args))
         text.configure(
             font=self.app_font,
@@ -357,30 +374,15 @@ class FIMPad(tk.Tk):
             selectbackground=self.cfg["highlight2"],
             selectforeground=self.cfg["bg"],
         )
-        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
-        self._clear_line_spacing(text)
-
-        # Spellcheck tag + bindings
-        text.tag_configure(
-            "misspelled", underline=True, foreground=self.cfg["highlight1"]
-        )
-        text.bind(
-            "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
-        )  # right-click menu
-        text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
-        text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
-        text.bind("<Control-Return>", self._on_generate_shortcut)
-        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
-        text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
-        text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
-
         st = {
             "frame": frame,
             "path": None,
             "text": text,
             "line_numbers": line_numbers,
+            "content_frame": content_frame,
+            "left_padding": left_padding,
+            "right_padding": right_padding,
+            "gutter_gap": gutter_gap,
             "scrollbar": scrollbar,
             "wrap": "word",  # "word" or "none"
             "dirty": False,
@@ -400,6 +402,25 @@ class FIMPad(tk.Tk):
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
             "_line_number_job": None,
         }
+
+        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+        self._clear_line_spacing(text)
+
+        # Spellcheck tag + bindings
+        text.tag_configure(
+            "misspelled", underline=True, foreground=self.cfg["highlight1"]
+        )
+        text.bind(
+            "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
+        )  # right-click menu
+        text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
+        text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
+        text.bind("<Control-Return>", self._on_generate_shortcut)
+        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
+        text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
 
         def on_modified(event=None):
             if st["suppress_modified"]:
@@ -663,8 +684,16 @@ class FIMPad(tk.Tk):
 
     # ---------- Helpers ----------
 
-    def _apply_editor_padding(self, text: tk.Text, pad_px: int) -> None:
-        text.configure(padx=max(0, int(pad_px)), pady=0)
+    def _apply_editor_padding(self, st: dict, pad_px: int) -> None:
+        pad_px = max(0, int(pad_px))
+        st["text"].configure(padx=0, pady=0)
+        for key in ("left_padding", "right_padding"):
+            pad = st.get(key)
+            if pad is not None:
+                pad.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
+        gap = st.get("gutter_gap")
+        if gap is not None:
+            gap.configure(width=20, bg=self.cfg["bg"], highlightthickness=0, bd=0)
 
     def _clear_line_spacing(self, text: tk.Text) -> None:
         text.configure(spacing1=0, spacing2=0, spacing3=0)
@@ -818,7 +847,7 @@ class FIMPad(tk.Tk):
         text = st["text"]
         st["wrap"] = "word" if wrap_word else "none"
         text.config(wrap=tk.WORD if wrap_word else tk.NONE)
-        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
         self._schedule_line_number_update(st["frame"], delay_ms=10)
 
     def _sync_wrap_menu_var(self) -> None:
@@ -1250,7 +1279,10 @@ class FIMPad(tk.Tk):
                     underline=True,
                     foreground=self.cfg["highlight1"],
                 )
-                self._apply_editor_padding(t, self.cfg["editor_padding_px"])
+                content_frame = st.get("content_frame")
+                if content_frame is not None:
+                    content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
+                self._apply_editor_padding(st, self.cfg["editor_padding_px"])
                 self._clear_line_spacing(t)
                 self._render_line_numbers(st)
                 self._schedule_line_number_update(frame, delay_ms=15)
