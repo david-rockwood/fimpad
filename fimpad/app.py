@@ -42,6 +42,7 @@ class FIMPad(tk.Tk):
             pass
 
         self._examples = iter_examples()
+        self._spell_menu_var: tk.BooleanVar | None = None
         self._build_menu()
         self._build_notebook()
         self.nb.bind(
@@ -75,6 +76,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
+        self.bind_all("<Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
         self.bind_all("<Control-t>", lambda e: self._open_settings())
 
@@ -244,6 +246,13 @@ class FIMPad(tk.Tk):
         editmenu.add_command(
             label="Toggle Wrap", accelerator="Alt+Z", command=self._toggle_wrap_current
         )
+        self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
+        editmenu.add_checkbutton(
+            label="Toggle Spellcheck",
+            accelerator="Alt+S",
+            variable=self._spell_menu_var,
+            command=self._toggle_spellcheck,
+        )
         editmenu.add_command(
             label="Select All", accelerator="Ctrl+A", command=self._select_all_current
         )
@@ -321,6 +330,30 @@ class FIMPad(tk.Tk):
             st["wrap"] = "word"
             text.config(wrap=tk.WORD)
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+
+    def _toggle_spellcheck(self):
+        enabled = not self.cfg.get("spellcheck_enabled", True)
+        self.cfg["spellcheck_enabled"] = enabled
+        save_config(self.cfg)
+        if self._spell_menu_var is not None:
+            self._spell_menu_var.set(enabled)
+
+        if not enabled:
+            for st in self.tabs.values():
+                timer_id = st.get("_spell_timer")
+                if timer_id is not None:
+                    with contextlib.suppress(Exception):
+                        self.after_cancel(timer_id)
+                    st["_spell_timer"] = None
+                st["text"].tag_remove("misspelled", "1.0", "end")
+            self._spell_notice_msg = None
+            return
+
+        self._dictionary = self._dictionary or self._load_dictionary(
+            self.cfg.get("spell_lang", "en_US")
+        )
+        for frame in self.tabs:
+            self._schedule_spellcheck_for_frame(frame, delay_ms=120)
 
     def _select_all_current(self):
         st = self._current_tab_state()
@@ -550,7 +583,6 @@ class FIMPad(tk.Tk):
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
 
-        spell_on_var = tk.BooleanVar(value=cfg.get("spellcheck_enabled", True))
         spell_lang_var = tk.StringVar(value=cfg.get("spell_lang", "en_US"))
 
         row = 0
@@ -615,11 +647,6 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        # Spellcheck controls
-        ttk.Checkbutton(w, text="Enable spellcheck", variable=spell_on_var).grid(
-            row=row, column=0, columnspan=2, padx=8, pady=(10, 0), sticky="w"
-        )
-        row += 1
         tk.Label(w, text="Spellcheck language (e.g., en_US):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
@@ -643,7 +670,6 @@ class FIMPad(tk.Tk):
                 self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
                 self.cfg["fg"] = fg_var.get().strip()
                 self.cfg["bg"] = bg_var.get().strip()
-                self.cfg["spellcheck_enabled"] = bool(spell_on_var.get())
                 self.cfg["spell_lang"] = spell_lang_var.get().strip() or "en_US"
             except Exception as e:
                 messagebox.showerror("Settings", f"Invalid value: {e}")
