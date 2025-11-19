@@ -1,10 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import enchant
-import enchant.data
 from importlib import resources
 
-enchant_data_dir = resources.files(enchant.data)
+try:
+    enchant_data_dir = resources.files(enchant) / 'data'
+    enchant_datas = [
+        (
+            str(enchant_data_dir),
+            'enchant/data',
+        )
+    ] if enchant_data_dir.is_dir() else []
+except (FileNotFoundError, ModuleNotFoundError, AttributeError):
+    enchant_datas = []
 
 a = Analysis(
     ['fimpad/__main__.py'],
@@ -15,10 +23,7 @@ a = Analysis(
             'fimpad/examples',
             'fimpad/examples',
         ),
-        (
-            str(enchant_data_dir),
-            'enchant/data',
-        ),
+        *enchant_datas,
     ],
     # Ship enchant dictionaries with the bundle so spellcheck works without
     # relying on an external enchant installation.
