@@ -33,11 +33,7 @@ jobs:
 
       - name: Build binary (PyInstaller)
         run: |
-          pyinstaller --onefile --windowed \
-            --name fimpad \
-            --hidden-import tkinter \
-            --hidden-import tkinter.scrolledtext \
-            fimpad/__main__.py
+          pyinstaller fimpad.spec
           ls -lh dist/
 
       - name: Rename artifact with tag
