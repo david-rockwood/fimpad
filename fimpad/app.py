@@ -195,7 +195,12 @@ class FIMPad(tk.Tk):
         tab_id = tabs[index]
         element = self.nb.identify(event.x, event.y)
         if self._tab_close_support == "element":
-            if element != "close":
+            element = str(element) if element is not None else ""
+            if not element.endswith("close"):
+                alt = getattr(self.nb, "identify_element", None)
+                if alt is not None:
+                    element = str(alt(event.x, event.y) or "")
+            if not element.endswith("close"):
                 return
         else:
             if not self._is_fallback_close_hit(event.x, event.y, tab_id):
