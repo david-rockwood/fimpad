@@ -14,7 +14,6 @@ import tkinter.font as tkfont
 from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, filedialog, messagebox, ttk
-from tkinter.scrolledtext import ScrolledText
 
 import enchant
 
@@ -44,6 +43,7 @@ class FIMPad(tk.Tk):
         self._examples = iter_examples()
         self._spell_menu_var: tk.BooleanVar | None = None
         self._wrap_menu_var: tk.BooleanVar | None = None
+        self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._build_menu()
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
@@ -78,6 +78,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
+        self.bind_all("<Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
         self.bind_all("<Control-t>", lambda e: self._open_settings())
 
@@ -321,8 +322,54 @@ class FIMPad(tk.Tk):
 
     def _new_tab(self, content: str = "", title: str = "Untitled"):
         frame = ttk.Frame(self.nb)
-        text = ScrolledText(frame, undo=True, maxundo=-1, wrap=tk.WORD)
-        text.pack(fill=tk.BOTH, expand=True)
+        text_frame = ttk.Frame(frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+
+        content_frame = tk.Frame(text_frame, bg=self.cfg["bg"])
+        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        content_frame.grid_columnconfigure(3, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
+
+        left_padding = tk.Frame(
+            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+        )
+        left_padding.grid(row=0, column=0, sticky="ns")
+
+        line_numbers = tk.Canvas(
+            content_frame,
+            width=0,
+            highlightthickness=0,
+            bd=0,
+            bg=self.cfg["highlight2"],
+            takefocus=0,
+        )
+        line_numbers.grid(row=0, column=1, sticky="ns")
+        for sequence in ("<Button-1>", "<Double-Button-1>", "<B1-Motion>"):
+            line_numbers.bind(sequence, lambda e: "break")
+
+        gutter_gap = tk.Frame(content_frame, width=20, bg=self.cfg["bg"])
+        gutter_gap.grid(row=0, column=2, sticky="ns")
+
+        text = tk.Text(
+            content_frame,
+            undo=True,
+            maxundo=-1,
+            wrap=tk.WORD,
+            highlightthickness=0,
+            borderwidth=0,
+            relief=tk.FLAT,
+            yscrollcommand=lambda f1, f2, fr=frame: self._on_text_scroll(fr, f1, f2),
+        )
+        text.grid(row=0, column=3, sticky="nsew")
+
+        right_padding = tk.Frame(
+            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+        )
+        right_padding.grid(row=0, column=4, sticky="ns")
+
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.config(command=lambda *args, fr=frame: self._on_scrollbar_scroll(fr, *args))
         text.configure(
             font=self.app_font,
             fg=self.cfg["fg"],
@@ -331,27 +378,16 @@ class FIMPad(tk.Tk):
             selectbackground=self.cfg["highlight2"],
             selectforeground=self.cfg["bg"],
         )
-        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
-        self._clear_line_spacing(text)
-
-        # Spellcheck tag + bindings
-        text.tag_configure(
-            "misspelled", underline=True, foreground=self.cfg["highlight1"]
-        )
-        text.bind(
-            "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
-        )  # right-click menu
-        text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
-        text.bind("<Control-Return>", self._on_generate_shortcut)
-        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
-        text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
-        text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
-
         st = {
+            "frame": frame,
             "path": None,
             "text": text,
+            "line_numbers": line_numbers,
+            "content_frame": content_frame,
+            "left_padding": left_padding,
+            "right_padding": right_padding,
+            "gutter_gap": gutter_gap,
+            "scrollbar": scrollbar,
             "wrap": "word",  # "word" or "none"
             "dirty": False,
             "suppress_modified": False,
@@ -367,15 +403,36 @@ class FIMPad(tk.Tk):
             "stream_cancelled": False,
             "last_insert": "1.0",
             "last_yview": 0.0,
+            "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
+            "_line_number_job": None,
         }
+
+        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+        self._clear_line_spacing(text)
+
+        # Spellcheck tag + bindings
+        text.tag_configure(
+            "misspelled", underline=True, foreground=self.cfg["highlight1"]
+        )
+        text.bind(
+            "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
+        )  # right-click menu
+        text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
+        text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
+        text.bind("<Control-Return>", self._on_generate_shortcut)
+        text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
+        text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
 
         def on_modified(event=None):
             if st["suppress_modified"]:
                 text.edit_modified(False)
-                return
-            if text.edit_modified():
+            elif text.edit_modified():
                 self._set_dirty(st, True)
                 text.edit_modified(False)
+            self._schedule_line_number_update(frame)
 
         text.bind("<<Modified>>", on_modified)
 
@@ -396,9 +453,13 @@ class FIMPad(tk.Tk):
         text.mark_set("insert", "1.0")
         text.see("1.0")
 
+        self._apply_line_numbers_state(st, st["line_numbers_enabled"])
+
         # Initial spellcheck (debounced)
         self._schedule_spellcheck_for_frame(frame, delay_ms=250)
         self._sync_wrap_menu_var()
+        self._sync_line_numbers_menu_var()
+        self._schedule_line_number_update(frame, delay_ms=10)
 
     def _on_tab_changed(self, event=None):
         previous = self._last_tab
@@ -409,9 +470,11 @@ class FIMPad(tk.Tk):
         if current:
             self._restore_tab_view(current)
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
+            self._schedule_line_number_update(current, delay_ms=10)
 
         self._last_tab = current
         self._sync_wrap_menu_var()
+        self._sync_line_numbers_menu_var()
 
     def _store_tab_view(self, tab_id: str) -> None:
         try:
@@ -421,7 +484,7 @@ class FIMPad(tk.Tk):
         st = self.tabs.get(frame)
         if not st:
             return
-        text: ScrolledText | None = st.get("text")
+        text: tk.Text | None = st.get("text")
         if not text:
             return
         st["last_insert"] = text.index("insert")
@@ -435,7 +498,7 @@ class FIMPad(tk.Tk):
         st = self.tabs.get(frame)
         if not st:
             return
-        text: ScrolledText | None = st.get("text")
+        text: tk.Text | None = st.get("text")
         if not text:
             return
         insert_idx = st.get("last_insert", "1.0")
@@ -445,6 +508,7 @@ class FIMPad(tk.Tk):
             text.yview_moveto(yview)
         text.see("insert")
         text.focus_set()
+        self._schedule_line_number_update(frame, delay_ms=10)
 
     def _current_tab_state(self):
         tab = self.nb.select()
@@ -567,6 +631,15 @@ class FIMPad(tk.Tk):
             variable=self._wrap_menu_var,
             command=self._on_wrap_menu_toggled,
         )
+        self._line_numbers_menu_var = tk.BooleanVar(
+            value=self.cfg.get("line_numbers_enabled", False)
+        )
+        editmenu.add_checkbutton(
+            label="Toggle Line Numbers",
+            accelerator="Alt+N",
+            variable=self._line_numbers_menu_var,
+            command=self._toggle_line_numbers,
+        )
         self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
         editmenu.add_checkbutton(
             label="Toggle Spellcheck",
@@ -615,8 +688,16 @@ class FIMPad(tk.Tk):
 
     # ---------- Helpers ----------
 
-    def _apply_editor_padding(self, text: ScrolledText, pad_px: int) -> None:
-        text.configure(padx=max(0, int(pad_px)), pady=0)
+    def _apply_editor_padding(self, st: dict, pad_px: int) -> None:
+        pad_px = max(0, int(pad_px))
+        st["text"].configure(padx=0, pady=0)
+        for key in ("left_padding", "right_padding"):
+            pad = st.get(key)
+            if pad is not None:
+                pad.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
+        gap = st.get("gutter_gap")
+        if gap is not None:
+            gap.configure(width=20, bg=self.cfg["bg"], highlightthickness=0, bd=0)
 
     def _clear_line_spacing(self, text: tk.Text) -> None:
         text.configure(spacing1=0, spacing2=0, spacing3=0)
@@ -637,7 +718,117 @@ class FIMPad(tk.Tk):
             if options:
                 text.tag_configure(tag, **options)
 
-    def _cur_text(self) -> ScrolledText:
+    def _on_text_scroll(self, frame, first: str, last: str) -> None:
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        scrollbar: ttk.Scrollbar | None = st.get("scrollbar")
+        if scrollbar:
+            scrollbar.set(first, last)
+        self._schedule_line_number_update(frame, delay_ms=10)
+
+    def _on_scrollbar_scroll(self, frame, *args) -> None:
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        st["text"].yview(*args)
+        self._schedule_line_number_update(frame, delay_ms=10)
+
+    def _schedule_line_number_update(self, frame, delay_ms: int = 30) -> None:
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        job = st.get("_line_number_job")
+        if job is not None:
+            with contextlib.suppress(Exception):
+                self.after_cancel(job)
+        st["_line_number_job"] = self.after(delay_ms, lambda fr=frame: self._draw_line_numbers(fr))
+
+    def _draw_line_numbers(self, frame) -> None:
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        st["_line_number_job"] = None
+        self._render_line_numbers(st)
+
+    def _render_line_numbers(self, st: dict) -> None:
+        text: tk.Text = st["text"]
+        canvas: tk.Canvas = st["line_numbers"]
+        if not st.get("line_numbers_enabled", False):
+            canvas.configure(width=0)
+            canvas.delete("all")
+            return
+
+        if not text.winfo_ismapped():
+            return
+
+        total_lines = max(1, int(text.index("end-1c").split(".")[0]))
+        digits = max(2, len(str(total_lines)))
+        number_width = self.app_font.measure("9" * digits)
+        gutter_width = number_width + 6
+        canvas_width = gutter_width
+        canvas.configure(
+            width=canvas_width,
+            bg=self.cfg["bg"],
+            highlightthickness=0,
+            bd=0,
+        )
+        canvas.delete("all")
+
+        visible_height = text.winfo_height()
+        canvas.create_rectangle(
+            max(0, canvas_width - gutter_width),
+            0,
+            canvas_width,
+            visible_height,
+            outline="",
+            fill=self.cfg["highlight2"],
+        )
+        index = text.index("@0,0")
+        visited = set()
+        while True:
+            if index in visited:
+                break
+            visited.add(index)
+            dline = text.dlineinfo(index)
+            if dline is None:
+                break
+            y_px = dline[1]
+            line_height = dline[3]
+            if y_px > visible_height + line_height:
+                break
+            line_no = int(index.split(".")[0])
+            is_line_start = text.compare(index, "==", f"{line_no}.0")
+            label = (str(line_no) if is_line_start else "".rjust(digits))
+            canvas.create_text(
+                canvas_width - 3,
+                y_px,
+                anchor="ne",
+                text=label,
+                font=self.app_font,
+                fill=self.cfg["highlight1"],
+            )
+
+            try:
+                next_index = text.index(f"{index}+1displayline")
+            except tk.TclError:
+                break
+            if text.compare(next_index, "<=", index):
+                break
+            if text.compare(next_index, ">", "end-1c"):
+                break
+            index = next_index
+
+    def _apply_line_numbers_state(self, st: dict, enabled: bool) -> None:
+        st["line_numbers_enabled"] = enabled
+        self._render_line_numbers(st)
+
+    def _sync_line_numbers_menu_var(self) -> None:
+        if self._line_numbers_menu_var is None:
+            return
+        self._line_numbers_menu_var.set(self.cfg.get("line_numbers_enabled", False))
+
+    def _cur_text(self) -> tk.Text:
         st = self._current_tab_state()
         return st["text"]
 
@@ -660,7 +851,8 @@ class FIMPad(tk.Tk):
         text = st["text"]
         st["wrap"] = "word" if wrap_word else "none"
         text.config(wrap=tk.WORD if wrap_word else tk.NONE)
-        self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+        self._schedule_line_number_update(st["frame"], delay_ms=10)
 
     def _sync_wrap_menu_var(self) -> None:
         if self._wrap_menu_var is None:
@@ -668,6 +860,16 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         wrap_word = True if not st else st.get("wrap", "word") != "none"
         self._wrap_menu_var.set(wrap_word)
+
+    def _toggle_line_numbers(self):
+        enabled = not self.cfg.get("line_numbers_enabled", False)
+        self.cfg["line_numbers_enabled"] = enabled
+        save_config(self.cfg)
+        if self._line_numbers_menu_var is not None:
+            self._line_numbers_menu_var.set(enabled)
+        for st in self.tabs.values():
+            self._apply_line_numbers_state(st, enabled)
+            self._schedule_line_number_update(st["frame"], delay_ms=10)
 
     def _toggle_spellcheck(self):
         enabled = not self.cfg.get("spellcheck_enabled", True)
@@ -1081,8 +1283,13 @@ class FIMPad(tk.Tk):
                     underline=True,
                     foreground=self.cfg["highlight1"],
                 )
-                self._apply_editor_padding(t, self.cfg["editor_padding_px"])
+                content_frame = st.get("content_frame")
+                if content_frame is not None:
+                    content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
+                self._apply_editor_padding(st, self.cfg["editor_padding_px"])
                 self._clear_line_spacing(t)
+                self._render_line_numbers(st)
+                self._schedule_line_number_update(frame, delay_ms=15)
                 # refresh spellcheck state
                 if not self.cfg["spellcheck_enabled"]:
                     t.tag_remove("misspelled", "1.0", "end")

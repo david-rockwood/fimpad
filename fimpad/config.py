@@ -24,6 +24,7 @@ DEFAULTS = {
     "bg": "#1e1e1e",
     "highlight1": "#ff0000",
     "highlight2": "#808080",
+    "line_numbers_enabled": False,
     "spellcheck_enabled": True,
     "spell_lang": "en_US",
 }
