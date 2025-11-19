@@ -22,6 +22,8 @@ DEFAULTS = {
     "editor_padding_px": 16,
     "fg": "#e6e6e6",
     "bg": "#1e1e1e",
+    "highlight1": "#ff0000",
+    "highlight2": "#808080",
     "spellcheck_enabled": True,
     "spell_lang": "en_US",
 }
