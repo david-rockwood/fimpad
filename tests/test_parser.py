@@ -8,8 +8,6 @@ from fimpad.parser import (
     parse_fim_request,
     parse_triple_tokens,
 )
-
-
 # Helpers --------------------------------------------------------------------
 
 
