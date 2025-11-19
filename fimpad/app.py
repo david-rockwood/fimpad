@@ -328,6 +328,7 @@ class FIMPad(tk.Tk):
         content_frame = tk.Frame(text_frame, bg=self.cfg["bg"])
         content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         content_frame.grid_columnconfigure(3, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
 
         left_padding = tk.Frame(
             content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
@@ -354,6 +355,9 @@ class FIMPad(tk.Tk):
             undo=True,
             maxundo=-1,
             wrap=tk.WORD,
+            highlightthickness=0,
+            borderwidth=0,
+            relief=tk.FLAT,
             yscrollcommand=lambda f1, f2, fr=frame: self._on_text_scroll(fr, f1, f2),
         )
         text.grid(row=0, column=3, sticky="nsew")
