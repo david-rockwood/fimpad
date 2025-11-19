@@ -7,10 +7,6 @@ a = Analysis(
     binaries=[],
     datas=[
         (
-            'fimpad/data/help_tab_template.txt',
-            'fimpad/data',
-        ),
-        (
             'fimpad/examples',
             'fimpad/examples',
         ),
