@@ -43,12 +43,10 @@ class FIMPad(tk.Tk):
 
         self._examples = iter_examples()
         self._spell_menu_var: tk.BooleanVar | None = None
+        self._wrap_menu_var: tk.BooleanVar | None = None
         self._build_menu()
         self._build_notebook()
-        self.nb.bind(
-            "<<NotebookTabChanged>>",
-            lambda e: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=80),
-        )
+        self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
         self._result_queue = queue.Queue()
         self.after(60, self._poll_queue)
@@ -164,6 +162,13 @@ class FIMPad(tk.Tk):
 
         # Initial spellcheck (debounced)
         self._schedule_spellcheck_for_frame(frame, delay_ms=250)
+        self._sync_wrap_menu_var()
+
+    def _on_tab_changed(self, event=None):
+        current = self.nb.select()
+        if current:
+            self._schedule_spellcheck_for_frame(current, delay_ms=80)
+        self._sync_wrap_menu_var()
 
     def _current_tab_state(self):
         tab = self.nb.select()
@@ -243,8 +248,12 @@ class FIMPad(tk.Tk):
             label="Find & Replace…", accelerator="Ctrl+H", command=self._open_replace_dialog
         )
         editmenu.add_separator()
-        editmenu.add_command(
-            label="Toggle Wrap", accelerator="Alt+Z", command=self._toggle_wrap_current
+        self._wrap_menu_var = tk.BooleanVar(value=True)
+        editmenu.add_checkbutton(
+            label="Toggle Wrap",
+            accelerator="Alt+Z",
+            variable=self._wrap_menu_var,
+            command=self._on_wrap_menu_toggled,
         )
         self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
         editmenu.add_checkbutton(
@@ -322,14 +331,29 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
+        wrap_word = st["wrap"] == "none"
+        self._apply_wrap_state(st, wrap_word)
+        if self._wrap_menu_var is not None:
+            self._wrap_menu_var.set(wrap_word)
+
+    def _on_wrap_menu_toggled(self) -> None:
+        st = self._current_tab_state()
+        if not st or self._wrap_menu_var is None:
+            return
+        self._apply_wrap_state(st, self._wrap_menu_var.get())
+
+    def _apply_wrap_state(self, st: dict, wrap_word: bool) -> None:
         text = st["text"]
-        if st["wrap"] == "word":
-            st["wrap"] = "none"
-            text.config(wrap=tk.NONE)
-        else:
-            st["wrap"] = "word"
-            text.config(wrap=tk.WORD)
+        st["wrap"] = "word" if wrap_word else "none"
+        text.config(wrap=tk.WORD if wrap_word else tk.NONE)
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
+
+    def _sync_wrap_menu_var(self) -> None:
+        if self._wrap_menu_var is None:
+            return
+        st = self._current_tab_state()
+        wrap_word = True if not st else st.get("wrap", "word") != "none"
+        self._wrap_menu_var.set(wrap_word)
 
     def _toggle_spellcheck(self):
         enabled = not self.cfg.get("spellcheck_enabled", True)
