@@ -7,7 +7,6 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 import contextlib
 import os
 import queue
-import subprocess  # noqa: F401  # imported for test monkeypatches
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -620,7 +619,7 @@ class FIMPad(tk.Tk):
             row=row, column=0, columnspan=2, padx=8, pady=(10, 0), sticky="w"
         )
         row += 1
-        tk.Label(w, text="Spellcheck language:").grid(
+        tk.Label(w, text="Spellcheck language (e.g., en_US):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
         tk.Entry(w, textvariable=spell_lang_var, width=20).grid(
@@ -1173,39 +1172,12 @@ class FIMPad(tk.Tk):
                     )
                     return
 
-                # Fallback path for tests or environments without dictionaries
-                lang = self.cfg.get("spell_lang", "en_US")
-                try:
-                    proc = subprocess.run(  # noqa: UP022 - keep stdout/stderr for monkeypatch compat
-                        ["aspell", "list", "-l", lang, "--encoding=utf-8"],
-                        input="\n".join(words).encode("utf-8"),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        check=False,
-                    )
-                    miss_raw = proc.stdout.decode("utf-8", errors="ignore").splitlines()
-                except Exception:
-                    miss_raw = []
-
-                miss = set(miss_raw) & set(words)
-                miss = {w for w in miss if w not in ignore_set}
-
-                if not miss:
+                # If no dictionary is available, skip marking misses.
+                if not dict_obj:
                     self._result_queue.put(
                         {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
                     )
                     return
-
-                content = text_snapshot
-                out_spans = []
-                for w, (s_off, e_off) in zip(words, offsets, strict=False):
-                    if w in miss:
-                        sidx = offset_to_tkindex(content, s_off)
-                        eidx = offset_to_tkindex(content, e_off)
-                        out_spans.append((sidx, eidx))
-                self._result_queue.put(
-                    {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
-                )
             except Exception:
                 # swallow spell errors silently
                 self._result_queue.put(
