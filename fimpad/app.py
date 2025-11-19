@@ -320,8 +320,9 @@ class FIMPad(tk.Tk):
         right_pad = 0
         if self._tab_close_compound_padding:
             right_pad = self._tab_close_compound_padding[2]
-        button_right = tab_x + width - right_pad
-        button_left = button_right - image_width
+        button_right = tab_x + width
+        button_width = image_width + right_pad
+        button_left = button_right - button_width
         return (
             button_left - padding <= x <= button_right + padding
             and tab_y <= y <= tab_y + height
