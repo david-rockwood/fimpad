@@ -768,8 +768,11 @@ class FIMPad(tk.Tk):
         canvas: tk.Canvas = st["line_numbers"]
         if not st.get("line_numbers_enabled", False):
             canvas.configure(width=0)
+            canvas.grid_remove()
             canvas.delete("all")
             return
+
+        canvas.grid()
 
         if not text.winfo_ismapped():
             return
