@@ -262,9 +262,7 @@ class FIMPad(tk.Tk):
         hit_pad = self._tab_close_hit_padding or 0
         if x < button_left - hit_pad or x > button_right + hit_pad:
             return False
-        if y < tab_y or y > tab_y + height:
-            return False
-        return True
+        return not (y < tab_y or y > tab_y + height)
 
     def _handle_tab_close_click(self, event) -> None:
         if self._tab_close_support not in {"element", "compound"}:
