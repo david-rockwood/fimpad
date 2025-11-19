@@ -13,9 +13,10 @@ class _DummyEnchant:
         return SimpleNamespace(check=lambda _: True, suggest=lambda _: [])
 
 
+# Ensure the enchant stub is registered before importing the application module.
 sys.modules.setdefault("enchant", _DummyEnchant())
 
-from fimpad.app import FIMPad
+from fimpad.app import FIMPad  # noqa: E402
 
 
 class DummyText:
