@@ -325,13 +325,19 @@ class FIMPad(tk.Tk):
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
 
-        content_frame = tk.Frame(text_frame, bg=self.cfg["bg"])
+        content_frame = tk.Frame(
+            text_frame, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
+        )
         content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         content_frame.grid_columnconfigure(3, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
         left_padding = tk.Frame(
-            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+            content_frame,
+            width=self.cfg["editor_padding_px"],
+            bg=self.cfg["bg"],
+            borderwidth=0,
+            highlightthickness=0,
         )
         left_padding.grid(row=0, column=0, sticky="ns")
 
@@ -347,7 +353,9 @@ class FIMPad(tk.Tk):
         for sequence in ("<Button-1>", "<Double-Button-1>", "<B1-Motion>"):
             line_numbers.bind(sequence, lambda e: "break")
 
-        gutter_gap = tk.Frame(content_frame, width=20, bg=self.cfg["bg"])
+        gutter_gap = tk.Frame(
+            content_frame, width=20, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
+        )
         gutter_gap.grid(row=0, column=2, sticky="ns")
 
         text = tk.Text(
@@ -363,7 +371,11 @@ class FIMPad(tk.Tk):
         text.grid(row=0, column=3, sticky="nsew")
 
         right_padding = tk.Frame(
-            content_frame, width=self.cfg["editor_padding_px"], bg=self.cfg["bg"]
+            content_frame,
+            width=self.cfg["editor_padding_px"],
+            bg=self.cfg["bg"],
+            borderwidth=0,
+            highlightthickness=0,
         )
         right_padding.grid(row=0, column=4, sticky="ns")
 
@@ -756,8 +768,11 @@ class FIMPad(tk.Tk):
         canvas: tk.Canvas = st["line_numbers"]
         if not st.get("line_numbers_enabled", False):
             canvas.configure(width=0)
+            canvas.grid_remove()
             canvas.delete("all")
             return
+
+        canvas.grid()
 
         if not text.winfo_ismapped():
             return
