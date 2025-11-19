@@ -354,7 +354,11 @@ class FIMPad(tk.Tk):
             line_numbers.bind(sequence, lambda e: "break")
 
         gutter_gap = tk.Frame(
-            content_frame, width=20, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
+            content_frame,
+            width=self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
+            bg=self.cfg["bg"],
+            borderwidth=0,
+            highlightthickness=0,
         )
         gutter_gap.grid(row=0, column=2, sticky="ns")
 
@@ -420,6 +424,9 @@ class FIMPad(tk.Tk):
         }
 
         self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+        self._apply_line_number_padding(
+            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        )
         self._clear_line_spacing(text)
 
         # Spellcheck tag + bindings
@@ -707,9 +714,12 @@ class FIMPad(tk.Tk):
             pad = st.get(key)
             if pad is not None:
                 pad.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
+
+    def _apply_line_number_padding(self, st: dict, pad_px: int) -> None:
+        pad_px = max(0, int(pad_px))
         gap = st.get("gutter_gap")
         if gap is not None:
-            gap.configure(width=20, bg=self.cfg["bg"], highlightthickness=0, bd=0)
+            gap.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
 
     def _clear_line_spacing(self, text: tk.Text) -> None:
         text.configure(spacing1=0, spacing2=0, spacing3=0)
@@ -867,6 +877,9 @@ class FIMPad(tk.Tk):
         st["wrap"] = "word" if wrap_word else "none"
         text.config(wrap=tk.WORD if wrap_word else tk.NONE)
         self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+        self._apply_line_number_padding(
+            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        )
         self._schedule_line_number_update(st["frame"], delay_ms=10)
 
     def _sync_wrap_menu_var(self) -> None:
@@ -1144,6 +1157,13 @@ class FIMPad(tk.Tk):
         pad_var = tk.StringVar(
             value=str(cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"]))
         )
+        line_pad_var = tk.StringVar(
+            value=str(
+                cfg.get(
+                    "line_number_padding_px", DEFAULTS["line_number_padding_px"]
+                )
+            )
+        )
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
@@ -1187,6 +1207,8 @@ class FIMPad(tk.Tk):
         add_row(row, "Font size:", fontsize_var)
         row += 1
         add_row(row, "Editor padding (px):", pad_var)
+        row += 1
+        add_row(row, "Line number padding (px):", line_pad_var)
         row += 1
 
         def pick_fg():
@@ -1272,6 +1294,7 @@ class FIMPad(tk.Tk):
                 self.cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
                 self.cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
                 self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
+                self.cfg["line_number_padding_px"] = max(0, int(line_pad_var.get()))
                 self.cfg["fg"] = fg_var.get().strip()
                 self.cfg["bg"] = bg_var.get().strip()
                 self.cfg["highlight1"] = highlight1_var.get().strip()
@@ -1302,6 +1325,7 @@ class FIMPad(tk.Tk):
                 if content_frame is not None:
                     content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
                 self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+                self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
                 self._clear_line_spacing(t)
                 self._render_line_numbers(st)
                 self._schedule_line_number_update(frame, delay_ms=15)
