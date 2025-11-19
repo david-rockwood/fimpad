@@ -333,7 +333,9 @@ class FIMPad(tk.Tk):
         self._clear_line_spacing(text)
 
         # Spellcheck tag + bindings
-        text.tag_configure("misspelled", underline=True, foreground="#ff6666")
+        text.tag_configure(
+            "misspelled", underline=True, foreground=self.cfg["highlight1"]
+        )
         text.bind(
             "<Button-3>", lambda e, fr=frame: self._spell_context_menu(e, fr)
         )  # right-click menu
@@ -1064,6 +1066,11 @@ class FIMPad(tk.Tk):
                     insertbackground=self.cfg["highlight1"],
                     selectbackground=self.cfg["highlight2"],
                     selectforeground=self.cfg["bg"],
+                )
+                t.tag_configure(
+                    "misspelled",
+                    underline=True,
+                    foreground=self.cfg["highlight1"],
                 )
                 self._apply_editor_padding(t, self.cfg["editor_padding_px"])
                 self._clear_line_spacing(t)
