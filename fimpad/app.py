@@ -1132,7 +1132,7 @@ class FIMPad(tk.Tk):
                 # Fallback path for tests or environments without dictionaries
                 lang = self.cfg.get("spell_lang", "en_US")
                 try:
-                    proc = subprocess.run(
+                    proc = subprocess.run(  # noqa: UP022 - keep stdout/stderr for monkeypatch compat
                         ["aspell", "list", "-l", lang, "--encoding=utf-8"],
                         input="\n".join(words).encode("utf-8"),
                         stdout=subprocess.PIPE,
