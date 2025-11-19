@@ -238,7 +238,7 @@ class FIMPad(tk.Tk):
                 print("[TABCLOSE] themed click ignored; not on close element", flush=True)
                 return
         else:
-            hit = self._is_fallback_close_hit(event.x, event.y, tab_id)
+            hit = self._is_fallback_close_hit(event.x, event.y, tab_id, debug=True)
             print(
                 f"[TABCLOSE] fallback hit_test={hit} x={event.x} y={event.y} tab={tab_id}",
                 flush=True,
@@ -307,40 +307,71 @@ class FIMPad(tk.Tk):
         element_tail = str(element or "").split(".")[-1].lower()
         return element_tail
 
-    def _is_fallback_close_hit(self, x: int, y: int, tab_id: str) -> bool:
+    def _is_fallback_close_hit(
+        self, x: int, y: int, tab_id: str, debug: bool = False
+    ) -> bool:
         if self._tab_close_support != "compound" or self._tab_close_image is None:
             return False
         try:
             tab_index = self.nb.index(tab_id)
         except tk.TclError:
             return False
+        element_tail = ""
+        with contextlib.suppress(tk.TclError):
+            element = self.nb.identify(x, y)
+        if element:
+            element_tail = str(element).split(".")[-1].lower()
+        with contextlib.suppress(tk.TclError):
+            self.nb.update_idletasks()
+        bbox: tuple[int, int, int, int] | None = None
         with contextlib.suppress(tk.TclError):
             bbox = self.nb.bbox(tab_index)
         if not bbox:
-            print(
-                f"[TABCLOSE] fallback bbox missing tab={tab_id} index={tab_index}",
-                flush=True,
-            )
-            return False
-        tab_x, tab_y, width, height = bbox
-        image_width = self._tab_close_image.width()
-        padding = self._tab_close_hit_padding
-        right_pad = 0
-        if self._tab_close_compound_padding:
-            right_pad = self._tab_close_compound_padding[2]
-        button_right = tab_x + width
-        button_width = image_width + right_pad
-        button_left = button_right - button_width
-        print(
-            "[TABCLOSE] fallback bbox"
-            f" tab={tab_id} bbox={bbox} button_left={button_left}"
-            f" button_right={button_right} padding={padding}",
-            flush=True,
-        )
-        return (
-            button_left - padding <= x <= button_right + padding
-            and tab_y <= y <= tab_y + height
-        )
+            if debug:
+                print(
+                    f"[TABCLOSE] fallback bbox missing tab={tab_id} index={tab_index}",
+                    flush=True,
+                )
+            bbox = None
+        hit = False
+        if bbox:
+            tab_x, tab_y, width, height = bbox
+            if width <= 0 or height <= 0:
+                if debug:
+                    print(
+                        "[TABCLOSE] fallback bbox invalid"
+                        f" tab={tab_id} bbox={bbox} element={element_tail}",
+                        flush=True,
+                    )
+                bbox = None
+            else:
+                image_width = self._tab_close_image.width()
+                padding = self._tab_close_hit_padding
+                right_pad = 0
+                if self._tab_close_compound_padding:
+                    right_pad = self._tab_close_compound_padding[2]
+                button_right = tab_x + width
+                button_width = image_width + right_pad
+                button_left = button_right - button_width
+                if debug:
+                    print(
+                        "[TABCLOSE] fallback bbox"
+                        f" tab={tab_id} bbox={bbox} button_left={button_left}"
+                        f" button_right={button_right} padding={padding}",
+                        flush=True,
+                    )
+                hit = (
+                    button_left - padding <= x <= button_right + padding
+                    and tab_y <= y <= tab_y + height
+                )
+        if not hit and element_tail == "image":
+            if debug:
+                print(
+                    f"[TABCLOSE] fallback element hit tab={tab_id} element={element_tail}",
+                    flush=True,
+                )
+            hit = True
+        return hit
 
     def _new_tab(self, content: str = "", title: str = "Untitled"):
         frame = ttk.Frame(self.nb)
