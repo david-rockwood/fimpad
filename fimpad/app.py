@@ -6,8 +6,8 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 
 import contextlib
 import os
-import subprocess
 import queue
+import subprocess  # noqa: F401  # imported for test monkeypatches
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
