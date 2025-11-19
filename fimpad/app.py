@@ -731,7 +731,6 @@ class FIMPad(tk.Tk):
 
         total_lines = max(1, int(text.index("end-1c").split(".")[0]))
         digits = max(2, len(str(total_lines)))
-        pad_px = max(0, int(self.cfg.get("editor_padding_px", 0)))
         number_width = self.app_font.measure("9" * digits)
         gutter_width = number_width + 6
         canvas_width = gutter_width
