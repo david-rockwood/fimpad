@@ -229,13 +229,7 @@ class FIMPad(tk.Tk):
         tab_id = tabs[index]
         element = self.nb.identify(event.x, event.y)
         if self._tab_close_support == "element":
-            element = str(element) if element is not None else ""
-            element_tail = element.split(".")[-1]
-            if "close" not in element_tail:
-                alt = getattr(self.nb, "identify_element", None)
-                if alt is not None:
-                    element = str(alt(event.x, event.y) or "")
-                    element_tail = element.split(".")[-1]
+            element_tail = self._identify_tab_element(event.x, event.y)
             if "close" not in element_tail:
                 return
         else:
@@ -293,6 +287,14 @@ class FIMPad(tk.Tk):
                 padding=self._tab_close_compound_padding,
             )
         self.nb.tab(tab_name, **kwargs)
+
+    def _identify_tab_element(self, x: int, y: int) -> str:
+        try:
+            element = self.nb.tk.call(self.nb._w, "identify", "element", x, y)
+        except tk.TclError:
+            return ""
+        element_tail = str(element or "").split(".")[-1].lower()
+        return element_tail
 
     def _is_fallback_close_hit(self, x: int, y: int, tab_id: str) -> bool:
         if self._tab_close_support != "compound" or self._tab_close_image is None:
