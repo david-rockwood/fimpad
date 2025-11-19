@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
 FIMpad — Tabbed Tkinter editor for llama-server
-with FIM streaming, dirty tracking, and aspell spellcheck.
+with FIM streaming, dirty tracking, and enchant-based spellcheck.
 """
 
 import contextlib
 import os
 import queue
-import subprocess
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -15,6 +14,8 @@ from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
+
+import enchant
 
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
@@ -50,7 +51,7 @@ class FIMPad(tk.Tk):
         self._result_queue = queue.Queue()
         self.after(60, self._poll_queue)
 
-        self._aspell_available = self._probe_aspell()
+        self._dictionary = self._load_dictionary(self.cfg.get("spell_lang", "en_US"))
         self._spell_ignore = set()  # session-level ignores
 
         self._last_fim_marker: str | None = None
@@ -612,11 +613,11 @@ class FIMPad(tk.Tk):
         row += 1
 
         # Spellcheck controls
-        ttk.Checkbutton(w, text="Enable spellcheck (aspell)", variable=spell_on_var).grid(
+        ttk.Checkbutton(w, text="Enable spellcheck", variable=spell_on_var).grid(
             row=row, column=0, columnspan=2, padx=8, pady=(10, 0), sticky="w"
         )
         row += 1
-        tk.Label(w, text="Spellcheck language (aspell):").grid(
+        tk.Label(w, text="Spellcheck language:").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
         tk.Entry(w, textvariable=spell_lang_var, width=20).grid(
@@ -645,6 +646,7 @@ class FIMPad(tk.Tk):
                 messagebox.showerror("Settings", f"Invalid value: {e}")
                 return
             save_config(self.cfg)
+            self._dictionary = self._load_dictionary(self.cfg["spell_lang"])
             self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
             for frame, st in self.tabs.items():
                 t = st["text"]
@@ -1026,19 +1028,17 @@ class FIMPad(tk.Tk):
 
         self.after(60, self._poll_queue)
 
-    # ---------- Spellcheck (aspell) ----------
+    # ---------- Spellcheck (enchant) ----------
 
-    def _probe_aspell(self) -> bool:
+    def _load_dictionary(self, lang: str):
+        lang_code = lang or "en_US"
         try:
-            subprocess.run(
-                ["aspell", "--version"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            return True
+            return enchant.Dict(lang_code)
         except Exception:
-            return False
+            if lang_code != "en_US":
+                with contextlib.suppress(Exception):
+                    return enchant.Dict("en_US")
+            return None
 
     def _schedule_spellcheck_for_frame(self, frame, delay_ms: int = 350):
         """
@@ -1046,7 +1046,12 @@ class FIMPad(tk.Tk):
         Accepts either a ttk.Frame object or a Notebook tab-id string.
         """
         # Respect settings / availability
-        if not self.cfg.get("spellcheck_enabled", True) or not self._aspell_available:
+        if not self.cfg.get("spellcheck_enabled", True) or not self._dictionary:
+            if isinstance(frame, str):
+                with contextlib.suppress(Exception):
+                    frame = self.nametowidget(frame)
+            if frame in self.tabs:
+                self.tabs[frame]["text"].tag_remove("misspelled", "1.0", "end")
             return
 
         # Normalize 'frame' if it's a tab-id string
@@ -1077,10 +1082,12 @@ class FIMPad(tk.Tk):
         t = st["text"]
         # Snapshot text (must be on main thread)
         txt = t.get("1.0", "end-1c")
-        lang = self.cfg.get("spell_lang", "en_US")
         ignore = set(self._spell_ignore)  # copy
+        dictionary = self._dictionary
+        if not dictionary:
+            return
 
-        def worker(tab_id, text_snapshot, lang_code, ignore_set):
+        def worker(tab_id, text_snapshot, ignore_set, dict_obj):
             try:
                 # Extract words + offsets
                 words = []
@@ -1097,15 +1104,10 @@ class FIMPad(tk.Tk):
                     )
                     return
 
-                # Ask aspell which are misspelled
-                p = subprocess.run(
-                    ["aspell", "--lang", lang_code, "list"],
-                    input=("\n".join(words)).encode("utf-8"),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    check=False,
-                )
-                miss = set(w.strip() for w in p.stdout.decode("utf-8").splitlines() if w.strip())
+                miss = set()
+                for w in set(words):
+                    if not dict_obj.check(w):
+                        miss.add(w)
 
                 # Filter ignores
                 miss = {w for w in miss if w not in ignore_set}
@@ -1134,11 +1136,11 @@ class FIMPad(tk.Tk):
                 )
 
         threading.Thread(
-            target=worker, args=(self.nb.select(), txt, lang, ignore), daemon=True
+            target=worker, args=(self.nb.select(), txt, ignore, dictionary), daemon=True
         ).start()
 
     def _spell_context_menu(self, event, frame):
-        if not self.cfg.get("spellcheck_enabled", True) or not self._aspell_available:
+        if not self.cfg.get("spellcheck_enabled", True) or not self._dictionary:
             return
         if frame not in self.tabs:
             return
@@ -1202,7 +1204,7 @@ class FIMPad(tk.Tk):
         bind_temp("<Escape>", handle_escape)
         menu.bind("<Unmap>", lambda e: remove_temp_bindings(), add="+")
 
-        suggs = self._aspell_suggestions(word)
+        suggs = self._spell_suggestions(word)
         if suggs:
             for s in suggs[:8]:
                 menu.add_command(
@@ -1230,30 +1232,14 @@ class FIMPad(tk.Tk):
         t.delete(sidx, eidx)
         t.insert(sidx, text)
 
-    def _aspell_suggestions(self, word):
-        if not self._aspell_available:
+    def _spell_suggestions(self, word):
+        dictionary = self._dictionary
+        if not dictionary:
             return []
         try:
-            lang = self.cfg.get("spell_lang", "en_US")
-            p = subprocess.run(
-                ["aspell", "--lang", lang, "-a"],
-                input=(word + "\n").encode("utf-8"),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-            lines = p.stdout.decode("utf-8", errors="ignore").splitlines()
-            for line in lines[1:]:  # skip header
-                if not line:
-                    continue
-                ch = line[0]
-                if ch in ("*", "+"):  # correct or already root
-                    return []
-                if ch in ("&", "#"):
-                    parts = line.split(":")
-                    if len(parts) > 1:
-                        return [s.strip() for s in parts[1].split(",")]
-            return []
+            if dictionary.check(word):
+                return []
+            return dictionary.suggest(word)
         except Exception:
             return []
 
