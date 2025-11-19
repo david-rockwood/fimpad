@@ -71,6 +71,8 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Return>", self._on_generate_shortcut)
         self.bind_all("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
+        self.bind_all("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
+        self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
@@ -344,6 +346,8 @@ class FIMPad(tk.Tk):
         text.bind("<Control-KP_Enter>", self._on_generate_shortcut)
         text.bind("<Control-Shift-Return>", self._on_repeat_last_fim_shortcut)
         text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
 
         st = {
             "path": None,
@@ -586,6 +590,11 @@ class FIMPad(tk.Tk):
             label="Repeat Last FIM",
             accelerator="Ctrl+Shift+Enter",
             command=self.repeat_last_fim,
+        )
+        aimenu.add_command(
+            label="Paste Last FIM Tag",
+            accelerator="Ctrl+Alt+Enter",
+            command=self.paste_last_fim_tag,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
@@ -1204,6 +1213,34 @@ class FIMPad(tk.Tk):
         self.generate()
         return "break"
 
+    def paste_last_fim_tag(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+
+        text_widget = st.get("text")
+        if text_widget is None:
+            return
+
+        marker = self._last_fim_marker or "[[[20]]]"
+
+        try:
+            start_index = text_widget.index(tk.INSERT)
+        except tk.TclError:
+            return
+
+        try:
+            text_widget.insert(start_index, marker)
+        except tk.TclError:
+            return
+
+        with contextlib.suppress(tk.TclError):
+            text_widget.mark_set(tk.INSERT, f"{start_index}+{len(marker)}c")
+
+        text_widget.tag_remove("sel", "1.0", tk.END)
+        text_widget.see(tk.INSERT)
+        text_widget.focus_set()
+
     def repeat_last_fim(self):
         st = self._current_tab_state()
         if not st:
@@ -1247,6 +1284,10 @@ class FIMPad(tk.Tk):
 
     def _on_repeat_last_fim_shortcut(self, event):
         self.repeat_last_fim()
+        return "break"
+
+    def _on_paste_last_fim_tag_shortcut(self, event):
+        self.paste_last_fim_tag()
         return "break"
 
     # ----- FIM/completion streaming -----
