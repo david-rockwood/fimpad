@@ -1135,7 +1135,8 @@ class FIMPad(tk.Tk):
                     proc = subprocess.run(
                         ["aspell", "list", "-l", lang, "--encoding=utf-8"],
                         input="\n".join(words).encode("utf-8"),
-                        capture_output=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                         check=False,
                     )
                     miss_raw = proc.stdout.decode("utf-8", errors="ignore").splitlines()
