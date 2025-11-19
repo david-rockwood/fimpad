@@ -43,7 +43,7 @@ class FIMPad(tk.Tk):
         self._tab_close_image = None
         self._tab_close_image_active = None
         self._tab_close_support = "element"  # "element" or "compound"
-        self._tab_close_hit_padding = 10
+        self._tab_close_hit_padding = 12
         self._tab_close_hover_tab: str | None = None
 
         self._examples = iter_examples()
@@ -129,20 +129,6 @@ class FIMPad(tk.Tk):
             created_custom_element = False
 
         if created_custom_element:
-            close_element = (
-                "Notebook.padding",
-                {
-                    "side": "right",
-                    "sticky": "",
-                    "padding": (8, 2, 6, 2),
-                    "children": [
-                        (
-                            "Notebook.close",
-                            {"sticky": ""},
-                        ),
-                    ],
-                },
-            )
             style.layout(
                 "ClosableNotebook.TNotebook.Tab",
                 [
@@ -165,9 +151,20 @@ class FIMPad(tk.Tk):
                                                     "children": [
                                                         (
                                                             "Notebook.label",
-                                                            {"side": "left", "sticky": ""},
+                                                            {
+                                                                "side": "left",
+                                                                "sticky": "",
+                                                                "padding": (0, 0, 6, 0),
+                                                            },
                                                         ),
-                                                        close_element,
+                                                        (
+                                                            "Notebook.close",
+                                                            {
+                                                                "side": "right",
+                                                                "sticky": "",
+                                                                "padding": (4, 2, 6, 2),
+                                                            },
+                                                        ),
                                                     ],
                                                 },
                                             )
@@ -179,7 +176,7 @@ class FIMPad(tk.Tk):
                     )
                 ],
             )
-            style.configure("ClosableNotebook.TNotebook.Tab", padding=(12, 6, 30, 6))
+            style.configure("ClosableNotebook.TNotebook.Tab", padding=(12, 6, 32, 6))
             style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
             self.nb.configure(style="ClosableNotebook.TNotebook")
             self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
