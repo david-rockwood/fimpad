@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
   "requests>=2.32",
-  "pyenchant>=3.2",
+  "pyenchant>=3.2.2",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +28,7 @@ dev = [
   "mypy>=1.11",
   "pre-commit>=4",
   "pyinstaller>=6.10",
+  "pyenchant>=3.2.2",
 ]
 
 [tool.ruff]
