@@ -1060,10 +1060,8 @@ class FIMPad(tk.Tk):
             return
         if self._spell_notice_msg == self._spell_notice_last:
             return
-        try:
+        with contextlib.suppress(Exception):
             messagebox.showwarning("Spellcheck", self._spell_notice_msg)
-        except Exception:
-            pass
         self._spell_notice_last = self._spell_notice_msg
 
     def _schedule_spellcheck_for_frame(self, frame, delay_ms: int = 350):
