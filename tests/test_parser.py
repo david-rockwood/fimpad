@@ -14,7 +14,11 @@ from fimpad.parser import (
 
 
 def _marker_tokens(content: str):
-    return [t for t in parse_triple_tokens(content) if isinstance(t, TagToken) and t.kind == "marker"]
+    return [
+        t
+        for t in parse_triple_tokens(content)
+        if isinstance(t, TagToken) and t.kind == "marker"
+    ]
 
 
 def make_request_for_marker(
