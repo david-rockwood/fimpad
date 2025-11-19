@@ -323,6 +323,12 @@ class FIMPad(tk.Tk):
         button_right = tab_x + width
         button_width = image_width + right_pad
         button_left = button_right - button_width
+        print(
+            "[TABCLOSE] fallback bbox"
+            f" tab={tab_id} bbox={bbox} button_left={button_left}"
+            f" button_right={button_right} padding={padding}",
+            flush=True,
+        )
         return (
             button_left - padding <= x <= button_right + padding
             and tab_y <= y <= tab_y + height
