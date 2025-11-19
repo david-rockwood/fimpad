@@ -20,6 +20,7 @@ DEFAULTS = {
     "font_family": "DejaVu Sans Mono",
     "font_size": 12,
     "editor_padding_px": 16,
+    "line_number_padding_px": 10,
     "fg": "#e6e6e6",
     "bg": "#1e1e1e",
     "highlight1": "#ff0000",
