@@ -40,6 +40,8 @@ class FIMPad(tk.Tk):
                 self.style.theme_use("clam")
         except Exception:
             pass
+        self._tab_close_image = None
+        self._tab_close_image_active = None
 
         self._examples = iter_examples()
         self._spell_menu_var: tk.BooleanVar | None = None
@@ -94,6 +96,94 @@ class FIMPad(tk.Tk):
         self.nb.pack(fill=tk.BOTH, expand=True)
         self.nb.enable_traversal()
         self.tabs = {}  # frame -> state dict
+        self._setup_closable_tabs()
+
+    def _setup_closable_tabs(self) -> None:
+        try:
+            style = self.style
+        except AttributeError:
+            style = ttk.Style(self)
+            self.style = style
+
+        if self._tab_close_image is None or self._tab_close_image_active is None:
+            self._tab_close_image = self._create_close_image(fill="#555555")
+            self._tab_close_image_active = self._create_close_image(fill="#cc3333")
+
+        with contextlib.suppress(tk.TclError):
+            style.element_create(
+                "Notebook.close",
+                "image",
+                self._tab_close_image,
+                ("active", self._tab_close_image_active),
+                ("pressed", self._tab_close_image_active),
+            )
+
+        style.layout(
+            "ClosableNotebook.Tab",
+            [
+                (
+                    "Notebook.tab",
+                    {
+                        "sticky": "nswe",
+                        "children": [
+                            (
+                                "Notebook.padding",
+                                {
+                                    "side": "top",
+                                    "sticky": "nswe",
+                                    "children": [
+                                        (
+                                            "Notebook.focus",
+                                            {
+                                                "side": "top",
+                                                "sticky": "nswe",
+                                                "children": [
+                                                    (
+                                                        "Notebook.label",
+                                                        {"side": "left", "sticky": ""},
+                                                    ),
+                                                    (
+                                                        "Notebook.close",
+                                                        {"side": "right", "sticky": ""},
+                                                    ),
+                                                ],
+                                            },
+                                        )
+                                    ],
+                                },
+                            )
+                        ],
+                    },
+                )
+            ],
+        )
+        style.configure("ClosableNotebook.Tab", padding=(8, 4, 18, 4))
+        style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
+        self.nb.configure(style="ClosableNotebook.TNotebook")
+        self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
+
+    def _create_close_image(self, fill: str, size: int = 12) -> tk.PhotoImage:
+        img = tk.PhotoImage(width=size, height=size)
+        background = self.cfg.get("bg", "#f0f0f0")
+        img.put(background, to=(0, 0, size, size))
+        for i in range(size):
+            img.put(fill, to=(i, i))
+            img.put(fill, to=(size - 1 - i, i))
+        return img
+
+    def _handle_tab_close_click(self, event):
+        if self.nb.identify(event.x, event.y) != "close":
+            return
+        try:
+            index = self.nb.index(f"@{event.x},{event.y}")
+        except tk.TclError:
+            return
+        tabs = self.nb.tabs()
+        if index < 0 or index >= len(tabs):
+            return
+        tab_id = tabs[index]
+        self.nb.select(tab_id)
+        self._close_current_tab()
 
     def _new_tab(self, content: str = "", title: str = "Untitled"):
         frame = ttk.Frame(self.nb)
