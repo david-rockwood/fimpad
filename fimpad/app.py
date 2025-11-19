@@ -43,6 +43,7 @@ class FIMPad(tk.Tk):
         self._tab_close_image = None
         self._tab_close_image_active = None
         self._tab_close_support = "element"  # "element" or "compound"
+        self._tab_close_hit_padding = 10
         self._tab_close_hover_tab: str | None = None
 
         self._examples = iter_examples()
@@ -108,8 +109,12 @@ class FIMPad(tk.Tk):
             self.style = style
 
         if self._tab_close_image is None or self._tab_close_image_active is None:
-            self._tab_close_image = self._create_close_image(fill="#555555")
-            self._tab_close_image_active = self._create_close_image(fill="#cc3333")
+            self._tab_close_image = self._create_close_image(
+                fill="#555555", size=18, margin=4, stroke=2
+            )
+            self._tab_close_image_active = self._create_close_image(
+                fill="#cc3333", size=18, margin=4, stroke=2
+            )
 
         created_custom_element = True
         try:
@@ -124,6 +129,20 @@ class FIMPad(tk.Tk):
             created_custom_element = False
 
         if created_custom_element:
+            close_element = (
+                "Notebook.padding",
+                {
+                    "side": "right",
+                    "sticky": "",
+                    "padding": (8, 2, 6, 2),
+                    "children": [
+                        (
+                            "Notebook.close",
+                            {"sticky": ""},
+                        ),
+                    ],
+                },
+            )
             style.layout(
                 "ClosableNotebook.TNotebook.Tab",
                 [
@@ -148,10 +167,7 @@ class FIMPad(tk.Tk):
                                                             "Notebook.label",
                                                             {"side": "left", "sticky": ""},
                                                         ),
-                                                        (
-                                                            "Notebook.close",
-                                                            {"side": "right", "sticky": ""},
-                                                        ),
+                                                        close_element,
                                                     ],
                                                 },
                                             )
@@ -163,7 +179,7 @@ class FIMPad(tk.Tk):
                     )
                 ],
             )
-            style.configure("ClosableNotebook.TNotebook.Tab", padding=(8, 4, 18, 4))
+            style.configure("ClosableNotebook.TNotebook.Tab", padding=(12, 6, 30, 6))
             style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
             self.nb.configure(style="ClosableNotebook.TNotebook")
             self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
@@ -175,13 +191,28 @@ class FIMPad(tk.Tk):
             self.nb.bind("<Motion>", self._handle_tab_motion, add="+")
             self.nb.bind("<Leave>", lambda e: self._set_close_hover_tab(None), add="+")
 
-    def _create_close_image(self, fill: str, size: int = 12) -> tk.PhotoImage:
+    def _create_close_image(
+        self, fill: str, size: int = 12, margin: int = 2, stroke: int = 1
+    ) -> tk.PhotoImage:
         img = tk.PhotoImage(width=size, height=size)
         background = self.cfg.get("bg", "#f0f0f0")
         img.put(background, to=(0, 0, size, size))
-        for i in range(size):
-            img.put(fill, to=(i, i))
-            img.put(fill, to=(size - 1 - i, i))
+        span = max(size - (margin * 2), 2)
+
+        def _put(px: int, py: int):
+            if 0 <= px < size and 0 <= py < size:
+                img.put(fill, to=(px, py))
+
+        for i in range(span):
+            x = margin + i
+            y = margin + i
+            x2 = size - 1 - margin - i
+            y2 = margin + i
+            for offset in range(stroke):
+                _put(x + offset, y)
+                _put(x, y + offset)
+                _put(x2 - offset, y2)
+                _put(x2, y2 + offset)
         return img
 
     def _handle_tab_close_click(self, event):
@@ -254,7 +285,7 @@ class FIMPad(tk.Tk):
             kwargs.update(
                 image=image,
                 compound=tk.RIGHT,
-                padding=(8, 4, 18, 4),
+                padding=(12, 6, 32, 6),
             )
         self.nb.tab(tab_name, **kwargs)
 
@@ -267,7 +298,7 @@ class FIMPad(tk.Tk):
             return False
         tab_x, tab_y, width, height = bbox
         image_width = self._tab_close_image.width()
-        padding = 6
+        padding = self._tab_close_hit_padding
         return (
             tab_x + width - (image_width + padding) <= x <= tab_x + width
             and tab_y <= y <= tab_y + height
