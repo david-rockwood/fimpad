@@ -325,7 +325,9 @@ class FIMPad(tk.Tk):
             font=self.app_font,
             fg=self.cfg["fg"],
             bg=self.cfg["bg"],
-            insertbackground=self.cfg["fg"],
+            insertbackground=self.cfg["highlight1"],
+            selectbackground=self.cfg["highlight2"],
+            selectforeground=self.cfg["bg"],
         )
         self._apply_editor_padding(text, self.cfg["editor_padding_px"])
         self._clear_line_spacing(text)
@@ -916,6 +918,8 @@ class FIMPad(tk.Tk):
         )
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
+        highlight1_var = tk.StringVar(value=cfg["highlight1"])
+        highlight2_var = tk.StringVar(value=cfg["highlight2"])
 
         spell_lang_var = tk.StringVar(value=cfg.get("spell_lang", "en_US"))
 
@@ -967,6 +971,18 @@ class FIMPad(tk.Tk):
             if c and c[1]:
                 bg_var.set(c[1])
 
+        def pick_highlight1():
+            c = colorchooser.askcolor(
+                color=highlight1_var.get(), title="Pick caret/highlight color"
+            )
+            if c and c[1]:
+                highlight1_var.set(c[1])
+
+        def pick_highlight2():
+            c = colorchooser.askcolor(color=highlight2_var.get(), title="Pick selection color")
+            if c and c[1]:
+                highlight2_var.set(c[1])
+
         tk.Label(w, text="Text color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
         tk.Entry(w, textvariable=fg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
@@ -981,6 +997,28 @@ class FIMPad(tk.Tk):
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
         tk.Button(w, text="Pick…", command=pick_bg).grid(
+            row=row, column=1, padx=8, pady=4, sticky="e"
+        )
+        row += 1
+
+        tk.Label(w, text="Caret/insert (hex):").grid(
+            row=row, column=0, padx=8, pady=4, sticky="w"
+        )
+        tk.Entry(w, textvariable=highlight1_var, width=20).grid(
+            row=row, column=1, padx=8, pady=4, sticky="w"
+        )
+        tk.Button(w, text="Pick…", command=pick_highlight1).grid(
+            row=row, column=1, padx=8, pady=4, sticky="e"
+        )
+        row += 1
+
+        tk.Label(w, text="Selection (hex):").grid(
+            row=row, column=0, padx=8, pady=4, sticky="w"
+        )
+        tk.Entry(w, textvariable=highlight2_var, width=20).grid(
+            row=row, column=1, padx=8, pady=4, sticky="w"
+        )
+        tk.Button(w, text="Pick…", command=pick_highlight2).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
@@ -1008,6 +1046,8 @@ class FIMPad(tk.Tk):
                 self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
                 self.cfg["fg"] = fg_var.get().strip()
                 self.cfg["bg"] = bg_var.get().strip()
+                self.cfg["highlight1"] = highlight1_var.get().strip()
+                self.cfg["highlight2"] = highlight2_var.get().strip()
                 self.cfg["spell_lang"] = spell_lang_var.get().strip() or "en_US"
             except Exception as e:
                 messagebox.showerror("Settings", f"Invalid value: {e}")
@@ -1021,7 +1061,9 @@ class FIMPad(tk.Tk):
                     font=self.app_font,
                     fg=self.cfg["fg"],
                     bg=self.cfg["bg"],
-                    insertbackground=self.cfg["fg"],
+                    insertbackground=self.cfg["highlight1"],
+                    selectbackground=self.cfg["highlight2"],
+                    selectforeground=self.cfg["bg"],
                 )
                 self._apply_editor_padding(t, self.cfg["editor_padding_px"])
                 self._clear_line_spacing(t)
