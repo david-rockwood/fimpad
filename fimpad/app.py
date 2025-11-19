@@ -152,6 +152,10 @@ class FIMPad(tk.Tk):
         self.nb.add(frame, text=title)
         self.nb.select(frame)
 
+        text.focus_set()
+        text.mark_set("insert", "1.0")
+        text.see("1.0")
+
         # Initial spellcheck (debounced)
         self._schedule_spellcheck_for_frame(frame, delay_ms=250)
 
@@ -334,6 +338,10 @@ class FIMPad(tk.Tk):
             return
 
         self._new_tab(content=content, title=title)
+        st = self._current_tab_state()
+        if st:
+            st["text"].focus_set()
+            st["text"].mark_set("insert", "1.0")
 
     # ---------- File Ops + Dirty ----------
 
@@ -352,6 +360,8 @@ class FIMPad(tk.Tk):
             st["suppress_modified"] = True
             st["text"].delete("1.0", tk.END)
             st["text"].insert("1.0", data)
+            st["text"].mark_set("insert", "1.0")
+            st["text"].focus_set()
             st["text"].edit_modified(False)
             st["suppress_modified"] = False
             st["path"] = path
