@@ -325,45 +325,40 @@ class FIMPad(tk.Tk):
             self.nb.update_idletasks()
         bbox: tuple[int, int, int, int] | None = None
         with contextlib.suppress(tk.TclError):
-            bbox = self.nb.bbox(tab_index)
+            bbox = self.nb.bbox(tab_id)
         if not bbox:
-            if debug:
-                print(
-                    f"[TABCLOSE] fallback bbox missing tab={tab_id} index={tab_index}",
-                    flush=True,
-                )
-            bbox = None
-        hit = False
+            with contextlib.suppress(tk.TclError):
+                bbox = self.nb.bbox(tab_index)
+        bounds_source = "bbox"
         if bbox:
             tab_x, tab_y, width, height = bbox
             if width <= 0 or height <= 0:
-                if debug:
-                    print(
-                        "[TABCLOSE] fallback bbox invalid"
-                        f" tab={tab_id} bbox={bbox} element={element_tail}",
-                        flush=True,
-                    )
                 bbox = None
-            else:
-                image_width = self._tab_close_image.width()
-                padding = self._tab_close_hit_padding
-                right_pad = 0
-                if self._tab_close_compound_padding:
-                    right_pad = self._tab_close_compound_padding[2]
-                button_right = tab_x + width
-                button_width = image_width + right_pad
-                button_left = button_right - button_width
-                if debug:
-                    print(
-                        "[TABCLOSE] fallback bbox"
-                        f" tab={tab_id} bbox={bbox} button_left={button_left}"
-                        f" button_right={button_right} padding={padding}",
-                        flush=True,
-                    )
-                hit = (
-                    button_left - padding <= x <= button_right + padding
-                    and tab_y <= y <= tab_y + height
+        if not bbox:
+            bbox = self._tab_bounds_via_identify(tab_index, x, y)
+            bounds_source = "identify"
+        hit = False
+        if bbox:
+            tab_x, tab_y, width, height = bbox
+            image_width = self._tab_close_image.width()
+            padding = self._tab_close_hit_padding
+            right_pad = 0
+            if self._tab_close_compound_padding:
+                right_pad = self._tab_close_compound_padding[2]
+            button_right = tab_x + width - right_pad
+            button_left = button_right - image_width
+            if debug:
+                print(
+                    "[TABCLOSE] fallback bbox"
+                    f" source={bounds_source} tab={tab_id} bbox={bbox}"
+                    f" button_left={button_left} button_right={button_right}"
+                    f" padding={padding}",
+                    flush=True,
                 )
+            hit = (
+                button_left - padding <= x <= button_right + padding
+                and tab_y <= y <= tab_y + height
+            )
         if not hit and element_tail == "image":
             if debug:
                 print(
@@ -371,7 +366,51 @@ class FIMPad(tk.Tk):
                     flush=True,
                 )
             hit = True
+        elif not hit and debug:
+            print(
+                f"[TABCLOSE] fallback miss tab={tab_id} element={element_tail}",
+                flush=True,
+            )
         return hit
+
+    def _identify_tab_index_at(self, x: int, y: int) -> int | None:
+        try:
+            result = self.nb.tk.call(self.nb._w, "identify", "tab", x, y)
+        except tk.TclError:
+            return None
+        if result in ("", "none"):
+            return None
+        try:
+            return int(result)
+        except (TypeError, ValueError):
+            return None
+
+    def _tab_bounds_via_identify(
+        self, tab_index: int, x_hint: int, y_hint: int
+    ) -> tuple[int, int, int, int] | None:
+        width = max(self.nb.winfo_width(), 1)
+        height = max(self.nb.winfo_height(), 1)
+        x_hint = min(max(x_hint, 0), width - 1)
+        y_hint = min(max(y_hint, 0), height - 1)
+        if self._identify_tab_index_at(x_hint, y_hint) != tab_index:
+            return None
+        left = x_hint
+        while left >= 0 and self._identify_tab_index_at(left, y_hint) == tab_index:
+            left -= 1
+        left += 1
+        right = x_hint
+        while right < width and self._identify_tab_index_at(right, y_hint) == tab_index:
+            right += 1
+        right -= 1
+        top = y_hint
+        while top >= 0 and self._identify_tab_index_at(x_hint, top) == tab_index:
+            top -= 1
+        top += 1
+        bottom = y_hint
+        while bottom < height and self._identify_tab_index_at(x_hint, bottom) == tab_index:
+            bottom += 1
+        bottom -= 1
+        return (left, top, right - left, bottom - top)
 
     def _new_tab(self, content: str = "", title: str = "Untitled"):
         frame = ttk.Frame(self.nb)
