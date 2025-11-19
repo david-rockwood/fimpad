@@ -733,16 +733,25 @@ class FIMPad(tk.Tk):
         digits = max(2, len(str(total_lines)))
         pad_px = max(0, int(self.cfg.get("editor_padding_px", 0)))
         number_width = self.app_font.measure("9" * digits)
-        canvas_width = number_width + pad_px + 6
+        gutter_width = number_width + 6
+        canvas_width = gutter_width
         canvas.configure(
             width=canvas_width,
-            bg=self.cfg["highlight2"],
+            bg=self.cfg["bg"],
             highlightthickness=0,
             bd=0,
         )
         canvas.delete("all")
 
         visible_height = text.winfo_height()
+        canvas.create_rectangle(
+            max(0, canvas_width - gutter_width),
+            0,
+            canvas_width,
+            visible_height,
+            outline="",
+            fill=self.cfg["highlight2"],
+        )
         index = text.index("@0,0")
         visited = set()
         while True:
