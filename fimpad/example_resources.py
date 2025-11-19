@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Helpers for discovering bundled example files."""
 
 from importlib import resources
