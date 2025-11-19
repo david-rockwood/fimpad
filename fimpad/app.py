@@ -52,6 +52,8 @@ class FIMPad(tk.Tk):
         self._result_queue = queue.Queue()
         self.after(60, self._poll_queue)
 
+        self._spell_notice_msg: str | None = None
+        self._spell_notice_last: str | None = None
         self._dictionary = self._load_dictionary(self.cfg.get("spell_lang", "en_US"))
         self._spell_ignore = set()  # session-level ignores
 
@@ -1034,12 +1036,33 @@ class FIMPad(tk.Tk):
     def _load_dictionary(self, lang: str):
         lang_code = lang or "en_US"
         try:
+            self._spell_notice_msg = None
+            self._spell_notice_last = None
             return enchant.Dict(lang_code)
-        except Exception:
+        except enchant.errors.DictNotFoundError:
+            self._spell_notice_msg = (
+                f"Spellcheck unavailable: dictionary '{lang_code}' is not installed."
+            )
             if lang_code != "en_US":
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(enchant.errors.DictNotFoundError):
+                    self._spell_notice_msg = None
+                    self._spell_notice_last = None
                     return enchant.Dict("en_US")
+            self._notify_spell_unavailable()
             return None
+        except Exception:
+            self._spell_notice_msg = "Spellcheck unavailable: failed to initialize dictionary."
+            self._notify_spell_unavailable()
+            return None
+
+    def _notify_spell_unavailable(self):
+        if not self._spell_notice_msg:
+            return
+        if self._spell_notice_msg == self._spell_notice_last:
+            return
+        with contextlib.suppress(Exception):
+            messagebox.showwarning("Spellcheck", self._spell_notice_msg)
+        self._spell_notice_last = self._spell_notice_msg
 
     def _schedule_spellcheck_for_frame(self, frame, delay_ms: int = 350):
         """
@@ -1047,12 +1070,19 @@ class FIMPad(tk.Tk):
         Accepts either a ttk.Frame object or a Notebook tab-id string.
         """
         # Respect settings / availability
-        if not self.cfg.get("spellcheck_enabled", True) or not self._dictionary:
+        dictionary = getattr(self, "_dictionary", None)
+        if not self.cfg.get("spellcheck_enabled", True) or not dictionary:
+            if not dictionary:
+                notifier = getattr(self, "_notify_spell_unavailable", None)
+                if callable(notifier):
+                    notifier()
             if isinstance(frame, str):
                 with contextlib.suppress(Exception):
                     frame = self.nametowidget(frame)
             if frame in self.tabs:
-                self.tabs[frame]["text"].tag_remove("misspelled", "1.0", "end")
+                st = self.tabs[frame]
+                st["text"].tag_remove("misspelled", "1.0", "end")
+                st["_spell_timer"] = None
             return
 
         # Normalize 'frame' if it's a tab-id string
@@ -1077,6 +1107,20 @@ class FIMPad(tk.Tk):
         st["_spell_timer"] = self.after(delay_ms, lambda fr=frame: self._spawn_spellcheck(fr))
 
     def _spawn_spellcheck(self, frame):
+        dictionary = getattr(self, "_dictionary", None)
+        if not self.cfg.get("spellcheck_enabled", True):
+            notifier = getattr(self, "_notify_spell_unavailable", None)
+            if callable(notifier):
+                notifier()
+            if frame in self.tabs:
+                st = self.tabs[frame]
+                st["text"].tag_remove("misspelled", "1.0", "end")
+                st["_spell_timer"] = None
+            return
+        if not dictionary:
+            notifier = getattr(self, "_notify_spell_unavailable", None)
+            if callable(notifier):
+                notifier()
         if frame not in self.tabs:
             return
         st = self.tabs[frame]
