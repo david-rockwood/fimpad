@@ -5,6 +5,8 @@ discovered automatically.
 """
 
 import contextlib
+import pathlib
+import sys
 from importlib import resources
 from importlib.resources.abc import Traversable
 
@@ -19,20 +21,9 @@ def iter_examples() -> list[tuple[str, Traversable]]:
     returned title omits the file extension.
     """
 
-    try:
-        package_files = resources.files(__package__)
-    except Exception:
-        return []
-
     with contextlib.ExitStack() as stack:
-        try:
-            examples_dir = stack.enter_context(
-                resources.as_file(package_files.joinpath("examples"))
-            )
-        except FileNotFoundError:
-            return []
-
-        if not examples_dir.exists():
+        examples_dir = _resolve_examples_dir(stack)
+        if examples_dir is None:
             return []
 
         results: list[tuple[str, Traversable]] = []
@@ -45,3 +36,34 @@ def iter_examples() -> list[tuple[str, Traversable]]:
 
         results.sort(key=lambda item: item[0].lower())
         return results
+
+
+def _resolve_examples_dir(stack: contextlib.ExitStack) -> pathlib.Path | None:
+    """Locate the packaged examples directory.
+
+    The primary lookup uses ``importlib.resources`` so that editable/source installs
+    work as expected. In frozen (PyInstaller) binaries, fall back to the extracted
+    ``_MEIPASS`` payload.
+    """
+
+    package_files: Traversable | None
+    try:
+        package_files = resources.files(__package__)
+    except Exception:
+        package_files = None
+
+    if package_files is not None:
+        with contextlib.suppress(FileNotFoundError):
+            examples_dir = stack.enter_context(
+                resources.as_file(package_files.joinpath("examples"))
+            )
+            if examples_dir.exists():
+                return examples_dir
+
+    if getattr(sys, "frozen", False):
+        base = pathlib.Path(getattr(sys, "_MEIPASS", ""))
+        pyinstaller_dir = base / "fimpad" / "examples"
+        if pyinstaller_dir.exists():
+            return pyinstaller_dir
+
+    return None
