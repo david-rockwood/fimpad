@@ -1,5 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import enchant
+import enchant.data
+from importlib import resources
+
+enchant_data_dir = resources.files(enchant.data)
 
 a = Analysis(
     ['fimpad/__main__.py'],
@@ -10,8 +15,21 @@ a = Analysis(
             'fimpad/examples',
             'fimpad/examples',
         ),
+        (
+            str(enchant_data_dir),
+            'enchant/data',
+        ),
     ],
-    hiddenimports=['tkinter', 'tkinter.scrolledtext'],
+    # Ship enchant dictionaries with the bundle so spellcheck works without
+    # relying on an external enchant installation.
+    hiddenimports=[
+        'tkinter',
+        'tkinter.scrolledtext',
+        'enchant',
+        'enchant.backends',
+        'enchant.checker',
+        'enchant.tokenize',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
