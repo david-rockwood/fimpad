@@ -476,6 +476,31 @@ class FIMPad(tk.Tk):
             command=lambda: self._cur_text().event_generate("<<Redo>>"),
         )
         editmenu.add_separator()
+        editmenu.add_command(
+            label="Cut",
+            accelerator="Ctrl+X",
+            command=lambda: self._cur_text().event_generate("<<Cut>>"),
+        )
+        editmenu.add_command(
+            label="Copy",
+            accelerator="Ctrl+C",
+            command=lambda: self._cur_text().event_generate("<<Copy>>"),
+        )
+        editmenu.add_command(
+            label="Paste",
+            accelerator="Ctrl+V",
+            command=lambda: self._cur_text().event_generate("<<Paste>>"),
+        )
+        editmenu.add_command(
+            label="Delete",
+            accelerator="Del",
+            command=lambda: self._cur_text().event_generate("<<Clear>>"),
+        )
+        editmenu.add_separator()
+        editmenu.add_command(
+            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
+        )
+        editmenu.add_separator()
         editmenu.add_command(label="Find…", accelerator="Ctrl+F", command=self._open_find_dialog)
         editmenu.add_command(
             label="Find & Replace…", accelerator="Ctrl+H", command=self._open_replace_dialog
@@ -494,9 +519,6 @@ class FIMPad(tk.Tk):
             accelerator="Alt+S",
             variable=self._spell_menu_var,
             command=self._toggle_spellcheck,
-        )
-        editmenu.add_command(
-            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
         )
         editmenu.add_separator()
         editmenu.add_command(
