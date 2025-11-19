@@ -1,0 +1,7 @@
+Welcome to FIMpad!
+
+This example shows a simple note you can edit, tweak, and use to try out the editor's features.
+
+- Use Ctrl+Enter to invoke FIM completion inside [[[N]]] markers.
+- Toggle word wrap with Alt+Z.
+- Open this file again from the Examples menu.

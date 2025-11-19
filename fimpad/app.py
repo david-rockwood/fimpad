@@ -13,11 +13,14 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
+from importlib import resources
+from importlib.resources.abc import Traversable
 
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .parser import MARKER_REGEX, FIMRequest, parse_fim_request
 from .utils import offset_to_tkindex
+from .example_resources import iter_examples
 
 
 class FIMPad(tk.Tk):
@@ -36,6 +39,7 @@ class FIMPad(tk.Tk):
         except Exception:
             pass
 
+        self._examples = iter_examples()
         self._build_menu()
         self._build_notebook()
         self.nb.bind(
@@ -254,6 +258,19 @@ class FIMPad(tk.Tk):
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
+        examples_menu = tk.Menu(menubar, tearoff=0)
+        if not self._examples:
+            examples_menu.add_command(label="(No examples found)", state="disabled")
+        else:
+            for title, resource in self._examples:
+                examples_menu.add_command(
+                    label=title,
+                    command=lambda t=title, r=resource: self._open_example_resource(
+                        t, r
+                    ),
+                )
+        menubar.add_cascade(label="Examples", menu=examples_menu)
+
         self.config(menu=menubar)
 
     # ---------- Helpers ----------
@@ -305,6 +322,19 @@ class FIMPad(tk.Tk):
         t.tag_add("sel", "1.0", "end-1c")
         t.mark_set(tk.INSERT, "1.0")
         t.see("1.0")
+
+    # ---------- Examples ----------
+
+    def _open_example_resource(self, title: str, resource: Traversable) -> None:
+        try:
+            with resources.as_file(resource) as path:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+        except Exception as exc:
+            messagebox.showerror("Example Error", f"Failed to load '{title}': {exc}")
+            return
+
+        self._new_tab(content=content, title=title)
 
     # ---------- File Ops + Dirty ----------
 
