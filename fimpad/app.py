@@ -1076,28 +1076,62 @@ class FIMPad(tk.Tk):
         e2.grid(row=1, column=1, padx=8, pady=8)
         e1.focus_set()
 
-        def replace_next():
+        match_tag = "find_replace_match"
+
+        def update_buttons():
+            has_match = bool(text.tag_ranges(match_tag))
+            state = "!disabled" if has_match else "disabled"
+            replace_btn.state((state,))
+            replace_all_btn.state((state,))
+
+        def clear_highlight():
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            update_buttons()
+
+        def find_next():
             patt = find_var.get()
-            repl = repl_var.get()
             if not patt:
+                clear_highlight()
                 return
             start = text.index(tk.INSERT)
             pos = text.search(patt, start, stopindex=tk.END)
             if not pos:
                 pos = text.search(patt, "1.0", stopindex=tk.END)
                 if not pos:
-                    messagebox.showinfo("Replace", "No more matches.")
+                    messagebox.showinfo("Find", "Not found.")
+                    clear_highlight()
                     return
             end = f"{pos}+{len(patt)}c"
-            text.delete(pos, end)
-            text.insert(pos, repl)
-            text.mark_set(tk.INSERT, f"{pos}+{len(repl)}c")
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.tag_add("sel", pos, end)
+            text.tag_add(match_tag, pos, end)
+            text.mark_set(tk.INSERT, end)
             text.see(pos)
+            update_buttons()
+
+        def replace_current():
+            patt = find_var.get()
+            repl = repl_var.get()
+            ranges = text.tag_ranges(match_tag)
+            if not patt or not ranges:
+                update_buttons()
+                return
+            start, end = ranges[0], ranges[1]
+            text.delete(start, end)
+            text.insert(start, repl)
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.mark_set(tk.INSERT, f"{start}+{len(repl)}c")
+            text.see(start)
+            update_buttons()
 
         def replace_all():
             patt = find_var.get()
             repl = repl_var.get()
-            if not patt:
+            if not patt or not text.tag_ranges(match_tag):
+                update_buttons()
                 return
             count = 0
             idx = "1.0"
@@ -1111,13 +1145,25 @@ class FIMPad(tk.Tk):
                 idx = f"{pos}+{len(repl)}c"
                 count += 1
             messagebox.showinfo("Replace All", f"Replaced {count} occurrences.")
+            clear_highlight()
 
-        ttk.Button(w, text="Replace Next", command=replace_next).grid(
-            row=2, column=1, padx=8, pady=6, sticky="w"
+        def on_find_change(*_):
+            clear_highlight()
+
+        find_var.trace_add("write", on_find_change)
+
+        btn_frame = ttk.Frame(w)
+        btn_frame.grid(row=2, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame.columnconfigure((0, 1, 2), weight=1)
+
+        ttk.Button(btn_frame, text="Find", command=find_next).grid(
+            row=0, column=0, padx=(0, 4), sticky="w"
         )
-        ttk.Button(w, text="Replace All", command=replace_all).grid(
-            row=2, column=1, padx=8, pady=6, sticky="e"
-        )
+        replace_btn = ttk.Button(btn_frame, text="Replace", command=replace_current)
+        replace_btn.grid(row=0, column=1)
+        replace_all_btn = ttk.Button(btn_frame, text="Replace All", command=replace_all)
+        replace_all_btn.grid(row=0, column=2, padx=(4, 0), sticky="e")
+        update_buttons()
 
     # ---------- Settings ----------
 
