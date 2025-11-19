@@ -57,6 +57,7 @@ class FIMPad(tk.Tk):
         self._spell_ignore = set()  # session-level ignores
 
         self._last_fim_marker: str | None = None
+        self._last_tab: str | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -356,6 +357,8 @@ class FIMPad(tk.Tk):
             "stops_after_maxlen": 0,
             "stream_tail": "",
             "stream_cancelled": False,
+            "last_insert": "1.0",
+            "last_yview": 0.0,
         }
 
         def on_modified(event=None):
@@ -378,6 +381,9 @@ class FIMPad(tk.Tk):
         self._apply_tab_title(frame, title)
         self.nb.select(frame)
 
+        if self._last_tab is None:
+            self._last_tab = self.nb.select()
+
         text.focus_set()
         text.mark_set("insert", "1.0")
         text.see("1.0")
@@ -387,10 +393,50 @@ class FIMPad(tk.Tk):
         self._sync_wrap_menu_var()
 
     def _on_tab_changed(self, event=None):
+        previous = self._last_tab
+        if previous:
+            self._store_tab_view(previous)
+
         current = self.nb.select()
         if current:
+            self._restore_tab_view(current)
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
+
+        self._last_tab = current
         self._sync_wrap_menu_var()
+
+    def _store_tab_view(self, tab_id: str) -> None:
+        try:
+            frame = self.nametowidget(tab_id)
+        except Exception:
+            return
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        text: ScrolledText | None = st.get("text")
+        if not text:
+            return
+        st["last_insert"] = text.index("insert")
+        st["last_yview"] = text.yview()[0]
+
+    def _restore_tab_view(self, tab_id: str) -> None:
+        try:
+            frame = self.nametowidget(tab_id)
+        except Exception:
+            return
+        st = self.tabs.get(frame)
+        if not st:
+            return
+        text: ScrolledText | None = st.get("text")
+        if not text:
+            return
+        insert_idx = st.get("last_insert", "1.0")
+        yview = st.get("last_yview", 0.0)
+        text.mark_set("insert", insert_idx)
+        with contextlib.suppress(Exception):
+            text.yview_moveto(yview)
+        text.see("insert")
+        text.focus_set()
 
     def _current_tab_state(self):
         tab = self.nb.select()
