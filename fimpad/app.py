@@ -240,6 +240,8 @@ class FIMPad(tk.Tk):
     def _apply_tab_title(self, tab_id, title: str) -> None:
         tab_name = str(tab_id)
         kwargs: dict[str, object] = {"text": title}
+        if self._tab_close_support == "element":
+            kwargs["style"] = "ClosableNotebook.Tab"
         if self._tab_close_support == "compound":
             image = (
                 self._tab_close_image_active
