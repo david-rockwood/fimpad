@@ -1073,7 +1073,9 @@ class FIMPad(tk.Tk):
         dictionary = getattr(self, "_dictionary", None)
         if not self.cfg.get("spellcheck_enabled", True) or not dictionary:
             if not dictionary:
-                self._notify_spell_unavailable()
+                notifier = getattr(self, "_notify_spell_unavailable", None)
+                if callable(notifier):
+                    notifier()
             if isinstance(frame, str):
                 with contextlib.suppress(Exception):
                     frame = self.nametowidget(frame)
@@ -1106,13 +1108,19 @@ class FIMPad(tk.Tk):
 
     def _spawn_spellcheck(self, frame):
         dictionary = getattr(self, "_dictionary", None)
-        if not self.cfg.get("spellcheck_enabled", True) or not dictionary:
-            self._notify_spell_unavailable()
+        if not self.cfg.get("spellcheck_enabled", True):
+            notifier = getattr(self, "_notify_spell_unavailable", None)
+            if callable(notifier):
+                notifier()
             if frame in self.tabs:
                 st = self.tabs[frame]
                 st["text"].tag_remove("misspelled", "1.0", "end")
                 st["_spell_timer"] = None
             return
+        if not dictionary:
+            notifier = getattr(self, "_notify_spell_unavailable", None)
+            if callable(notifier):
+                notifier()
         if frame not in self.tabs:
             return
         st = self.tabs[frame]
