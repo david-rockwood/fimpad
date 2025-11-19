@@ -94,6 +94,229 @@ class FIMPad(tk.Tk):
         self.nb.pack(fill=tk.BOTH, expand=True)
         self.nb.enable_traversal()
         self.tabs = {}  # frame -> state dict
+        self._tab_close_image: tk.PhotoImage | None = None
+        self._tab_close_image_active: tk.PhotoImage | None = None
+        self._tab_close_support: str | None = None
+        self._tab_close_hit_padding = 6
+        self._tab_close_compound_padding = (8, 4, 16, 4)
+        self._tab_close_hover_tab: str | None = None
+        self._setup_closable_tabs()
+
+    def _setup_closable_tabs(self) -> None:
+        self._tab_close_image = self._create_close_image(
+            fill="#555555", size=16, margin=3, stroke=2
+        )
+        self._tab_close_image_active = self._create_close_image(
+            fill="#cc3333", size=16, margin=3, stroke=2
+        )
+
+        style = getattr(self, "style", None) or ttk.Style(self)
+
+        try:
+            style.element_create(
+                "Notebook.close",
+                "image",
+                self._tab_close_image,
+                ("active", self._tab_close_image_active),
+                border=0,
+                sticky="",
+            )
+            style.layout(
+                "ClosableNotebook.TNotebook.Tab",
+                [
+                    (
+                        "Notebook.tab",
+                        {
+                            "sticky": "nswe",
+                            "children": [
+                                (
+                                    "Notebook.padding",
+                                    {
+                                        "side": "top",
+                                        "sticky": "nswe",
+                                        "children": [
+                                            (
+                                                "Notebook.focus",
+                                                {
+                                                    "side": "top",
+                                                    "sticky": "nswe",
+                                                    "children": [
+                                                        (
+                                                            "Notebook.label",
+                                                            {
+                                                                "side": "left",
+                                                                "sticky": "",
+                                                            },
+                                                        ),
+                                                        (
+                                                            "Notebook.close",
+                                                            {
+                                                                "side": "right",
+                                                                "sticky": "",
+                                                            },
+                                                        ),
+                                                    ],
+                                                },
+                                            )
+                                        ],
+                                    },
+                                )
+                            ],
+                        },
+                    )
+                ],
+            )
+            style.configure(
+                "ClosableNotebook.TNotebook.Tab", padding=(8, 4, 16, 4)
+            )
+            self.nb.configure(style="ClosableNotebook.TNotebook")
+            self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
+            self._tab_close_support = "element"
+            return
+        except tk.TclError:
+            pass
+
+        self._tab_close_support = "compound"
+        self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
+        self.nb.bind("<Motion>", self._handle_tab_motion, add="+")
+        self.nb.bind("<Leave>", lambda e: self._set_close_hover_tab(None), add="+")
+
+    def _create_close_image(
+        self, fill: str, size: int = 12, margin: int = 2, stroke: int = 2
+    ) -> tk.PhotoImage:
+        image = tk.PhotoImage(width=size, height=size)
+        radius = max(0, stroke // 2)
+
+        def paint(px: int, py: int) -> None:
+            if 0 <= px < size and 0 <= py < size:
+                image.put(fill, (px, py))
+
+        for i in range(margin, size - margin):
+            tl_br = (i, i)
+            bl_tr = (i, size - i - 1)
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    paint(tl_br[0] + dx, tl_br[1] + dy)
+                    paint(bl_tr[0] + dx, bl_tr[1] + dy)
+        return image
+
+    def _apply_tab_title(self, tab_id, title: str) -> None:
+        if self._tab_close_support == "compound":
+            if not tab_id:
+                return
+            image = (
+                self._tab_close_image_active
+                if tab_id == self._tab_close_hover_tab
+                else self._tab_close_image
+            )
+            kwargs = {
+                "text": title,
+                "compound": tk.RIGHT,
+                "padding": self._tab_close_compound_padding,
+            }
+            if image is not None:
+                kwargs["image"] = image
+            self.nb.tab(tab_id, **kwargs)
+        else:
+            self.nb.tab(tab_id, text=title)
+
+    def _identify_tab_index_at(self, x: int, y: int) -> int | None:
+        try:
+            index = self.nb.tk.call(self.nb._w, "identify", "tab", x, y)
+        except tk.TclError:
+            return None
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            return None
+        tabs = self.nb.tabs()
+        if index < 0 or index >= len(tabs):
+            return None
+        return index
+
+    def _identify_tab_element(self, x: int, y: int) -> str:
+        try:
+            element = self.nb.tk.call(self.nb._w, "identify", "element", x, y)
+        except tk.TclError:
+            return ""
+        if not element:
+            return ""
+        parts = str(element).split("!")[-1].split(".")
+        return parts[-1].lower() if parts else ""
+
+    def _is_fallback_close_hit(self, x: int, y: int, tab_id: str, debug: bool = False) -> bool:
+        if self._tab_close_support != "compound":
+            return False
+        try:
+            tab_index = self.nb.index(tab_id)
+            bbox = self.nb.bbox(tab_index)
+        except tk.TclError:
+            return False
+        if not bbox:
+            return False
+        tab_x, tab_y, width, height = bbox
+        image_width = self._tab_close_image.width() if self._tab_close_image else 0
+        right_pad = self._tab_close_compound_padding[2] if self._tab_close_compound_padding else 0
+        button_right = tab_x + width - right_pad
+        button_left = button_right - image_width
+        hit_pad = self._tab_close_hit_padding or 0
+        if x < button_left - hit_pad or x > button_right + hit_pad:
+            return False
+        if y < tab_y or y > tab_y + height:
+            return False
+        return True
+
+    def _handle_tab_close_click(self, event) -> None:
+        if self._tab_close_support not in {"element", "compound"}:
+            return
+        index = self._identify_tab_index_at(event.x, event.y)
+        if index is None:
+            return
+        tabs = self.nb.tabs()
+        if index >= len(tabs):
+            return
+        tab_id = tabs[index]
+        if self._tab_close_support == "element":
+            element = self._identify_tab_element(event.x, event.y)
+            if "close" not in element:
+                return
+        elif self._tab_close_support == "compound":
+            if not self._is_fallback_close_hit(event.x, event.y, tab_id):
+                return
+            self._set_close_hover_tab(None)
+        self.nb.select(tab_id)
+        self._close_current_tab()
+
+    def _handle_tab_motion(self, event) -> None:
+        if self._tab_close_support != "compound":
+            return
+        index = self._identify_tab_index_at(event.x, event.y)
+        if index is None:
+            self._set_close_hover_tab(None)
+            return
+        tabs = self.nb.tabs()
+        if index >= len(tabs):
+            self._set_close_hover_tab(None)
+            return
+        tab_id = tabs[index]
+        if self._is_fallback_close_hit(event.x, event.y, tab_id):
+            self._set_close_hover_tab(tab_id)
+        else:
+            self._set_close_hover_tab(None)
+
+    def _set_close_hover_tab(self, tab_id: str | None) -> None:
+        if self._tab_close_support != "compound":
+            return
+        if tab_id == self._tab_close_hover_tab:
+            return
+        prev = self._tab_close_hover_tab
+        self._tab_close_hover_tab = tab_id
+        for target in filter(None, (prev, tab_id)):
+            try:
+                title = self.nb.tab(target, option="text")
+            except tk.TclError:
+                continue
+            self._apply_tab_title(target, title)
 
     def _new_tab(self, content: str = "", title: str = "Untitled"):
         frame = ttk.Frame(self.nb)
@@ -154,6 +377,7 @@ class FIMPad(tk.Tk):
 
         self.tabs[frame] = st
         self.nb.add(frame, text=title)
+        self._apply_tab_title(frame, title)
         self.nb.select(frame)
 
         text.focus_set()
@@ -181,10 +405,15 @@ class FIMPad(tk.Tk):
         tab = self.nb.select()
         if not tab:
             return
-        title = os.path.basename(st["path"]) if st["path"] else "Untitled"
+        title = self._format_tab_title(st)
+        self._apply_tab_title(tab, title)
+
+    def _format_tab_title(self, st: dict) -> str:
+        path = st.get("path")
+        title = os.path.basename(path) if path else "Untitled"
         if st.get("dirty"):
             title = f"• {title}"
-        self.nb.tab(tab, text=title)
+        return title
 
     def _set_dirty(self, st, dirty: bool):
         st["dirty"] = dirty
@@ -197,6 +426,12 @@ class FIMPad(tk.Tk):
         if not self._maybe_save(st):
             return
         cur = self.nb.select()
+        if (
+            self._tab_close_support == "compound"
+            and cur
+            and cur == self._tab_close_hover_tab
+        ):
+            self._set_close_hover_tab(None)
         frame = self.nametowidget(cur)
         self.nb.forget(cur)
         self.tabs.pop(frame, None)
@@ -987,6 +1222,8 @@ class FIMPad(tk.Tk):
                 tab_id = item.get("tab")
                 frame = self.nametowidget(tab_id) if tab_id else None
                 if not frame or frame not in self.tabs:
+                    if kind == "stream_done":
+                        self._set_busy(False)
                     continue
                 st = self.tabs[frame]
                 text = st["text"]
