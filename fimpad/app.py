@@ -227,7 +227,6 @@ class FIMPad(tk.Tk):
         if index < 0 or index >= len(tabs):
             return
         tab_id = tabs[index]
-        element = self.nb.identify(event.x, event.y)
         if self._tab_close_support == "element":
             element_tail = self._identify_tab_element(event.x, event.y)
             if "close" not in element_tail:
