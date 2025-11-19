@@ -44,6 +44,7 @@ class FIMPad(tk.Tk):
         self._tab_close_image_active = None
         self._tab_close_support = "element"  # "element" or "compound"
         self._tab_close_hit_padding = 12
+        self._tab_close_compound_padding = (12, 6, 32, 6)
         self._tab_close_hover_tab: str | None = None
 
         self._examples = iter_examples()
@@ -289,7 +290,7 @@ class FIMPad(tk.Tk):
             kwargs.update(
                 image=image,
                 compound=tk.RIGHT,
-                padding=(12, 6, 32, 6),
+                padding=self._tab_close_compound_padding,
             )
         self.nb.tab(tab_name, **kwargs)
 
@@ -303,8 +304,13 @@ class FIMPad(tk.Tk):
         tab_x, tab_y, width, height = bbox
         image_width = self._tab_close_image.width()
         padding = self._tab_close_hit_padding
+        right_pad = 0
+        if self._tab_close_compound_padding:
+            right_pad = self._tab_close_compound_padding[2]
+        button_right = tab_x + width - right_pad
+        button_left = button_right - image_width
         return (
-            tab_x + width - (image_width + padding) <= x <= tab_x + width
+            button_left - padding <= x <= button_right + padding
             and tab_y <= y <= tab_y + height
         )
 
