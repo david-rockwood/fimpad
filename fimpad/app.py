@@ -129,55 +129,60 @@ class FIMPad(tk.Tk):
             created_custom_element = False
 
         if created_custom_element:
-            style.layout(
-                "ClosableNotebook.TNotebook.Tab",
-                [
-                    (
-                        "Notebook.tab",
-                        {
-                            "sticky": "nswe",
-                            "children": [
-                                (
-                                    "Notebook.padding",
-                                    {
-                                        "side": "top",
-                                        "sticky": "nswe",
-                                        "children": [
-                                            (
-                                                "Notebook.focus",
-                                                {
-                                                    "side": "top",
-                                                    "sticky": "nswe",
-                                                    "children": [
-                                                        (
-                                                            "Notebook.label",
-                                                            {
-                                                                "side": "left",
-                                                                "sticky": "",
-                                                                "padding": (0, 0, 6, 0),
-                                                            },
-                                                        ),
-                                                        (
-                                                            "Notebook.close",
-                                                            {
-                                                                "side": "right",
-                                                                "sticky": "",
-                                                                "padding": (4, 2, 6, 2),
-                                                            },
-                                                        ),
-                                                    ],
-                                                },
-                                            )
-                                        ],
-                                    },
-                                )
-                            ],
-                        },
-                    )
-                ],
-            )
-            style.configure("ClosableNotebook.TNotebook.Tab", padding=(12, 6, 32, 6))
-            style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
+            try:
+                style.layout(
+                    "ClosableNotebook.TNotebook.Tab",
+                    [
+                        (
+                            "Notebook.tab",
+                            {
+                                "sticky": "nswe",
+                                "children": [
+                                    (
+                                        "Notebook.padding",
+                                        {
+                                            "side": "top",
+                                            "sticky": "nswe",
+                                            "children": [
+                                                (
+                                                    "Notebook.focus",
+                                                    {
+                                                        "side": "top",
+                                                        "sticky": "nswe",
+                                                        "children": [
+                                                            (
+                                                                "Notebook.label",
+                                                                {
+                                                                    "side": "left",
+                                                                    "sticky": "",
+                                                                    "padding": (0, 0, 6, 0),
+                                                                },
+                                                            ),
+                                                            (
+                                                                "Notebook.close",
+                                                                {
+                                                                    "side": "right",
+                                                                    "sticky": "",
+                                                                    "padding": (4, 2, 6, 2),
+                                                                },
+                                                            ),
+                                                        ],
+                                                    },
+                                                )
+                                            ],
+                                        },
+                                    )
+                                ],
+                            },
+                        )
+                    ],
+                )
+                style.configure("ClosableNotebook.TNotebook.Tab", padding=(12, 6, 32, 6))
+                style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
+            except tk.TclError:
+                created_custom_element = False
+
+        if created_custom_element:
             self.nb.configure(style="ClosableNotebook.TNotebook")
             self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
             self._tab_close_support = "element"
