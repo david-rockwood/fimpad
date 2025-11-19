@@ -310,9 +310,17 @@ class FIMPad(tk.Tk):
     def _is_fallback_close_hit(self, x: int, y: int, tab_id: str) -> bool:
         if self._tab_close_support != "compound" or self._tab_close_image is None:
             return False
+        try:
+            tab_index = self.nb.index(tab_id)
+        except tk.TclError:
+            return False
         with contextlib.suppress(tk.TclError):
-            bbox = self.nb.bbox(tab_id)
+            bbox = self.nb.bbox(tab_index)
         if not bbox:
+            print(
+                f"[TABCLOSE] fallback bbox missing tab={tab_id} index={tab_index}",
+                flush=True,
+            )
             return False
         tab_x, tab_y, width, height = bbox
         image_width = self._tab_close_image.width()
