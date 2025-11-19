@@ -91,6 +91,27 @@ class FIMPad(tk.Tk):
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
+    def _center_window(self, window: tk.Toplevel) -> None:
+        try:
+            window.update_idletasks()
+            parent_x = self.winfo_rootx()
+            parent_y = self.winfo_rooty()
+            parent_w = self.winfo_width()
+            parent_h = self.winfo_height()
+            win_w = window.winfo_width()
+            win_h = window.winfo_height()
+            x = parent_x + max(0, (parent_w - win_w) // 2)
+            y = parent_y + max(0, (parent_h - win_h) // 2)
+            window.geometry(f"+{x}+{y}")
+        except tk.TclError:
+            pass
+
+    def _prepare_child_window(self, window: tk.Toplevel) -> None:
+        window.transient(self)
+        with contextlib.suppress(tk.TclError):
+            window.attributes("-topmost", True)
+        self._center_window(window)
+
     # ---------- Notebook / Tabs ----------
 
     def _build_notebook(self):
@@ -1057,6 +1078,8 @@ class FIMPad(tk.Tk):
             row=1, column=1, padx=8, pady=8, sticky="e"
         )
 
+        self._prepare_child_window(w)
+
     def _open_replace_dialog(self):
         st = self._current_tab_state()
         if not st:
@@ -1165,6 +1188,8 @@ class FIMPad(tk.Tk):
         replace_all_btn.grid(row=0, column=2, padx=(4, 0), sticky="e")
         update_buttons()
 
+        self._prepare_child_window(w)
+
     # ---------- Settings ----------
 
     def _open_settings(self):
@@ -1257,25 +1282,28 @@ class FIMPad(tk.Tk):
         add_row(row, "Line number padding (px):", line_pad_var)
         row += 1
 
+        def pick_color(initial: str, title: str) -> tuple | None:
+            c = colorchooser.askcolor(color=initial, title=title, parent=w)
+            w.lift()
+            return c
+
         def pick_fg():
-            c = colorchooser.askcolor(color=fg_var.get(), title="Pick text color")
+            c = pick_color(fg_var.get(), "Pick text color")
             if c and c[1]:
                 fg_var.set(c[1])
 
         def pick_bg():
-            c = colorchooser.askcolor(color=bg_var.get(), title="Pick background color")
+            c = pick_color(bg_var.get(), "Pick background color")
             if c and c[1]:
                 bg_var.set(c[1])
 
         def pick_highlight1():
-            c = colorchooser.askcolor(
-                color=highlight1_var.get(), title="Pick caret/highlight color"
-            )
+            c = pick_color(highlight1_var.get(), "Pick caret/highlight color")
             if c and c[1]:
                 highlight1_var.set(c[1])
 
         def pick_highlight2():
-            c = colorchooser.askcolor(color=highlight2_var.get(), title="Pick selection color")
+            c = pick_color(highlight2_var.get(), "Pick selection color")
             if c and c[1]:
                 highlight2_var.set(c[1])
 
@@ -1385,6 +1413,8 @@ class FIMPad(tk.Tk):
         tk.Button(w, text="Save", command=apply_and_close).grid(
             row=row, column=1, padx=8, pady=12, sticky="e"
         )
+
+        self._prepare_child_window(w)
 
     # ---------- Generate (streaming) ----------
 
