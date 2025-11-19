@@ -11,16 +11,16 @@ import subprocess
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
-from tkinter import colorchooser, filedialog, messagebox, ttk
-from tkinter.scrolledtext import ScrolledText
 from importlib import resources
 from importlib.resources.abc import Traversable
+from tkinter import colorchooser, filedialog, messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
 
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
+from .example_resources import iter_examples
 from .parser import MARKER_REGEX, FIMRequest, parse_fim_request
 from .utils import offset_to_tkindex
-from .example_resources import iter_examples
 
 
 class FIMPad(tk.Tk):
@@ -327,9 +327,8 @@ class FIMPad(tk.Tk):
 
     def _open_example_resource(self, title: str, resource: Traversable) -> None:
         try:
-            with resources.as_file(resource) as path:
-                with open(path, encoding="utf-8") as f:
-                    content = f.read()
+            with resources.as_file(resource) as path, open(path, encoding="utf-8") as f:
+                content = f.read()
         except Exception as exc:
             messagebox.showerror("Example Error", f"Failed to load '{title}': {exc}")
             return
