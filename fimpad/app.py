@@ -7,8 +7,8 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 import contextlib
 import os
 import queue
-import threading
 import subprocess
+import threading
 import tkinter as tk
 import tkinter.font as tkfont
 from importlib import resources
