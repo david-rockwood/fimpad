@@ -125,7 +125,7 @@ class FIMPad(tk.Tk):
 
         if created_custom_element:
             style.layout(
-                "ClosableNotebook.Tab",
+                "ClosableNotebook.TNotebook.Tab",
                 [
                     (
                         "Notebook.tab",
@@ -163,7 +163,7 @@ class FIMPad(tk.Tk):
                     )
                 ],
             )
-            style.configure("ClosableNotebook.Tab", padding=(8, 4, 18, 4))
+            style.configure("ClosableNotebook.TNotebook.Tab", padding=(8, 4, 18, 4))
             style.layout("ClosableNotebook.TNotebook", style.layout("TNotebook"))
             self.nb.configure(style="ClosableNotebook.TNotebook")
             self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
@@ -240,8 +240,6 @@ class FIMPad(tk.Tk):
     def _apply_tab_title(self, tab_id, title: str) -> None:
         tab_name = str(tab_id)
         kwargs: dict[str, object] = {"text": title}
-        if self._tab_close_support == "element":
-            kwargs["style"] = "ClosableNotebook.Tab"
         if self._tab_close_support == "compound":
             image = (
                 self._tab_close_image_active
