@@ -2,41 +2,70 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Iterable
 
 import requests
 
 
-def _sse_chunks(resp) -> Iterable[str]:
+def _sse_chunks(resp, stop_event: threading.Event | None = None) -> Iterable[str]:
     # decode lines as UTF-8, accept "data:" with/without a space
-    for raw in resp.iter_lines(decode_unicode=False):
-        if not raw:
-            continue
-        try:
-            line = raw.decode("utf-8", errors="replace")
-        except Exception:
-            continue
-        if not line.startswith("data:"):
-            continue
-        data_str = line[5:].lstrip()
-        if data_str == "[DONE]":
-            break
-        try:
-            chunk = json.loads(data_str)
-        except Exception:
-            continue
-        ch0 = (chunk.get("choices") or [{}])[0]
-        piece = (
-            ch0.get("delta", {}).get("content", "")
-            or ch0.get("message", {}).get("content", "")
-            or ch0.get("text", "")
-        )
-        if piece:
-            yield piece
+    try:
+        for raw in resp.iter_lines(decode_unicode=False):
+            if stop_event is not None and stop_event.is_set():
+                break
+            if not raw:
+                continue
+            try:
+                line = raw.decode("utf-8", errors="replace")
+            except Exception:
+                continue
+            if not line.startswith("data:"):
+                continue
+            data_str = line[5:].lstrip()
+            if data_str == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data_str)
+            except Exception:
+                continue
+            ch0 = (chunk.get("choices") or [{}])[0]
+            piece = (
+                ch0.get("delta", {}).get("content", "")
+                or ch0.get("message", {}).get("content", "")
+                or ch0.get("text", "")
+            )
+            if piece:
+                yield piece
+    except AttributeError:
+        # The response may be closed from another thread when a stop event is
+        # signaled. Swallow the resulting read failure if we're stopping; otherwise
+        # surface the error so the caller can handle it.
+        if stop_event is None or not stop_event.is_set():
+            raise
 
 
-def stream_completion(endpoint: str, payload: dict) -> Iterable[str]:
+def stream_completion(
+    endpoint: str, payload: dict, stop_event: threading.Event | None = None
+) -> Iterable[str]:
     url = f"{endpoint}/v1/completions"
-    with requests.post(url, json=payload, stream=True, timeout=5000) as resp:
+    resp = requests.post(url, json=payload, stream=True, timeout=5000)
+    closer_thread = None
+    try:
         resp.raise_for_status()
-        yield from _sse_chunks(resp)
+        if stop_event is not None:
+            closer_thread = threading.Thread(
+                target=lambda: (stop_event.wait(), resp.close()),
+                daemon=True,
+            )
+            closer_thread.start()
+
+        yield from _sse_chunks(resp, stop_event)
+    finally:
+        resp.close()
+        if (
+            stop_event is not None
+            and closer_thread is not None
+            and closer_thread.is_alive()
+        ):
+            stop_event.set()
