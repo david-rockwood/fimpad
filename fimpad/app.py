@@ -1698,6 +1698,7 @@ class FIMPad(tk.Tk):
             st["stream_mark"] = "stream_here"
 
             def worker(tab_id, stop_event):
+                errored = False
                 try:
                     for piece in stream_completion(cfg["endpoint"], payload, stop_event):
                         self._result_queue.put(
@@ -1710,17 +1711,20 @@ class FIMPad(tk.Tk):
                             }
                         )
                 except Exception as e:
-                    self._result_queue.put(
-                        {"ok": False, "error": str(e), "tab": tab_id}
-                    )
+                    if stop_event is None or not stop_event.is_set():
+                        errored = True
+                        self._result_queue.put(
+                            {"ok": False, "error": str(e), "tab": tab_id}
+                        )
                 finally:
                     # Always emit done; then kick spellcheck
                     self._result_queue.put(
                         {"ok": True, "kind": "stream_done", "tab": tab_id}
                     )
-                    self._result_queue.put(
-                        {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
-                    )
+                    if not errored:
+                        self._result_queue.put(
+                            {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                        )
 
             threading.Thread(
                 target=worker,
