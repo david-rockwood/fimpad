@@ -5,6 +5,8 @@ import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+DEFAULT_MARKER_MAX_TOKENS = 100
+
 TRIPLE_RE = re.compile(r"\[\[\[(?P<body>.*?)\]\]\]", re.DOTALL)
 MARKER_REGEX = re.compile(
     r"""
@@ -84,7 +86,9 @@ def parse_triple_tokens(content: str) -> Iterator[Token]:
 
 
 def parse_fim_request(
-    content: str, cursor_offset: int, default_n: int
+    content: str,
+    cursor_offset: int,
+    default_n: int = DEFAULT_MARKER_MAX_TOKENS,
 ) -> FIMRequest | None:
     """Parse FIM instructions around ``cursor_offset``.
 

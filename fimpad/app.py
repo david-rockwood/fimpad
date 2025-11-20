@@ -53,7 +53,11 @@ class FIMPad(tk.Tk):
 
         self._spell_notice_msg: str | None = None
         self._spell_notice_last: str | None = None
-        self._dictionary = self._load_dictionary(self.cfg.get("spell_lang", "en_US"))
+        self._available_spell_langs = self._list_spell_languages()
+        self._spell_lang = self._determine_spell_language(
+            self.cfg.get("spell_lang")
+        )
+        self._dictionary = self._load_dictionary(self._spell_lang)
         self._spell_ignore = set()  # session-level ignores
 
         self._last_fim_marker: str | None = None
@@ -938,9 +942,7 @@ class FIMPad(tk.Tk):
             self._spell_notice_msg = None
             return
 
-        self._dictionary = self._dictionary or self._load_dictionary(
-            self.cfg.get("spell_lang", "en_US")
-        )
+        self._dictionary = self._dictionary or self._load_dictionary(self._spell_lang)
         for frame in self.tabs:
             self._schedule_spellcheck_for_frame(frame, delay_ms=120)
 
@@ -1214,10 +1216,8 @@ class FIMPad(tk.Tk):
             return cb
 
         endpoint_var = tk.StringVar(value=cfg["endpoint"])
-        model_var = tk.StringVar(value=cfg["model"])
         temp_var = tk.StringVar(value=str(cfg["temperature"]))
         top_p_var = tk.StringVar(value=str(cfg["top_p"]))
-        defN_var = tk.StringVar(value=str(cfg["default_n"]))
 
         fim_pref_var = tk.StringVar(value=cfg["fim_prefix"])
         fim_suf_var = tk.StringVar(value=cfg["fim_suffix"])
@@ -1239,19 +1239,16 @@ class FIMPad(tk.Tk):
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
         highlight2_var = tk.StringVar(value=cfg["highlight2"])
-
-        spell_lang_var = tk.StringVar(value=cfg.get("spell_lang", "en_US"))
+        spell_lang_var = tk.StringVar(value=self._spell_lang)
+        available_spell_langs = self._available_spell_langs
+        show_spell_lang = len(available_spell_langs) > 1
 
         row = 0
         add_row(row, "Endpoint (base, no path):", endpoint_var)
         row += 1
-        add_row(row, "Model:", model_var)
-        row += 1
         add_row(row, "Temperature:", temp_var)
         row += 1
         add_row(row, "Top-p:", top_p_var)
-        row += 1
-        add_row(row, "Default [[[N]]]:", defN_var)
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -1316,7 +1313,9 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="Background (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
+        tk.Label(
+            w, text="Background color (hex):"
+        ).grid(row=row, column=0, padx=8, pady=4, sticky="w")
         tk.Entry(w, textvariable=bg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
@@ -1325,7 +1324,7 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="Caret/insert (hex):").grid(
+        tk.Label(w, text="Caret color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
         tk.Entry(w, textvariable=highlight1_var, width=20).grid(
@@ -1336,7 +1335,7 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="Selection (hex):").grid(
+        tk.Label(w, text="Selection color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
         tk.Entry(w, textvariable=highlight2_var, width=20).grid(
@@ -1347,21 +1346,20 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="Spellcheck language (e.g., en_US):").grid(
-            row=row, column=0, padx=8, pady=4, sticky="w"
-        )
-        tk.Entry(w, textvariable=spell_lang_var, width=20).grid(
-            row=row, column=1, padx=8, pady=4, sticky="w"
-        )
-        row += 1
+        if show_spell_lang:
+            add_combobox_row(
+                row,
+                "Spellcheck language:",
+                spell_lang_var,
+                available_spell_langs,
+            )
+            row += 1
 
         def apply_and_close():
             try:
                 self.cfg["endpoint"] = endpoint_var.get().strip().rstrip("/")
-                self.cfg["model"] = model_var.get().strip()
                 self.cfg["temperature"] = float(temp_var.get())
                 self.cfg["top_p"] = float(top_p_var.get())
-                self.cfg["default_n"] = max(1, min(4096, int(defN_var.get())))
                 self.cfg["fim_prefix"] = fim_pref_var.get()
                 self.cfg["fim_suffix"] = fim_suf_var.get()
                 self.cfg["fim_middle"] = fim_mid_var.get()
@@ -1373,12 +1371,17 @@ class FIMPad(tk.Tk):
                 self.cfg["bg"] = bg_var.get().strip()
                 self.cfg["highlight1"] = highlight1_var.get().strip()
                 self.cfg["highlight2"] = highlight2_var.get().strip()
-                self.cfg["spell_lang"] = spell_lang_var.get().strip() or "en_US"
+                if show_spell_lang:
+                    self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
+                    self.cfg["spell_lang"] = self._spell_lang
+                else:
+                    self._spell_lang = DEFAULTS.get("spell_lang", "en_US")
+                    self.cfg.pop("spell_lang", None)
             except Exception as e:
                 messagebox.showerror("Settings", f"Invalid value: {e}")
                 return
             save_config(self.cfg)
-            self._dictionary = self._load_dictionary(self.cfg["spell_lang"])
+            self._dictionary = self._load_dictionary(self._spell_lang)
             self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
             for frame, st in self.tabs.items():
                 t = st["text"]
@@ -1520,7 +1523,7 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        fim_request = parse_fim_request(content, cursor_offset, self.cfg["default_n"])
+        fim_request = parse_fim_request(content, cursor_offset)
 
         if fim_request is not None:
             self._launch_fim_or_completion_stream(st, content, fim_request)
@@ -1626,7 +1629,6 @@ class FIMPad(tk.Tk):
             )
 
         payload = {
-            "model": cfg["model"],
             "prompt": prompt,
             "max_tokens": fim_request.max_tokens,
             "temperature": cfg["temperature"],
@@ -1811,6 +1813,52 @@ class FIMPad(tk.Tk):
 
     # ---------- Spellcheck (enchant) ----------
 
+    def _list_spell_languages(self) -> list[str]:
+        try:
+            langs = enchant.list_languages()
+        except Exception:
+            return []
+
+        available: list[str] = []
+        for lang in sorted(set(langs or [])):
+            if not lang:
+                continue
+            try:
+                if enchant.dict_exists(lang):
+                    available.append(lang)
+            except Exception:
+                continue
+
+        default_lang = DEFAULTS.get("spell_lang", "en_US")
+        if default_lang not in available:
+            try:
+                if enchant.dict_exists(default_lang):
+                    available.append(default_lang)
+            except Exception:
+                pass
+
+        return sorted(available)
+
+    def _determine_spell_language(self, preferred: str | None) -> str:
+        default_lang = DEFAULTS.get("spell_lang", "en_US")
+        if len(self._available_spell_langs) <= 1:
+            if "spell_lang" in self.cfg:
+                self.cfg.pop("spell_lang", None)
+                save_config(self.cfg)
+            return default_lang
+
+        lang = preferred or default_lang
+        if lang not in self._available_spell_langs:
+            if default_lang in self._available_spell_langs:
+                lang = default_lang
+            else:
+                lang = self._available_spell_langs[0]
+
+        if self.cfg.get("spell_lang") != lang:
+            self.cfg["spell_lang"] = lang
+            save_config(self.cfg)
+        return lang
+
     def _load_dictionary(self, lang: str):
         lang_code = lang or "en_US"
         try:
@@ -1953,7 +2001,7 @@ class FIMPad(tk.Tk):
 
                 # Fallback path for environments without dictionaries (used by tests)
                 if not dict_obj:
-                    lang = self.cfg.get("spell_lang", "en_US")
+                    lang = self._spell_lang
                     try:
                         proc = subprocess.run(  # noqa: UP022 - keep stdout/stderr for monkeypatch compat
                             ["aspell", "list", "-l", lang, "--encoding=utf-8"],
