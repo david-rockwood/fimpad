@@ -1474,6 +1474,8 @@ class FIMPad(tk.Tk):
             cur = text.index(tk.END)
         should_follow = st.get("stream_following", self._should_follow(text))
         text.insert(cur, piece)
+        with contextlib.suppress(tk.TclError):
+            text.tag_remove("misspelled", cur, f"{cur}+{len(piece)}c")
         if should_follow:
             text.see(mark)
             primed = st.pop("_stream_follow_primed", False)
