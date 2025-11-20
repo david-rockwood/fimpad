@@ -1443,6 +1443,12 @@ class FIMPad(tk.Tk):
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
 
+    def _stream_in_progress(self) -> bool:
+        for st in self.tabs.values():
+            if st.get("stream_mark"):
+                return True
+        return False
+
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
         if not st or st.get("stream_flush_job") is not None:
@@ -1509,6 +1515,13 @@ class FIMPad(tk.Tk):
     def generate(self):
         st = self._current_tab_state()
         if not st:
+            return
+
+        if self._stream_in_progress():
+            messagebox.showerror(
+                "Generation Busy",
+                "You may not execute a FIM tag while another FIM generation is underway.",
+            )
             return
 
         text_widget = st["text"]
