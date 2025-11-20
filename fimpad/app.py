@@ -1444,10 +1444,7 @@ class FIMPad(tk.Tk):
         st["stream_cancelled"] = False
 
     def _stream_in_progress(self) -> bool:
-        for st in self.tabs.values():
-            if st.get("stream_mark"):
-                return True
-        return False
+        return any(st.get("stream_mark") for st in self.tabs.values())
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
