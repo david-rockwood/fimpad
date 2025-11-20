@@ -443,6 +443,7 @@ class FIMPad(tk.Tk):
             "stops_after_maxlen": 0,
             "stream_tail": "",
             "stream_cancelled": False,
+            "stream_stop_event": None,
             "last_insert": "1.0",
             "last_yview": 0.0,
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
@@ -1443,6 +1444,10 @@ class FIMPad(tk.Tk):
         st["stops_after_maxlen"] = 0
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
+        stop_event = st.get("stream_stop_event")
+        if stop_event is not None:
+            stop_event.set()
+        st["stream_stop_event"] = None
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -1667,6 +1672,7 @@ class FIMPad(tk.Tk):
             )
             st["stream_tail"] = ""
             st["stream_cancelled"] = False
+            st["stream_stop_event"] = threading.Event()
 
             self._set_busy(True)
 
@@ -1691,9 +1697,9 @@ class FIMPad(tk.Tk):
             self._set_dirty(st, True)
             st["stream_mark"] = "stream_here"
 
-            def worker(tab_id):
+            def worker(tab_id, stop_event):
                 try:
-                    for piece in stream_completion(cfg["endpoint"], payload):
+                    for piece in stream_completion(cfg["endpoint"], payload, stop_event):
                         self._result_queue.put(
                             {
                                 "ok": True,
@@ -1717,7 +1723,9 @@ class FIMPad(tk.Tk):
                     )
 
             threading.Thread(
-                target=worker, args=(self.nb.select(),), daemon=True
+                target=worker,
+                args=(self.nb.select(), st["stream_stop_event"]),
+                daemon=True,
             ).start()
         except Exception as exc:
             self._fim_generation_active = False
@@ -1797,6 +1805,9 @@ class FIMPad(tk.Tk):
                                 st["stops_after"] = []
                                 st["stops_after_maxlen"] = 0
                                 st["stream_tail"] = ""
+                                stop_event = st.get("stream_stop_event")
+                                if stop_event is not None:
+                                    stop_event.set()
                                 self._result_queue.put(
                                     {"ok": True, "kind": "stream_done", "tab": tab_id}
                                 )
@@ -1826,6 +1837,7 @@ class FIMPad(tk.Tk):
                     st["stops_after"] = []
                     st["stops_after_maxlen"] = 0
                     st["stream_tail"] = ""
+                    st["stream_stop_event"] = None
                     self._fim_generation_active = False
                     self._set_busy(False)
 
