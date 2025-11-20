@@ -1316,7 +1316,9 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="Background color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
+        tk.Label(
+            w, text="Background color (hex):"
+        ).grid(row=row, column=0, padx=8, pady=4, sticky="w")
         tk.Entry(w, textvariable=bg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
@@ -1851,7 +1853,10 @@ class FIMPad(tk.Tk):
 
         lang = preferred or default_lang
         if lang not in self._available_spell_langs:
-            lang = default_lang if default_lang in self._available_spell_langs else self._available_spell_langs[0]
+            if default_lang in self._available_spell_langs:
+                lang = default_lang
+            else:
+                lang = self._available_spell_langs[0]
 
         if self.cfg.get("spell_lang") != lang:
             self.cfg["spell_lang"] = lang
