@@ -1218,7 +1218,6 @@ class FIMPad(tk.Tk):
         endpoint_var = tk.StringVar(value=cfg["endpoint"])
         temp_var = tk.StringVar(value=str(cfg["temperature"]))
         top_p_var = tk.StringVar(value=str(cfg["top_p"]))
-        defN_var = tk.StringVar(value=str(cfg["default_n"]))
 
         fim_pref_var = tk.StringVar(value=cfg["fim_prefix"])
         fim_suf_var = tk.StringVar(value=cfg["fim_suffix"])
@@ -1250,8 +1249,6 @@ class FIMPad(tk.Tk):
         add_row(row, "Temperature:", temp_var)
         row += 1
         add_row(row, "Top-p:", top_p_var)
-        row += 1
-        add_row(row, "Default [[[N]]]:", defN_var)
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -1363,7 +1360,6 @@ class FIMPad(tk.Tk):
                 self.cfg["endpoint"] = endpoint_var.get().strip().rstrip("/")
                 self.cfg["temperature"] = float(temp_var.get())
                 self.cfg["top_p"] = float(top_p_var.get())
-                self.cfg["default_n"] = max(1, min(4096, int(defN_var.get())))
                 self.cfg["fim_prefix"] = fim_pref_var.get()
                 self.cfg["fim_suffix"] = fim_suf_var.get()
                 self.cfg["fim_middle"] = fim_mid_var.get()
@@ -1527,7 +1523,7 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        fim_request = parse_fim_request(content, cursor_offset, self.cfg["default_n"])
+        fim_request = parse_fim_request(content, cursor_offset)
 
         if fim_request is not None:
             self._launch_fim_or_completion_stream(st, content, fim_request)

@@ -14,7 +14,6 @@ DEFAULTS = {
     "endpoint": "http://localhost:8080",
     "temperature": 0.9,
     "top_p": 1.0,
-    "default_n": 100,
     "fim_prefix": "<|fim_prefix|>",
     "fim_suffix": "<|fim_suffix|>",
     "fim_middle": "<|fim_middle|>",
@@ -35,7 +34,7 @@ WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
 
 
 def load_config() -> dict:
-    deprecated_keys = {"model"}
+    deprecated_keys = {"model", "default_n"}
     try:
         os.makedirs(APP_DIR, exist_ok=True)
         if not os.path.exists(CONFIG_PATH):
