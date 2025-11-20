@@ -80,6 +80,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
+        self.bind_all("<Control-Escape>", self._on_interrupt_stream)
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
@@ -714,6 +715,11 @@ class FIMPad(tk.Tk):
             label="Paste Last FIM Tag",
             accelerator="Ctrl+Alt+Enter",
             command=self.paste_last_fim_tag,
+        )
+        aimenu.add_command(
+            label="Interrupt Stream",
+            accelerator="Ctrl+Esc",
+            command=self.interrupt_stream,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
@@ -1552,6 +1558,31 @@ class FIMPad(tk.Tk):
         self.generate()
         return "break"
 
+    def _on_interrupt_stream(self, event):
+        self.interrupt_stream()
+        return "break"
+
+    def interrupt_stream(self):
+        if not self._fim_generation_active:
+            return
+
+        st = self._current_tab_state()
+        if not st:
+            return
+
+        st["stream_cancelled"] = True
+        st["stops_after"] = []
+        st["stops_after_maxlen"] = 0
+        st["stream_tail"] = ""
+
+        stop_event = st.get("stream_stop_event")
+        if stop_event is not None:
+            stop_event.set()
+
+        self._result_queue.put(
+            {"ok": True, "kind": "stream_done", "tab": self.nb.select()}
+        )
+
     def paste_last_fim_tag(self):
         st = self._current_tab_state()
         if not st:
@@ -1801,20 +1832,20 @@ class FIMPad(tk.Tk):
                                 st["stream_mark"] = mark
                                 flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
-                                st["stream_cancelled"] = True
-                                st["stops_after"] = []
-                                st["stops_after_maxlen"] = 0
-                                st["stream_tail"] = ""
-                                stop_event = st.get("stream_stop_event")
-                                if stop_event is not None:
-                                    stop_event.set()
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "stream_done", "tab": tab_id}
-                                )
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
-                                )
-                                continue
+            st["stream_cancelled"] = True
+            st["stops_after"] = []
+            st["stops_after_maxlen"] = 0
+            st["stream_tail"] = ""
+            stop_event = st.get("stream_stop_event")
+            if stop_event is not None:
+                stop_event.set()
+            self._result_queue.put(
+                {"ok": True, "kind": "stream_done", "tab": tab_id}
+            )
+            self._result_queue.put(
+                {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+            )
+            continue
 
                             maxlen = st.get("stops_after_maxlen", 0)
                             if maxlen > 0:
