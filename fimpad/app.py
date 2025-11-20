@@ -62,6 +62,7 @@ class FIMPad(tk.Tk):
 
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
+        self._fim_generation_active: bool = False
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -1507,6 +1508,12 @@ class FIMPad(tk.Tk):
         st["stream_mark"] = None
 
     def generate(self):
+        if self._fim_generation_active:
+            messagebox.showerror(
+                "Generate", "A FIM generation is already running. Please wait."
+            )
+            return
+
         st = self._current_tab_state()
         if not st:
             return
@@ -1567,6 +1574,12 @@ class FIMPad(tk.Tk):
         text_widget.focus_set()
 
     def repeat_last_fim(self):
+        if self._fim_generation_active:
+            messagebox.showerror(
+                "Generate", "A FIM generation is already running. Please wait."
+            )
+            return
+
         st = self._current_tab_state()
         if not st:
             return
@@ -1644,54 +1657,71 @@ class FIMPad(tk.Tk):
 
         self._reset_stream_state(st)
 
-        st["stops_after"] = fim_request.stops_after
-        st["stops_after_maxlen"] = max((len(s) for s in fim_request.stops_after), default=0)
-        st["stream_tail"] = ""
-        st["stream_cancelled"] = False
+        self._fim_generation_active = True
+        try:
+            st["stops_after"] = fim_request.stops_after
+            st["stops_after_maxlen"] = max(
+                (len(s) for s in fim_request.stops_after), default=0
+            )
+            st["stream_tail"] = ""
+            st["stream_cancelled"] = False
 
-        self._set_busy(True)
+            self._set_busy(True)
 
-        # Prepare streaming mark
-        text.mark_set("stream_here", start_index)
-        text.mark_gravity("stream_here", tk.RIGHT)
-        if fim_request.suffix_token is not None and not fim_request.keep_tags:
-            s_s = offset_to_tkindex(content, fim_request.suffix_token.start)
-            s_e = offset_to_tkindex(content, fim_request.suffix_token.end)
-            with contextlib.suppress(tk.TclError):
-                text.delete(s_s, s_e)
-        if fim_request.prefix_token is not None and not fim_request.keep_tags:
-            p_s = offset_to_tkindex(content, fim_request.prefix_token.start)
-            p_e = offset_to_tkindex(content, fim_request.prefix_token.end)
-            with contextlib.suppress(tk.TclError):
-                text.delete(p_s, p_e)
+            # Prepare streaming mark
+            text.mark_set("stream_here", start_index)
+            text.mark_gravity("stream_here", tk.RIGHT)
+            if fim_request.suffix_token is not None and not fim_request.keep_tags:
+                s_s = offset_to_tkindex(content, fim_request.suffix_token.start)
+                s_e = offset_to_tkindex(content, fim_request.suffix_token.end)
+                with contextlib.suppress(tk.TclError):
+                    text.delete(s_s, s_e)
+            if fim_request.prefix_token is not None and not fim_request.keep_tags:
+                p_s = offset_to_tkindex(content, fim_request.prefix_token.start)
+                p_e = offset_to_tkindex(content, fim_request.prefix_token.end)
+                with contextlib.suppress(tk.TclError):
+                    text.delete(p_s, p_e)
 
-        marker_len = fim_request.marker.end - fim_request.marker.start
-        start_index = text.index("stream_here")
-        end_index = text.index(f"{start_index}+{marker_len}c")
-        text.delete(start_index, end_index)
-        self._set_dirty(st, True)
-        st["stream_mark"] = "stream_here"
+            marker_len = fim_request.marker.end - fim_request.marker.start
+            start_index = text.index("stream_here")
+            end_index = text.index(f"{start_index}+{marker_len}c")
+            text.delete(start_index, end_index)
+            self._set_dirty(st, True)
+            st["stream_mark"] = "stream_here"
 
-        def worker(tab_id):
-            try:
-                for piece in stream_completion(cfg["endpoint"], payload):
+            def worker(tab_id):
+                try:
+                    for piece in stream_completion(cfg["endpoint"], payload):
+                        self._result_queue.put(
+                            {
+                                "ok": True,
+                                "kind": "stream_append",
+                                "tab": tab_id,
+                                "mark": "stream_here",
+                                "text": piece,
+                            }
+                        )
+                except Exception as e:
                     self._result_queue.put(
-                        {
-                            "ok": True,
-                            "kind": "stream_append",
-                            "tab": tab_id,
-                            "mark": "stream_here",
-                            "text": piece,
-                        }
+                        {"ok": False, "error": str(e), "tab": tab_id}
                     )
-            except Exception as e:
-                self._result_queue.put({"ok": False, "error": str(e), "tab": tab_id})
-            finally:
-                # Always emit done; then kick spellcheck
-                self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
-                self._result_queue.put({"ok": True, "kind": "spellcheck_now", "tab": tab_id})
+                finally:
+                    # Always emit done; then kick spellcheck
+                    self._result_queue.put(
+                        {"ok": True, "kind": "stream_done", "tab": tab_id}
+                    )
+                    self._result_queue.put(
+                        {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                    )
 
-        threading.Thread(target=worker, args=(self.nb.select(),), daemon=True).start()
+            threading.Thread(
+                target=worker, args=(self.nb.select(),), daemon=True
+            ).start()
+        except Exception as exc:
+            self._fim_generation_active = False
+            self._set_busy(False)
+            messagebox.showerror("Generation Error", str(exc))
+            return
 
     # ---------- Queue handling ----------
 
@@ -1707,6 +1737,7 @@ class FIMPad(tk.Tk):
                         st_err = self.tabs[frame]
                         mark = st_err.get("stream_mark") or "stream_here"
                         self._force_flush_stream_buffer(frame, mark)
+                    self._fim_generation_active = False
                     self._set_busy(False)
                     messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                     continue
@@ -1716,6 +1747,7 @@ class FIMPad(tk.Tk):
                 frame = self.nametowidget(tab_id) if tab_id else None
                 if not frame or frame not in self.tabs:
                     if kind == "stream_done":
+                        self._fim_generation_active = False
                         self._set_busy(False)
                     continue
                 st = self.tabs[frame]
@@ -1792,6 +1824,7 @@ class FIMPad(tk.Tk):
                     st["stops_after"] = []
                     st["stops_after_maxlen"] = 0
                     st["stream_tail"] = ""
+                    self._fim_generation_active = False
                     self._set_busy(False)
 
                 elif kind == "spellcheck_now":
