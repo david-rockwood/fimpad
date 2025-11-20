@@ -1832,20 +1832,20 @@ class FIMPad(tk.Tk):
                                 st["stream_mark"] = mark
                                 flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
-            st["stream_cancelled"] = True
-            st["stops_after"] = []
-            st["stops_after_maxlen"] = 0
-            st["stream_tail"] = ""
-            stop_event = st.get("stream_stop_event")
-            if stop_event is not None:
-                stop_event.set()
-            self._result_queue.put(
-                {"ok": True, "kind": "stream_done", "tab": tab_id}
-            )
-            self._result_queue.put(
-                {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
-            )
-            continue
+                                st["stream_cancelled"] = True
+                                st["stops_after"] = []
+                                st["stops_after_maxlen"] = 0
+                                st["stream_tail"] = ""
+                                stop_event = st.get("stream_stop_event")
+                                if stop_event is not None:
+                                    stop_event.set()
+                                self._result_queue.put(
+                                    {"ok": True, "kind": "stream_done", "tab": tab_id}
+                                )
+                                self._result_queue.put(
+                                    {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                                )
+                                continue
 
                             maxlen = st.get("stops_after_maxlen", 0)
                             if maxlen > 0:
