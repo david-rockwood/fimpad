@@ -34,7 +34,7 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
         "A [[[5; stop(\"alpha\"); name(one)]]] "
         "B [[[2; name(two)]]] [[[\"one\" 'two']]] "
-        "C [[[prefix]]] D [[[suffix!]]] E [[[(note about things) after]]]" """ F"""
+        "C [[[prefix]]] D [[[suffix hard]]] E [[[(note about things) after]]]" """ F"""
     )
     tokens = list(parse_triple_tokens(content))
 
@@ -143,7 +143,7 @@ def test_unknown_function_raises():
 
 def test_bang_after_fim_count_rejected():
     with pytest.raises(TagParseError):
-        list(parse_triple_tokens("[[[5!]]]"))
+        list(parse_triple_tokens("[[[50!]]]"))
 
 
 def test_missing_semicolon_after_fim_count_rejected():
@@ -154,6 +154,47 @@ def test_missing_semicolon_after_fim_count_rejected():
 def test_string_literal_outside_function_rejected():
     with pytest.raises(TagParseError):
         list(parse_triple_tokens("[[[5; \"alpha\"]]]"))
+
+
+def test_implicit_string_stop_rejected():
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[100'User: ']]]"))
+
+
+def test_new_dsl_accepts_supported_functions_and_phases():
+    content = (
+        "[[[42; keep(); keep_tags(); stop(\"alpha\"); after:tail('done'); "
+        "post:append(\"tail\"); append_nl('more'); temperature(0.4); top_p(0.9); "
+        "name(sample)]]]"
+    )
+    fim_token = _collect_tags(content)[0]
+
+    assert fim_token.kind == "fim"
+    assert isinstance(fim_token.tag, FIMTag)
+
+    function_names = [fn.name for fn in fim_token.tag.functions]
+    assert function_names == [
+        "keep",
+        "keep_tags",
+        "stop",
+        "tail",
+        "append",
+        "append_nl",
+        "temperature",
+        "top_p",
+        "name",
+    ]
+
+    functions = fim_token.tag.functions
+    assert functions[0].phase == "meta"
+    assert functions[1].phase == "meta"
+    assert functions[2].args == ("alpha",) and functions[2].phase == "init"
+    assert functions[3].args == ("done",) and functions[3].phase == "after"
+    assert functions[4].args == ("tail",) and functions[4].phase == "post"
+    assert functions[5].args == ("more",) and functions[5].phase == "post"
+    assert functions[6].args == ("0.4",) and functions[6].phase == "init"
+    assert functions[7].args == ("0.9",) and functions[7].phase == "init"
+    assert functions[8].args == ("sample",) and functions[8].phase == "meta"
 
 
 def test_parse_fim_request_uses_new_ast(monkeypatch):
@@ -181,7 +222,7 @@ def test_parse_fim_request_uses_new_ast(monkeypatch):
 def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness():
     content = (
         "[[[prefix soft]]]A [[[(note) before]]] [[[2; stop('cut')]]]\n"
-        "B [[[(not used) after]]] [[[suffix!]]] tail"
+        "B [[[(not used) after]]] [[[suffix hard]]] tail"
     )
     tokens = _collect_tags(content)
     marker = tokens[2]
