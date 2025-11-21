@@ -43,7 +43,8 @@ FIMpad is written in Python and currently targets Linux (and possibly other Unix
 
 Clone the repo and set up a virtual environment:
 
-```bash
+```
+bash
 git clone https://github.com/david-rockwood/fimpad.git
 cd fimpad
 
@@ -51,6 +52,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 pip install -e ".[dev]"
+```
 
 ---
 
@@ -65,4 +67,3 @@ pip install -e ".[dev]"
 - Python-only
 
 - Local LLM workflow assumed
-
