@@ -1828,9 +1828,6 @@ class FIMPad(tk.Tk):
             "top_p": request_cfg.get("top_p", cfg["top_p"]),
             "stream": True,
         }
-        if fim_request.stop_patterns:
-            payload["stop"] = fim_request.stop_patterns
-
         text = st["text"]
         start_index = offset_to_tkindex(content, fim_request.marker.start)
         end_index = offset_to_tkindex(content, fim_request.marker.end)
