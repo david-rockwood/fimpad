@@ -1449,6 +1449,16 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
+    def _show_unsupported_fim_error(self, exc: TagParseError) -> None:
+        messagebox.showerror(
+            "Generate",
+            (
+                "FIM marker could not be parsed. Legacy [[[N...]]] bodies and other "
+                "old syntax are no longer supported. Please update the marker and try "
+                f"again.\n\nDetails: {exc}"
+            ),
+        )
+
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
         if job is not None:
@@ -1513,7 +1523,7 @@ class FIMPad(tk.Tk):
         try:
             tokens = tokens or list(parse_triple_tokens(content))
         except TagParseError as exc:
-            messagebox.showerror("Generate", str(exc))
+            self._show_unsupported_fim_error(exc)
             self._sequence_queue = []
             self._sequence_tab = None
             return
@@ -1528,9 +1538,15 @@ class FIMPad(tk.Tk):
             self._sequence_tab = None
             return
 
-        fim_request = parse_fim_request(
-            content, marker_token.start, tokens=tokens, marker_token=marker_token
-        )
+        try:
+            fim_request = parse_fim_request(
+                content, marker_token.start, tokens=tokens, marker_token=marker_token
+            )
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            self._sequence_queue = []
+            self._sequence_tab = None
+            return
         if fim_request is None:
             messagebox.showerror("Generate", f"Invalid FIM tag referenced by {name}")
             self._sequence_queue = []
@@ -1630,7 +1646,7 @@ class FIMPad(tk.Tk):
         try:
             tokens = list(parse_triple_tokens(content))
         except TagParseError as exc:
-            messagebox.showerror("Generate", str(exc))
+            self._show_unsupported_fim_error(exc)
             return
 
         marker_token = self._find_active_tag(tokens, cursor_offset)
@@ -1655,9 +1671,13 @@ class FIMPad(tk.Tk):
             self._run_sequence_step(st, tokens=tokens, registry=name_registry)
             return
 
-        fim_request = parse_fim_request(
-            content, cursor_offset, tokens=tokens, marker_token=marker_token
-        )
+        try:
+            fim_request = parse_fim_request(
+                content, cursor_offset, tokens=tokens, marker_token=marker_token
+            )
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            return
         if fim_request is not None:
             self._sequence_queue = []
             self._sequence_tab = None
