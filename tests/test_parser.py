@@ -58,7 +58,13 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
 
 
 def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multiline():
-    content = """[[[12! \n    \"alpha\"; 'omega';\n    stop(\"beta\"); after:stop('ga\\'mma');\n    chop(\"line\\n3\") ; name(foo)\n]]]\n"""
+    content = (
+        "[[[12! \n"
+        '    "alpha"; \'omega\';\n'
+        '    stop("beta"); after:stop(\'ga\\\'mma\');\n'
+        '    chop("line\\n3") ; name(foo)\n'
+        "]]]\n"
+    )
     fim_token = _collect_tags(content)[0]
 
     assert fim_token.kind == "fim"
