@@ -23,7 +23,7 @@ Using a recent build of llama.cpp llama-server is recommended, available at:
 https://github.com/ggml-org/llama.cpp
 ```
 
-When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster, bigger allows for longer documents and chats. Bigger requires more RAM with CPU inference, or more VRAM with GPU inference. The max for IBM Granite 4.0 H is 131072.
+When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster, bigger allows for longer documents and chats. Bigger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
 
 ## The LLMs
 
