@@ -51,3 +51,18 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 pip install -e ".[dev]"
+
+---
+
+## The overall scope of FIMpad
+
+- Lightweight editor
+
+- FIM generation only. No sytsem promt / user prompt /assistant response chats.
+
+- No heavy dependencies
+
+- Python-only
+
+- Local LLM workflow assumed
+
