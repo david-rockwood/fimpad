@@ -184,6 +184,13 @@ def test_string_literal_outside_function_rejected():
         list(parse_triple_tokens("[[[5; \"alpha\"]]]"))
 
 
+def test_string_args_allow_internal_whitespace():
+    fim_token = _collect_tags("[[[50;stop(\" forth\")]]]")[0]
+
+    assert isinstance(fim_token.tag, FIMTag)
+    assert fim_token.tag.functions[0].args == (" forth",)
+
+
 def test_implicit_string_stop_rejected():
     with pytest.raises(TagParseError):
         list(parse_triple_tokens("[[[100'User: ']]]"))

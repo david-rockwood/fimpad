@@ -113,8 +113,8 @@ class _TokenPiece:
 FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "keep": {"args": 0, "default_phase": "meta"},
     "keep_tags": {"args": 0, "default_phase": "meta"},
-    "stop": {"args": 1, "default_phase": "init", "require_string": True},
-    "chop": {"args": 1, "default_phase": "init", "require_string": True},
+    "stop": {"min_args": 1, "default_phase": "init", "require_string": True},
+    "chop": {"min_args": 1, "default_phase": "init", "require_string": True},
     "tail": {"args": 1, "default_phase": "after", "require_string": True},
     "name": {"args": 1, "default_phase": "meta", "allow_any": True},
     "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
@@ -212,10 +212,10 @@ def parse_fim_request(
         elif fn.name in {"append", "append_nl"}:
             post_functions.append(fn)
         elif fn.name in {"chop", "tail"} and fn.args:
-            chop_patterns.append(fn.args[0])
+            chop_patterns.extend(fn.args)
         elif fn.name == "stop" and fn.args:
             target = stop_patterns if (fn.phase or "init") != "after" else chop_patterns
-            target.append(fn.args[0])
+            target.extend(fn.args)
 
     chop_patterns = _dedupe_preserve(chop_patterns)
     stop_patterns = _dedupe_preserve([p for p in stop_patterns if p not in chop_patterns])
@@ -343,14 +343,24 @@ def _parse_function(func_text: str, seen_names: set[str]) -> FIMFunction:
         for piece in pieces:
             args.append(_parse_arg(piece))
 
-    expected_args = int(spec.get("args", 0))
-    if len(args) != expected_args:
+    expected_args = spec.get("args")
+    if (
+        isinstance(expected_args, int)
+        and expected_args >= 0
+        and len(args) != expected_args
+    ):
         raise TagParseError(
             f"{name}() expects {expected_args} arg(s) but got {len(args)}"
         )
 
-    if spec.get("require_string") and args and not isinstance(args[0], str):
-        raise TagParseError(f"{name}() requires a string argument")
+    min_args = spec.get("min_args")
+    if isinstance(min_args, int) and len(args) < min_args:
+        raise TagParseError(
+            f"{name}() expects at least {min_args} arg(s) but got {len(args)}"
+        )
+
+    if spec.get("require_string") and any(not isinstance(arg, str) for arg in args):
+        raise TagParseError(f"{name}() requires string argument(s)")
 
     if name == "name":
         ident = str(args[0])
@@ -441,9 +451,29 @@ def _scan_single_token(body: str, i: int) -> tuple[_TokenPiece, int]:
         value, new_i = _parse_parenthetical(body, i)
         return _TokenPiece(kind="comment", value=value), new_i
 
-    j = i + 1
-    while j < len(body) and not body[j].isspace() and body[j] != ";":
+    depth = 0
+    j = i
+    while j < len(body):
+        ch = body[j]
+        if ch in {'"', "'"}:
+            _value, j = _parse_string_literal(body, j)
+            continue
+        if ch == "(":
+            depth += 1
+            j += 1
+            continue
+        if ch == ")":
+            if depth > 0:
+                depth -= 1
+            j += 1
+            continue
+        if depth == 0 and (ch.isspace() or ch == ";"):
+            break
+        if ch == "\\":
+            j += 2
+            continue
         j += 1
+
     return _TokenPiece(kind="word", value=body[i:j]), j
 
 
