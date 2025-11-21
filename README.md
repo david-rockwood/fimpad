@@ -22,11 +22,10 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
-Using a recent build of llama.cpp llama-server is recommended, available at:
+A recent build of llama.cpp llama-server is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
-
 When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster, larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
 
 ## The LLMs
@@ -43,3 +42,34 @@ Granite Tiny is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
+
+## Let us begin
+
+Once you have your server running, open FIMpad. All examples of FIM generation below were generated using llama-server and Granite Small at Q6 quantization.
+
+## FIM tags
+
+All tags in FIMpad are wrapped in triple brackets in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM generated text to be inserted. Below is an example of a simple FIM tag before insertion.
+```
+Four score and seven[[[50]]]
+```
+
+The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. The tag will be deleted before streaming insertion. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly adjacent to the FIM tag. Then press Ctrl+Enter (or use the menu entry at AI->Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
+```
+Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal." He also delivered the Gettysburg Address on November 19, 1863, which is considered
+```
+
+Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file (BOF) and the location of the now-deleted FIM tag is considered **prefix text**. All of the text between the now-deleted FIM tag and the end of the file (EOF) is considered **suffix text**. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 tokens that the LLM deems most likely to appear between the prefix and the suffix. In the example above, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
+
+
+
+
+
+
+
+
+
+
+
+
+
