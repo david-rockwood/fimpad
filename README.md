@@ -325,61 +325,61 @@ Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags,
 
 Below is an example of how to start a virtual role-based chat, before generation.
 
-> *****SYSTEM PROMPT*****
+> ^^^^^SYSTEM PROMPT^^^^^
 >
 > You are a helpful assistant.
 >
 >
-> *****USER PROMPT*****
+> ^^^^^USER PROMPT^^^^^
 >
 > what's up MAN!
 >
 >
-> *****ASSISTANT RESPONSE*****
+> ^^^^^ASSISTANT RESPONSE^^^^^
 >
 > Hello! How can I help you today?
 >
 >
-> *****USER PROMPT*****
+> ^^^^^USER PROMPT^^^^^
 >
 > oh im gonna travel to BRAZIL! what city should I go to in brazill where thier will be a lott of beatiful women?  i wanna meet them
 >
 >
-> *****ASSISTANT RESPONSE*****
+> ^^^^^ASSISTANT RESPONSE^^^^^
 >
-> [[[1000;append("\n\n\n*****USER PROMPT*****\n")]]]
+> [[[1000;append("\n\n\n^^^^^USER PROMPT^^^^^\n")]]]
 
 after generating two turns:
 
-> *****SYSTEM PROMPT*****
+> ^^^^^SYSTEM PROMPT^^^^^
 >
 > You are a helpful assistant.
 >
 >
-> *****USER PROMPT*****
+> ^^^^^USER PROMPT^^^^^
 >
 > what's up MAN!
 >
 >
-> *****ASSISTANT RESPONSE*****
+> ^^^^^ASSISTANT RESPONSE^^^^^
 >
 > Hello! How can I help you today?
 >
 >
-> *****USER PROMPT*****
+> ^^^^^USER PROMPT^^^^^
 >
 > oh im gonna travel to BRAZIL! what city should I go to in brazill where thier will be a lott of beatiful women?  i wanna meet them
 >
 >
-> *****ASSISTANT RESPONSE*****
+> ^^^^^ASSISTANT RESPONSE^^^^^
 > Brazil is a beautiful country with many vibrant cities. Some popular destinations that are known for their beauty include Rio de Janeiro, São Paulo, Salvador, and Florianópolis. Each city has its own unique culture, attractions, and nightlife. I would recommend doing some research to find a city that aligns with your interests and preferences.
 >
 >
-> *****USER PROMPT*****
+> ^^^^USER PROMPT^^^^^
 > tell me more about rio
 >
 >
-> *****ASSISTANT RESPONSE*****
+> ^^^^^ASSISTANT RESPONSE^^^^^
 > Rio de Janeiro, often simply called Rio, is the second-largest city in Brazil and one of the most iconic. It is known for its stunning beaches like Copacabana and Ipanema, the famous statue of Christ the Redeemer atop Corcovado mountain, the lively Carnival festival, and the vibrant Samba culture. 
 >
 > Rio has a diverse population and is famous for its beauty. Some popular places to visit include:
@@ -399,8 +399,13 @@ after generating two turns:
 > Rio is a popular tourist destination with something to offer everyone, from stunning natural beauty to rich culture and history. Just be aware that like any major city, there are safety concerns to be aware of. Research the areas you plan to visit and use common sense precautions.
 >
 >I hope this gives you a good overview of what Rio de Janeiro has to offer! Let me know if you have any other questions.
+>
+>
+> ^^^^^USER PROMPT^^^^^
 
-Note that the the first assistant response is shorter than the second assistant response, even though box were given a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available.
+Note that the the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available.
+
+
 
 
 
