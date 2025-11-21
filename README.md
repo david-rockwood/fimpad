@@ -321,7 +321,7 @@ One more thing here though: keep in mind that when you get a generation that you
 
 Many who are familiar with LLMs are used to role-based chat, where the standard roles are: **system**, **user**, and **assistant**. The system prompt sets the overall rules for, and the personality of, the LLM assistant. The user prompts are messages that the human user sends to the LLM. The assistant responses are messages that the LLM sends back to the user.
 
-Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags, with complementary closing tags for each, to enable standard role-based chat. But these tags made FIMpad unwieldy, overly complicated. And it turns out, likely due to the use of synthetic LLM training data that includes transcripts of role-based chats, you can simulate this well with FIM generation.
+Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags, with complementary closing tags for each, to enable standard role-based chat. But these tags made FIMpad unwieldy, overly complicated. And it turns out that you can simulate this well with FIM generation, likely due to LLM training data including transcripts of role-based chats.
 
 Below is an example of how to start a virtual role-based chat, before generation.
 
