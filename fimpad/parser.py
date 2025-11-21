@@ -134,19 +134,27 @@ def parse_triple_tokens(content: str) -> Iterator[Token]:
 
     last_index = 0
     seen_names: set[str] = set()
+    tokens: list[Token] = []
     for match in TRIPLE_RE.finditer(content):
         start, end = match.span()
         if start > last_index:
-            yield TextToken(start=last_index, end=start, text=content[last_index:start])
+            tokens.append(
+                TextToken(start=last_index, end=start, text=content[last_index:start])
+            )
 
         raw = match.group(0)
         inner = match.group("body") or ""
         tag = _parse_tag(inner, seen_names)
-        yield TagToken(start=start, end=end, raw=raw, body=inner, tag=tag)
+        tokens.append(TagToken(start=start, end=end, raw=raw, body=inner, tag=tag))
         last_index = end
 
     if last_index < len(content):
-        yield TextToken(start=last_index, end=len(content), text=content[last_index:])
+        tokens.append(
+            TextToken(start=last_index, end=len(content), text=content[last_index:])
+        )
+
+    _validate_sequence_names(tokens)
+    yield from tokens
 
 
 def parse_fim_request(
@@ -208,6 +216,9 @@ def parse_fim_request(
         elif fn.name == "stop" and fn.args:
             target = stop_patterns if (fn.phase or "init") != "after" else chop_patterns
             target.append(fn.args[0])
+
+    chop_patterns = _dedupe_preserve(chop_patterns)
+    stop_patterns = _dedupe_preserve([p for p in stop_patterns if p not in chop_patterns])
 
     return FIMRequest(
         marker=marker_token,
@@ -279,6 +290,27 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
     raise TagParseError(f"Unrecognized tag: {body}")
 
 
+def _validate_sequence_names(tokens: list[Token]):
+    registry: set[str] = set()
+    sequence_names: list[tuple[int, tuple[str, ...]]] = []
+
+    for token in tokens:
+        if not isinstance(token, TagToken):
+            continue
+        if isinstance(token.tag, FIMTag):
+            for fn in token.tag.functions:
+                if fn.name == "name" and fn.args:
+                    registry.add(fn.args[0])
+        elif isinstance(token.tag, SequenceTag):
+            sequence_names.append((token.start, token.tag.names))
+
+    for _, names in sequence_names:
+        missing = [nm for nm in names if nm not in registry]
+        if missing:
+            missing_list = ", ".join(missing)
+            raise TagParseError(f"Sequence references missing tags: {missing_list}")
+
+
 def _token_to_function(token: _TokenPiece, seen_names: set[str]) -> FIMFunction:
     if token.kind == "string":
         phase = "before" if token.quote == '"' else "after"
@@ -342,7 +374,7 @@ def _scan_tokens(body: str) -> list[_TokenPiece]:
     i = 0
     while i < len(body):
         ch = body[i]
-        if ch.isspace():
+        if ch.isspace() or ch == ";":
             i += 1
             continue
         if ch in {'"', "'"}:
@@ -356,7 +388,7 @@ def _scan_tokens(body: str) -> list[_TokenPiece]:
             i = new_i
             continue
         j = i + 1
-        while j < len(body) and not body[j].isspace():
+        while j < len(body) and not body[j].isspace() and body[j] != ";":
             j += 1
         tokens.append(_TokenPiece(kind="word", value=body[i:j]))
         i = j
@@ -441,6 +473,17 @@ def _clamp_tokens(n: int, default_n: int) -> int:
     except Exception:
         value = default_n
     return max(1, min(4096, value))
+
+
+def _dedupe_preserve(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        ordered.append(item)
+    return ordered
 
 
 def _find_fim_token(tokens: list[Token], cursor_offset: int) -> TagToken | None:
