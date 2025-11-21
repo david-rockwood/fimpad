@@ -148,7 +148,8 @@ def test_bare_fim_tag_without_functions():
 
 def test_multifunction_tag_collects_stops_chops_and_post_actions():
     content = (
-        "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append_nl('more'); after:stop('tail')]]] BBB"
+        "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append_nl('more'); "
+        "after:stop('tail')]]] BBB"
     )
     marker = _collect_tags(content)[0]
 
