@@ -50,14 +50,14 @@ Once you have your server running, open FIMpad. All examples of FIM generation b
 ## FIM tags
 
 All tags in FIMpad are wrapped in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before insertion.
-```
-Four score and seven[[[50]]]
-```
+
+>Four score and seven[[[50]]]
+
 
 The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. The tag will be deleted before streaming insertion. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly adjacent to the FIM tag. Then press Ctrl+Enter (or use the menu entry at AI->Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
-```
-Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal." He also delivered the Gettysburg Address on November 19, 1863, which is considered
-```
+
+>Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal." He also delivered the Gettysburg Address on November 19, 1863, which is considered
+
 
 Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file (BOF) and the location of the now-deleted FIM tag is considered **prefix text**. All of the text between the now-deleted FIM tag and the end of the file (EOF) is considered **suffix text**. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 tokens that the LLM deems most likely to appear between the prefix and the suffix. In the example above, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
 
