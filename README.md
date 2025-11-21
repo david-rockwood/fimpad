@@ -69,12 +69,14 @@ Any valid tag that has an integer as the fourth character after the three openin
 
 Within FIM tags you can list functions that will modify what the FIM tag does. Below we have an example of an FIM tag without a stop() function.
 
-> John: Hello Jane.
-> Jane: Hi John!
-> John: Did you hear that our stupid economy collapsed?
-> Jane: Yes. So I hear, so I hear.
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
-> Jane: [[[75]]]
+<div style="white-space: pre-wrap;">
+John: Hello Jane.
+Jane: Hi John!
+John: Did you hear that our stupid economy collapsed?
+Jane: Yes. So I hear, so I hear.
+John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
+Jane: [[[75]]]
+</div>
 
 and, after execution:
 
