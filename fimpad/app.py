@@ -20,7 +20,17 @@ import enchant
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .example_resources import iter_examples
-from .parser import FIMRequest, parse_fim_request
+from .parser import (
+    FIMRequest,
+    PrefixSuffixTag,
+    SequenceTag,
+    TagParseError,
+    TagToken,
+    FIMTag,
+    cursor_within_span,
+    parse_fim_request,
+    parse_triple_tokens,
+)
 from .utils import offset_to_tkindex
 
 
@@ -63,6 +73,8 @@ class FIMPad(tk.Tk):
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
         self._fim_generation_active: bool = False
+        self._sequence_queue: list[str] = []
+        self._sequence_tab: str | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -440,11 +452,12 @@ class FIMPad(tk.Tk):
             "stream_mark": None,
             "stream_following": False,
             "_stream_follow_primed": False,
-            "stops_after": [],
-            "stops_after_maxlen": 0,
+            "stream_patterns": [],
             "stream_tail": "",
             "stream_cancelled": False,
             "stream_stop_event": None,
+            "post_actions": [],
+            "stream_pattern_maxlen": 0,
             "last_insert": "1.0",
             "last_yview": 0.0,
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
@@ -1446,14 +1459,85 @@ class FIMPad(tk.Tk):
         st["stream_mark"] = None
         st["stream_following"] = False
         st["_stream_follow_primed"] = False
-        st["stops_after"] = []
-        st["stops_after_maxlen"] = 0
+        st["stream_patterns"] = []
         st["stream_tail"] = ""
         st["stream_cancelled"] = False
+        st["post_actions"] = []
+        st["stream_pattern_maxlen"] = 0
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
             stop_event.set()
         st["stream_stop_event"] = None
+
+    def _find_active_tag(self, tokens, cursor_offset: int) -> TagToken | None:
+        marker_token: TagToken | None = None
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if not cursor_within_span(token.start, token.end, cursor_offset):
+                continue
+            if marker_token is None or token.start >= marker_token.start:
+                marker_token = token
+        return marker_token
+
+    def _build_name_registry(self, tokens) -> dict[str, TagToken]:
+        registry: dict[str, TagToken] = {}
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if token.kind != "fim" or not isinstance(token.tag, FIMTag):
+                continue
+            for fn in token.tag.functions:
+                if fn.name == "name" and fn.args:
+                    registry[fn.args[0]] = token
+        return registry
+
+    def _run_sequence_step(self, st, *, tokens=None, registry=None):
+        if not self._sequence_queue:
+            self._sequence_tab = None
+            return
+
+        if self._fim_generation_active:
+            return
+
+        tab_id = self.nb.select()
+        if self._sequence_tab is not None and tab_id != self._sequence_tab:
+            self._sequence_queue = []
+            self._sequence_tab = None
+            return
+
+        name = self._sequence_queue.pop(0)
+        text_widget = st["text"]
+        content = text_widget.get("1.0", tk.END)
+
+        try:
+            tokens = tokens or list(parse_triple_tokens(content))
+        except TagParseError as exc:
+            messagebox.showerror("Generate", str(exc))
+            self._sequence_queue = []
+            self._sequence_tab = None
+            return
+
+        registry = registry or self._build_name_registry(tokens)
+        marker_token = registry.get(name)
+        if marker_token is None or not isinstance(marker_token.tag, FIMTag):
+            messagebox.showerror(
+                "Generate", f"Sequence tag refers to missing id: {name}"
+            )
+            self._sequence_queue = []
+            self._sequence_tab = None
+            return
+
+        fim_request = parse_fim_request(
+            content, marker_token.start, tokens=tokens, marker_token=marker_token
+        )
+        if fim_request is None:
+            messagebox.showerror("Generate", f"Invalid FIM tag referenced by {name}")
+            self._sequence_queue = []
+            self._sequence_tab = None
+            return
+
+        self._launch_fim_or_completion_stream(st, content, fim_request)
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -1543,9 +1627,40 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        fim_request = parse_fim_request(content, cursor_offset)
+        try:
+            tokens = list(parse_triple_tokens(content))
+        except TagParseError as exc:
+            messagebox.showerror("Generate", str(exc))
+            return
 
+        marker_token = self._find_active_tag(tokens, cursor_offset)
+        if marker_token is None:
+            messagebox.showinfo(
+                "Generate",
+                "Place the caret inside a [[[N]]] marker to generate.",
+            )
+            return
+
+        name_registry = self._build_name_registry(tokens)
+        if marker_token.kind == "sequence" and isinstance(marker_token.tag, SequenceTag):
+            names = list(marker_token.tag.names)
+            missing = [nm for nm in names if nm not in name_registry]
+            if missing:
+                messagebox.showerror(
+                    "Generate", f"Sequence references missing tags: {', '.join(missing)}"
+                )
+                return
+            self._sequence_queue = names
+            self._sequence_tab = self.nb.select()
+            self._run_sequence_step(st, tokens=tokens, registry=name_registry)
+            return
+
+        fim_request = parse_fim_request(
+            content, cursor_offset, tokens=tokens, marker_token=marker_token
+        )
         if fim_request is not None:
+            self._sequence_queue = []
+            self._sequence_tab = None
             self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
@@ -1571,9 +1686,11 @@ class FIMPad(tk.Tk):
             return
 
         st["stream_cancelled"] = True
-        st["stops_after"] = []
-        st["stops_after_maxlen"] = 0
+        st["stream_patterns"] = []
+        st["stream_pattern_maxlen"] = 0
         st["stream_tail"] = ""
+        self._sequence_queue = []
+        self._sequence_tab = None
 
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
@@ -1672,6 +1789,13 @@ class FIMPad(tk.Tk):
         cfg = self.cfg
         self._last_fim_marker = fim_request.marker.raw
 
+        request_cfg = {
+            "temperature": cfg["temperature"],
+            "top_p": cfg["top_p"],
+            "max_tokens": fim_request.max_tokens,
+        }
+        request_cfg.update(fim_request.config_overrides)
+
         if fim_request.use_completion:
             prompt = fim_request.before_region
         else:
@@ -1681,13 +1805,13 @@ class FIMPad(tk.Tk):
 
         payload = {
             "prompt": prompt,
-            "max_tokens": fim_request.max_tokens,
-            "temperature": cfg["temperature"],
-            "top_p": cfg["top_p"],
+            "max_tokens": request_cfg.get("max_tokens", fim_request.max_tokens),
+            "temperature": request_cfg.get("temperature", cfg["temperature"]),
+            "top_p": request_cfg.get("top_p", cfg["top_p"]),
             "stream": True,
         }
-        if fim_request.stops_before:
-            payload["stop"] = fim_request.stops_before
+        if fim_request.stop_patterns:
+            payload["stop"] = fim_request.stop_patterns
 
         text = st["text"]
         start_index = offset_to_tkindex(content, fim_request.marker.start)
@@ -1697,25 +1821,46 @@ class FIMPad(tk.Tk):
 
         self._fim_generation_active = True
         try:
-            st["stops_after"] = fim_request.stops_after
-            st["stops_after_maxlen"] = max(
-                (len(s) for s in fim_request.stops_after), default=0
+            st["stream_patterns"] = [
+                {"text": patt, "action": "stop"} for patt in fim_request.stop_patterns
+            ] + [
+                {"text": patt, "action": "chop"} for patt in fim_request.chop_patterns
+            ]
+            st["stream_pattern_maxlen"] = max(
+                (len(p["text"]) for p in st["stream_patterns"]), default=0
             )
             st["stream_tail"] = ""
             st["stream_cancelled"] = False
             st["stream_stop_event"] = threading.Event()
+            st["post_actions"] = []
+
+            for fn in fim_request.post_functions:
+                val = fn.args[0] if fn.args else ""
+                if fn.name == "append_nl" and not val.endswith("\n"):
+                    val = f"{val}\n"
+                st["post_actions"].append(val)
 
             self._set_busy(True)
 
             # Prepare streaming mark
             text.mark_set("stream_here", start_index)
             text.mark_gravity("stream_here", tk.RIGHT)
-            if fim_request.suffix_token is not None and not fim_request.keep_tags:
+            if (
+                fim_request.suffix_token is not None
+                and not fim_request.keep_tags
+                and isinstance(fim_request.suffix_token.tag, PrefixSuffixTag)
+                and fim_request.suffix_token.tag.hardness == "soft"
+            ):
                 s_s = offset_to_tkindex(content, fim_request.suffix_token.start)
                 s_e = offset_to_tkindex(content, fim_request.suffix_token.end)
                 with contextlib.suppress(tk.TclError):
                     text.delete(s_s, s_e)
-            if fim_request.prefix_token is not None and not fim_request.keep_tags:
+            if (
+                fim_request.prefix_token is not None
+                and not fim_request.keep_tags
+                and isinstance(fim_request.prefix_token.tag, PrefixSuffixTag)
+                and fim_request.prefix_token.tag.hardness == "soft"
+            ):
                 p_s = offset_to_tkindex(content, fim_request.prefix_token.start)
                 p_e = offset_to_tkindex(content, fim_request.prefix_token.end)
                 with contextlib.suppress(tk.TclError):
@@ -1780,6 +1925,8 @@ class FIMPad(tk.Tk):
                         self._force_flush_stream_buffer(frame, mark)
                     self._fim_generation_active = False
                     self._set_busy(False)
+                    self._sequence_queue = []
+                    self._sequence_tab = None
                     messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                     continue
 
@@ -1802,43 +1949,50 @@ class FIMPad(tk.Tk):
                     piece = item["text"]
 
                     if not item.get("allow_stream_cancelled"):
-                        after_stops = st.get("stops_after", [])
-                        if after_stops:
+                        patterns = st.get("stream_patterns", [])
+                        if patterns:
                             tail = st.get("stream_tail", "")
                             combined = tail + piece
-                            match_index = None
-                            match_stop = ""
-                            for stop in after_stops:
-                                idx = combined.find(stop)
+                            best: tuple[int, int, int] | None = None
+                            best_pattern: dict[str, str] | None = None
+                            for patt in patterns:
+                                patt_text = patt.get("text", "")
+                                if not patt_text:
+                                    continue
+                                idx = combined.find(patt_text)
                                 if idx == -1:
                                     continue
-                                if (
-                                    match_index is None
-                                    or idx < match_index
-                                    or (idx == match_index and len(stop) > len(match_stop))
-                                ):
-                                    match_index = idx
-                                    match_stop = stop
+                                priority = 0 if patt.get("action") == "chop" else 1
+                                cand = (idx, -len(patt_text), priority)
+                                if best is None or cand < best:
+                                    best = cand
+                                    best_pattern = patt
 
-                            if match_index is not None:
+                            if best_pattern is not None and best is not None:
+                                match_index = best[0]
+                                patt_text = best_pattern.get("text", "")
                                 pre_len = max(0, match_index - len(tail))
                                 pre_piece = piece[:pre_len]
-                                tail_overlap = max(0, len(tail) - match_index)
-                                stop_remaining = match_stop[tail_overlap:]
                                 if pre_piece:
                                     st["stream_buffer"].append(pre_piece)
-                                if stop_remaining:
-                                    st["stream_buffer"].append(stop_remaining)
                                 st["stream_mark"] = mark
                                 flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
                                 st["stream_cancelled"] = True
-                                st["stops_after"] = []
-                                st["stops_after_maxlen"] = 0
+                                st["stream_patterns"] = []
+                                st["stream_pattern_maxlen"] = 0
                                 st["stream_tail"] = ""
                                 stop_event = st.get("stream_stop_event")
                                 if stop_event is not None:
                                     stop_event.set()
+                                if patt_text:
+                                    try:
+                                        start_idx = text.index(
+                                            f"{flush_mark}-{len(patt_text)}c"
+                                        )
+                                        text.delete(start_idx, flush_mark)
+                                    except tk.TclError:
+                                        pass
                                 self._result_queue.put(
                                     {"ok": True, "kind": "stream_done", "tab": tab_id}
                                 )
@@ -1847,7 +2001,7 @@ class FIMPad(tk.Tk):
                                 )
                                 continue
 
-                            maxlen = st.get("stops_after_maxlen", 0)
+                            maxlen = st.get("stream_pattern_maxlen", 0)
                             if maxlen > 0:
                                 keep = maxlen - 1
                                 st["stream_tail"] = combined[-keep:] if keep > 0 else ""
@@ -1865,12 +2019,22 @@ class FIMPad(tk.Tk):
                 elif kind == "stream_done":
                     mark = st.get("stream_mark") or item.get("mark") or "stream_here"
                     self._force_flush_stream_buffer(frame, mark)
-                    st["stops_after"] = []
-                    st["stops_after_maxlen"] = 0
+                    st["stream_patterns"] = []
+                    st["stream_pattern_maxlen"] = 0
                     st["stream_tail"] = ""
                     st["stream_stop_event"] = None
+                    for extra in st.get("post_actions", []):
+                        try:
+                            text.insert(mark, extra)
+                            mark = text.index(f"{mark}+{len(extra)}c")
+                        except tk.TclError:
+                            continue
+                    st["post_actions"] = []
                     self._fim_generation_active = False
                     self._set_busy(False)
+                    self._set_dirty(st, True)
+                    if self._sequence_queue and self._sequence_tab == tab_id:
+                        self.after_idle(lambda: self._run_sequence_step(st))
 
                 elif kind == "spellcheck_now":
                     self._schedule_spellcheck_for_frame(frame, delay_ms=150)

@@ -96,8 +96,10 @@ class FIMRequest:
     safe_suffix: str
     max_tokens: int
     keep_tags: bool
-    stops_before: list[str]
-    stops_after: list[str]
+    stop_patterns: list[str]
+    chop_patterns: list[str]
+    post_functions: tuple[FIMFunction, ...]
+    config_overrides: dict[str, object]
     use_completion: bool
 
 
@@ -111,9 +113,14 @@ class _TokenPiece:
 FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "keep": {"args": 0, "default_phase": "meta"},
     "keep_tags": {"args": 0, "default_phase": "meta"},
-    "stop": {"args": 1, "default_phase": "before", "require_string": True},
+    "stop": {"args": 1, "default_phase": "init", "require_string": True},
+    "chop": {"args": 1, "default_phase": "init", "require_string": True},
     "tail": {"args": 1, "default_phase": "after", "require_string": True},
     "name": {"args": 1, "default_phase": "meta", "allow_any": True},
+    "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
+    "top_p": {"args": 1, "default_phase": "init", "allow_any": True},
+    "append": {"args": 1, "default_phase": "post", "require_string": True},
+    "append_nl": {"args": 1, "default_phase": "post", "require_string": True},
 }
 
 
@@ -146,6 +153,9 @@ def parse_fim_request(
     content: str,
     cursor_offset: int,
     default_n: int = DEFAULT_MARKER_MAX_TOKENS,
+    *,
+    tokens: list[Token] | None = None,
+    marker_token: TagToken | None = None,
 ) -> FIMRequest | None:
     """Parse FIM instructions around ``cursor_offset``.
 
@@ -153,17 +163,19 @@ def parse_fim_request(
     """
 
     try:
-        tokens = list(parse_triple_tokens(content))
+        tokens = tokens or list(parse_triple_tokens(content))
     except TagParseError:
         return None
-    marker_token = _find_fim_token(tokens, cursor_offset)
+
+    if marker_token is None:
+        marker_token = _find_fim_token(tokens, cursor_offset)
     if marker_token is None or not isinstance(marker_token.tag, FIMTag):
         return None
 
     fim_tag = marker_token.tag
     prefix_token, suffix_token = _find_prefix_suffix(tokens, marker_token)
-    before_region, after_region = _extract_regions(
-        content, marker_token, prefix_token, suffix_token
+    before_region, after_region = _extract_regions_clean(
+        content, tokens, marker_token, prefix_token, suffix_token
     )
     safe_suffix = _strip_triple_tags(after_region)
     use_completion = after_region.strip() == ""
@@ -171,18 +183,31 @@ def parse_fim_request(
     max_tokens = _clamp_tokens(fim_tag.max_tokens or default_n, default_n)
     keep_tags = any(fn.name in {"keep", "keep_tags"} for fn in fim_tag.functions)
 
-    stops_before: list[str] = []
-    stops_after: list[str] = []
+    stop_patterns: list[str] = []
+    chop_patterns: list[str] = []
+    post_functions: list[FIMFunction] = []
+    config_overrides: dict[str, object] = {}
+
     for fn in fim_tag.functions:
-        if fn.name == "stop":
-            (st,) = fn.args
-            if (fn.phase or "before") == "after":
-                stops_after.append(st)
-            else:
-                stops_before.append(st)
-        elif fn.name == "tail":
-            (st,) = fn.args
-            stops_after.append(st)
+        if fn.name in {"keep", "keep_tags", "name"}:
+            continue
+        if fn.name == "temperature" and fn.args:
+            try:
+                config_overrides["temperature"] = float(fn.args[0])
+            except Exception:
+                continue
+        elif fn.name == "top_p" and fn.args:
+            try:
+                config_overrides["top_p"] = float(fn.args[0])
+            except Exception:
+                continue
+        elif fn.name in {"append", "append_nl"}:
+            post_functions.append(fn)
+        elif fn.name in {"chop", "tail"} and fn.args:
+            chop_patterns.append(fn.args[0])
+        elif fn.name == "stop" and fn.args:
+            target = stop_patterns if (fn.phase or "init") != "after" else chop_patterns
+            target.append(fn.args[0])
 
     return FIMRequest(
         marker=marker_token,
@@ -193,8 +218,10 @@ def parse_fim_request(
         safe_suffix=safe_suffix,
         max_tokens=max_tokens,
         keep_tags=keep_tags,
-        stops_before=stops_before,
-        stops_after=stops_after,
+        stop_patterns=stop_patterns,
+        chop_patterns=chop_patterns,
+        post_functions=tuple(post_functions),
+        config_overrides=config_overrides,
         use_completion=use_completion,
     )
 
@@ -452,23 +479,48 @@ def _find_prefix_suffix(
     return prefix_token, suffix_token
 
 
-def _extract_regions(
+def _strip_comment_segments(
+    content: str, tokens: list[Token], start: int, end: int
+) -> str:
+    pieces: list[str] = []
+    cursor = start
+    for token in tokens:
+        if not isinstance(token, TagToken) or token.kind != "comment":
+            continue
+        if token.start >= end:
+            break
+        if token.end <= start:
+            continue
+        if cursor < token.start:
+            pieces.append(content[cursor : token.start])
+        cursor = max(cursor, token.end)
+    if cursor < end:
+        pieces.append(content[cursor:end])
+    return "".join(pieces)
+
+
+def _extract_regions_clean(
     content: str,
+    tokens: list[Token],
     marker_token: TagToken,
     prefix_token: TagToken | None,
     suffix_token: TagToken | None,
 ) -> tuple[str, str]:
     if prefix_token is not None:
-        pfx_used_end = prefix_token.end
-        before_region = content[pfx_used_end:marker_token.start]
+        before_region = _strip_comment_segments(
+            content, tokens, prefix_token.end, marker_token.start
+        )
     else:
-        before_region = content[: marker_token.start]
+        before_region = _strip_comment_segments(content, tokens, 0, marker_token.start)
 
     if suffix_token is not None:
-        sfx_used_start = suffix_token.start
-        after_region = content[marker_token.end : sfx_used_start]
+        after_region = _strip_comment_segments(
+            content, tokens, marker_token.end, suffix_token.start
+        )
     else:
-        after_region = content[marker_token.end :]
+        after_region = _strip_comment_segments(
+            content, tokens, marker_token.end, len(content)
+        )
 
     return before_region, after_region
 
