@@ -374,6 +374,16 @@ def _parse_arg(piece: str) -> str:
 
 
 def _scan_tokens(body: str) -> list[_TokenPiece]:
+    if not body:
+        return []
+
+    if body[0].isdigit():
+        return _scan_fim_tokens(body)
+
+    return _scan_general_tokens(body)
+
+
+def _scan_general_tokens(body: str) -> list[_TokenPiece]:
     tokens: list[_TokenPiece] = []
     i = 0
     while i < len(body):
@@ -381,22 +391,66 @@ def _scan_tokens(body: str) -> list[_TokenPiece]:
         if ch.isspace() or ch == ";":
             i += 1
             continue
-        if ch in {'"', "'"}:
-            value, new_i = _parse_string_literal(body, i)
-            tokens.append(_TokenPiece(kind="string", value=value, quote=ch))
-            i = new_i
-            continue
-        if ch == "(":
-            value, new_i = _parse_parenthetical(body, i)
-            tokens.append(_TokenPiece(kind="comment", value=value))
-            i = new_i
-            continue
-        j = i + 1
-        while j < len(body) and not body[j].isspace() and body[j] != ";":
-            j += 1
-        tokens.append(_TokenPiece(kind="word", value=body[i:j]))
-        i = j
+        token, i = _scan_single_token(body, i)
+        tokens.append(token)
     return tokens
+
+
+def _scan_fim_tokens(body: str) -> list[_TokenPiece]:
+    tokens: list[_TokenPiece] = []
+
+    num_match = re.match(r"\d+", body)
+    if not num_match:
+        raise TagParseError("FIM tags must start with an integer")
+
+    tokens.append(_TokenPiece(kind="word", value=num_match.group(0)))
+
+    i = num_match.end()
+    i = _consume_whitespace(body, i)
+    if i < len(body) and body[i] != ";":
+        raise TagParseError(
+            "FIM tags require semicolons between the token count and statements"
+        )
+
+    while i < len(body):
+        if body[i] != ";":
+            raise TagParseError("FIM tags require semicolons between statements")
+
+        i += 1
+        i = _consume_whitespace(body, i)
+        if i >= len(body):
+            break
+        if body[i] == ";":
+            raise TagParseError("FIM tags require statements after semicolons")
+
+        token, i = _scan_single_token(body, i)
+        tokens.append(token)
+        i = _consume_whitespace(body, i)
+        if i < len(body) and body[i] not in {";"}:
+            raise TagParseError("FIM tags require semicolons between statements")
+
+    return tokens
+
+
+def _scan_single_token(body: str, i: int) -> tuple[_TokenPiece, int]:
+    ch = body[i]
+    if ch in {'"', "'"}:
+        value, new_i = _parse_string_literal(body, i)
+        return _TokenPiece(kind="string", value=value, quote=ch), new_i
+    if ch == "(":
+        value, new_i = _parse_parenthetical(body, i)
+        return _TokenPiece(kind="comment", value=value), new_i
+
+    j = i + 1
+    while j < len(body) and not body[j].isspace() and body[j] != ";":
+        j += 1
+    return _TokenPiece(kind="word", value=body[i:j]), j
+
+
+def _consume_whitespace(text: str, i: int) -> int:
+    while i < len(text) and text[i].isspace():
+        i += 1
+    return i
 
 
 def _parse_string_literal(text: str, start: int) -> tuple[str, int]:
