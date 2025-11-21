@@ -59,7 +59,7 @@ The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum
 > Four score and seven years ago, our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so
 
 
-Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file (BOF) and the location of the now-deleted FIM tag is considered **prefix text**. All of the text between the now-deleted FIM tag and the end of the file (EOF) is considered **suffix text**. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 tokens that the LLM deems most likely to appear between the prefix and the suffix.
+Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file (BOF) and the location of the now-deleted FIM tag is considered **prefix text**. All of the text between the now-deleted FIM tag and the end of the file (EOF) is considered **suffix text**. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 or fewer tokens that the LLM deems most likely to appear between the prefix and the suffix.
 
 In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
 
