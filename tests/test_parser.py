@@ -122,7 +122,10 @@ def test_parse_fim_request_uses_new_ast(monkeypatch):
 
 
 def test_parse_fim_request_strips_comments_and_collects_overrides():
-    content = "[[[prefix soft]]] Hello [[[(note) before]]] [[[3 stop(\"zip\") chop('zap') top_p(0.4) append('!')]]] [[[suffix]]]\n"
+    content = (
+        "[[[prefix soft]]] Hello [[[(note) before]]] "
+        "[[[3 stop(\"zip\") chop('zap') top_p(0.4) append('!')]]] [[[suffix]]]\n"
+    )
     tokens = _collect_tags(content)
     marker = tokens[2]
     fim_request = parse_fim_request(content, marker.start + 1)

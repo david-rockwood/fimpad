@@ -22,11 +22,11 @@ from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .example_resources import iter_examples
 from .parser import (
     FIMRequest,
+    FIMTag,
     PrefixSuffixTag,
     SequenceTag,
     TagParseError,
     TagToken,
-    FIMTag,
     cursor_within_span,
     parse_fim_request,
     parse_triple_tokens,
@@ -2034,7 +2034,7 @@ class FIMPad(tk.Tk):
                     self._set_busy(False)
                     self._set_dirty(st, True)
                     if self._sequence_queue and self._sequence_tab == tab_id:
-                        self.after_idle(lambda: self._run_sequence_step(st))
+                        self.after_idle(lambda st=st: self._run_sequence_step(st))
 
                 elif kind == "spellcheck_now":
                     self._schedule_spellcheck_for_frame(frame, delay_ms=150)
