@@ -32,7 +32,7 @@ def stitch_tokens(tokens):
 
 def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
-        "A [[[5 \"alpha\" name(one)]]] B [[[2 name(two)]]] [[[\"one\" 'two']]] C [[[prefix]]] "
+        "A [[[5; \"alpha\"; name(one)]]] B [[[2; name(two)]]] [[[\"one\" 'two']]] C [[[prefix]]] "
         "D [[[suffix!]]] E [[[(note about things) after]]]" """ F"""
     )
     tokens = list(parse_triple_tokens(content))
@@ -59,10 +59,10 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
 
 def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multiline():
     content = (
-        "[[[12! \n"
+        "[[[12; keep_tags();\n"
         '    "alpha"; \'omega\';\n'
         '    stop("beta"); after:stop(\'ga\\\'mma\');\n'
-        '    chop("line\\n3") ; name(foo)\n'
+        '    chop("line\\n3"); name(foo)\n'
         "]]]\n"
     )
     fim_token = _collect_tags(content)[0]
@@ -93,7 +93,7 @@ def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multilin
 
 def test_sequence_tag_parses_strings_with_escapes():
     content = (
-        "[[[1 name(first)]]]\n[[[2 name('line\\n2')]]]\n[[[\"first\" \"line\\n2\"]]]"
+        "[[[1; name(first)]]]\n[[[2; name('line\\n2')]]]\n[[[\"first\" \"line\\n2\"]]]"
     )
     tokens = _collect_tags(content)
     token = tokens[-1]
@@ -104,8 +104,8 @@ def test_sequence_tag_parses_strings_with_escapes():
 
 def test_sequence_tag_validates_named_targets_and_duplicates():
     content = """
-    [[[2 name(first)]]]
-    [[[3 name(second)]]]
+    [[[2; name(first)]]]
+    [[[3; name(second)]]]
     [[["first" "second"]]]
     """
     tokens = list(parse_triple_tokens(content))
@@ -122,7 +122,7 @@ def test_sequence_tag_validates_named_targets_and_duplicates():
 
 def test_sequence_tag_missing_name_raises():
     content = """
-    [[[1 name(alpha)]]]
+    [[[1; name(alpha)]]]
     [[["alpha" "beta"]]]
     """
     with pytest.raises(TagParseError):
@@ -130,18 +130,28 @@ def test_sequence_tag_missing_name_raises():
 
 
 def test_duplicate_names_raise():
-    content = "[[[1 name(foo)]]] [[[2 name(foo)]]]"
+    content = "[[[1; name(foo)]]] [[[2; name(foo)]]]"
     with pytest.raises(TagParseError):
         list(parse_triple_tokens(content))
 
 
 def test_unknown_function_raises():
     with pytest.raises(TagParseError):
-        list(parse_triple_tokens("[[[1 unknown()]]]]"))
+        list(parse_triple_tokens("[[[1; unknown()]]]]"))
+
+
+def test_bang_after_fim_count_rejected():
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[5!]]]"))
+
+
+def test_missing_semicolon_after_fim_count_rejected():
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[5 stop('cut')]]]"))
 
 
 def test_parse_fim_request_uses_new_ast(monkeypatch):
-    content = "[[[prefix]]] AAA [[[5! \"alpha\" 'omega']]] BBB [[[suffix hard]]]"
+    content = "[[[prefix]]] AAA [[[5; keep_tags(); \"alpha\"; 'omega']]] BBB [[[suffix hard]]]"
     tokens = _collect_tags(content)
     marker = tokens[1]
     cursor_offset = marker.start + 2
@@ -161,7 +171,7 @@ def test_parse_fim_request_uses_new_ast(monkeypatch):
 
 def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness():
     content = (
-        "[[[prefix soft]]]A [[[(note) before]]] [[[2 stop('cut')]]]\n"
+        "[[[prefix soft]]]A [[[(note) before]]] [[[2; stop('cut')]]]\n"
         "B [[[(not used) after]]] [[[suffix!]]] tail"
     )
     tokens = _collect_tags(content)
@@ -183,7 +193,7 @@ def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness()
 def test_parse_fim_request_strips_comments_and_collects_overrides():
     content = (
         "[[[prefix soft]]] Hello [[[(note) before]]] "
-        "[[[3 stop(\"zip\") chop('zap') top_p(0.4) append('!')]]] [[[suffix]]]\n"
+        "[[[3; stop(\"zip\"); chop('zap'); top_p(0.4); append('!')]]] [[[suffix]]]\n"
     )
     tokens = _collect_tags(content)
     marker = tokens[2]
@@ -198,7 +208,7 @@ def test_parse_fim_request_strips_comments_and_collects_overrides():
 
 
 def test_stop_and_chop_tie_breaking_prefers_chop():
-    content = "[[[2 stop(\"shared\") chop('shared') after:stop('later')]]]"
+    content = "[[[2; stop(\"shared\"); chop('shared'); after:stop('later')]]]"
     token = _collect_tags(content)[0]
     fim_request = parse_fim_request(content, token.start + 1)
 

@@ -242,6 +242,9 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
     if not stripped:
         return None
 
+    if re.match(r"\d+!", stripped):
+        raise TagParseError("Unexpected '!' after FIM token count")
+
     tokens = _scan_tokens(stripped)
     if not tokens:
         return None
@@ -269,14 +272,16 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
                 kind=name_key, hardness=hardness, is_close=is_close
             )
 
-        fim_match = re.fullmatch(r"(?P<num>\d+)(?P<keep>!)?", base_word)
+        fim_match = re.fullmatch(r"(?P<num>\d+)", base_word)
         if fim_match:
+            remainder = stripped[len(fim_match.group("num")) :].lstrip()
+            if remainder and not remainder.startswith(";"):
+                raise TagParseError(
+                    "FIM tags require semicolons between the token count and statements"
+                )
+
             n_val = int(fim_match.group("num"))
-            functions: list[FIMFunction] = []
-            if fim_match.group("keep"):
-                functions.append(FIMFunction(name="keep_tags", args=(), phase="meta"))
-            for tok in tokens[1:]:
-                functions.append(_token_to_function(tok, seen_names))
+            functions = [_token_to_function(tok, seen_names) for tok in tokens[1:]]
             return FIMTag(max_tokens=n_val, functions=tuple(functions))
 
     if first.kind == "string":
