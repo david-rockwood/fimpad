@@ -4,8 +4,6 @@ A lightweight text editor focused on LLM FIM (fill-in-the-middle) workflows with
 
 The first release will likely be in December 2025.
 
-This project is at an early stage. FIMpad has only been run on Linux so far. FIMpad has only been used with llama.cpp llama-server endpoints so far. FIMpad should be used with IBM Granite 4.0 H models because of the need FIMpad has for FIM (fill-in-the-middle) tokens in the tokenizer. Other models may be supported in the future.
-
 ## Quick start
 
 ```bash
@@ -47,5 +45,3 @@ Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE mod
 ## Overview
 
 With FIMpad, you can have AI sessions with a local LLM in a notepad-like text editor. You can do fill-in-the-middle generation at any point in a text file. If you do fill-in-the-middle at the very end of a text file, it works like completion. Fill-in-the-middle is a versatile and quick way to help with story writing and coding, among many other things.
-
-
