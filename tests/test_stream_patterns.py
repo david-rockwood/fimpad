@@ -1,21 +1,20 @@
-from fimpad.stream_utils import compute_stream_tail, find_stream_match
+from fimpad.stream_utils import find_stream_match
 
 
 def _simulate_stream(chunks, patterns):
     output = ""
-    tail = ""
 
     for piece in chunks:
-        match = find_stream_match(tail, piece, patterns)
+        candidate = output + piece
+        match = find_stream_match(candidate, patterns)
         if match:
-            if match.append_len:
-                output += piece[: match.append_len]
-            if match.action == "chop" and match.pattern:
-                output = output[: -len(match.pattern)]
+            if match.action == "chop":
+                output = candidate[: match.match_index]
+            else:
+                output = candidate[: match.end_index]
             break
 
-        output += piece
-        tail = compute_stream_tail(tail, piece, patterns)
+        output = candidate
 
     return output
 
@@ -56,3 +55,17 @@ def test_pattern_spanning_chunks_for_chop():
     chunks = ["before HA", "LT trailing text"]
 
     assert _simulate_stream(chunks, patterns) == "before "
+
+
+def test_stop_does_not_trigger_on_partial_prefixes():
+    patterns = [{"text": "FINAL ANSWER", "action": "stop"}]
+    chunks = ["FIN", "ALX ", "ANSWERISH"]
+
+    assert _simulate_stream(chunks, patterns) == "FINALX ANSWERISH"
+
+
+def test_chop_trims_only_pattern_text():
+    patterns = [{"text": "<END>", "action": "chop"}]
+    chunks = ["Result: one ", "two <END>", " keep rest"]
+
+    assert _simulate_stream(chunks, patterns) == "Result: one two "

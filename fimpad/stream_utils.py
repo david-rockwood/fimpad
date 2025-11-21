@@ -16,21 +16,16 @@ class StreamMatch:
     pattern: str
     action: str
     match_index: int
-    append_len: int
+    end_index: int
 
 
-def find_stream_match(
-    tail: str, piece: str, patterns: Iterable[dict[str, str]]
-) -> StreamMatch | None:
-    """Locate the earliest pattern match in ``tail + piece``.
+def find_stream_match(text: str, patterns: Iterable[dict[str, str]]) -> StreamMatch | None:
+    """Locate the earliest pattern match in ``text``.
 
-    The returned ``append_len`` indicates how many characters from ``piece``
-    should be appended before halting streaming. The slice always includes the
-    pattern text so callers can choose to retain it (for ``stop``) or remove it
-    after insertion (for ``chop``).
+    Returns the match with the lowest character offset. When multiple patterns
+    match at the same offset, the one that appeared first in ``patterns`` wins.
     """
 
-    combined = tail + piece
     best: tuple[int, int] | None = None  # (match_index, order)
     best_pattern: dict[str, str] | None = None
 
@@ -38,7 +33,7 @@ def find_stream_match(
         patt_text = patt.get("text", "")
         if not patt_text:
             continue
-        idx = combined.find(patt_text)
+        idx = text.find(patt_text)
         if idx == -1:
             continue
         cand = (idx, order)
@@ -53,14 +48,11 @@ def find_stream_match(
     patt_text = best_pattern.get("text", "")
     action = best_pattern.get("action", "stop")
 
-    pattern_end_in_piece = max(0, match_index + len(patt_text) - len(tail))
-    append_len = pattern_end_in_piece
-
     return StreamMatch(
         pattern=patt_text,
         action=action,
         match_index=match_index,
-        append_len=append_len,
+        end_index=match_index + len(patt_text),
     )
 
 

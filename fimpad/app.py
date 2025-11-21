@@ -31,7 +31,7 @@ from .parser import (
     parse_fim_request,
     parse_triple_tokens,
 )
-from .stream_utils import compute_stream_tail, find_stream_match
+from .stream_utils import find_stream_match
 from .utils import offset_to_tkindex
 
 
@@ -454,11 +454,10 @@ class FIMPad(tk.Tk):
             "stream_following": False,
             "_stream_follow_primed": False,
             "stream_patterns": [],
-            "stream_tail": "",
+            "stream_accumulated": "",
             "stream_cancelled": False,
             "stream_stop_event": None,
             "post_actions": [],
-            "stream_pattern_maxlen": 0,
             "last_insert": "1.0",
             "last_yview": 0.0,
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
@@ -1471,10 +1470,9 @@ class FIMPad(tk.Tk):
         st["stream_following"] = False
         st["_stream_follow_primed"] = False
         st["stream_patterns"] = []
-        st["stream_tail"] = ""
+        st["stream_accumulated"] = ""
         st["stream_cancelled"] = False
         st["post_actions"] = []
-        st["stream_pattern_maxlen"] = 0
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
             stop_event.set()
@@ -1586,6 +1584,7 @@ class FIMPad(tk.Tk):
             cur = text.index(tk.END)
         should_follow = st.get("stream_following", self._should_follow(text))
         text.insert(cur, piece)
+        st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
         with contextlib.suppress(tk.TclError):
             text.tag_remove("misspelled", cur, f"{cur}+{len(piece)}c")
         if should_follow:
@@ -1708,8 +1707,7 @@ class FIMPad(tk.Tk):
 
         st["stream_cancelled"] = True
         st["stream_patterns"] = []
-        st["stream_pattern_maxlen"] = 0
-        st["stream_tail"] = ""
+        st["stream_accumulated"] = ""
         self._sequence_queue = []
         self._sequence_tab = None
 
@@ -1847,10 +1845,7 @@ class FIMPad(tk.Tk):
             ] + [
                 {"text": patt, "action": "chop"} for patt in fim_request.chop_patterns
             ]
-            st["stream_pattern_maxlen"] = max(
-                (len(p["text"]) for p in st["stream_patterns"]), default=0
-            )
-            st["stream_tail"] = ""
+            st["stream_accumulated"] = ""
             st["stream_cancelled"] = False
             st["stream_stop_event"] = threading.Event()
             st["post_actions"] = []
@@ -1972,30 +1967,31 @@ class FIMPad(tk.Tk):
                     if not item.get("allow_stream_cancelled"):
                         patterns = st.get("stream_patterns", [])
                         if patterns:
-                            tail = st.get("stream_tail", "")
-                            match = find_stream_match(tail, piece, patterns)
+                            buffered = "".join(st.get("stream_buffer", []))
+                            accumulated = st.get("stream_accumulated", "")
+                            candidate = f"{accumulated}{buffered}{piece}"
+                            match = find_stream_match(candidate, patterns)
 
                             if match is not None:
-                                if match.append_len > 0:
-                                    st["stream_buffer"].append(piece[: match.append_len])
+                                target_text = (
+                                    candidate[: match.match_index]
+                                    if match.action == "chop"
+                                    else candidate[: match.end_index]
+                                )
+                                pending_insert = target_text[len(accumulated) :]
+                                if pending_insert:
+                                    st["stream_buffer"] = [pending_insert]
+                                else:
+                                    st["stream_buffer"].clear()
                                 st["stream_mark"] = mark
                                 flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
                                 st["stream_cancelled"] = True
                                 st["stream_patterns"] = []
-                                st["stream_pattern_maxlen"] = 0
-                                st["stream_tail"] = ""
+                                st["stream_accumulated"] = target_text
                                 stop_event = st.get("stream_stop_event")
                                 if stop_event is not None:
                                     stop_event.set()
-                                if match.action == "chop" and match.pattern:
-                                    try:
-                                        start_idx = text.index(
-                                            f"{flush_mark}-{len(match.pattern)}c"
-                                        )
-                                        text.delete(start_idx, flush_mark)
-                                    except tk.TclError:
-                                        pass
                                 self._result_queue.put(
                                     {"ok": True, "kind": "stream_done", "tab": tab_id}
                                 )
@@ -2004,15 +2000,12 @@ class FIMPad(tk.Tk):
                                 )
                                 continue
 
-                            st["stream_tail"] = compute_stream_tail(
-                                tail, piece, patterns
-                            )
-                        else:
-                            st["stream_tail"] = ""
+                        st["stream_buffer"] = [buffered + piece]
+                        st["stream_accumulated"] = accumulated + piece
                     else:
-                        st["stream_tail"] = ""
+                        st["stream_buffer"].append(piece)
+                        st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
 
-                    st["stream_buffer"].append(piece)
                     st["stream_mark"] = mark
                     self._schedule_stream_flush(frame, mark)
 
@@ -2020,8 +2013,7 @@ class FIMPad(tk.Tk):
                     mark = st.get("stream_mark") or item.get("mark") or "stream_here"
                     self._force_flush_stream_buffer(frame, mark)
                     st["stream_patterns"] = []
-                    st["stream_pattern_maxlen"] = 0
-                    st["stream_tail"] = ""
+                    st["stream_accumulated"] = ""
                     st["stream_stop_event"] = None
                     for extra in st.get("post_actions", []):
                         try:
