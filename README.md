@@ -63,7 +63,7 @@ Upon execution of the FIM tag, the tag is deleted from the document. All of the 
 
 In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
 
-In FIMpad, any valid tag that has an integer as the fourth character after the three opening bracket characters is a FIM tag.
+Any valid tag that has an integer as the fourth character after the three opening bracket characters is a FIM tag.
 
 
 
