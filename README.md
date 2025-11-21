@@ -372,14 +372,17 @@ after generating two turns:
 >
 >
 > ^^^^^ASSISTANT RESPONSE^^^^^
+>
 > Brazil is a beautiful country with many vibrant cities. Some popular destinations that are known for their beauty include Rio de Janeiro, São Paulo, Salvador, and Florianópolis. Each city has its own unique culture, attractions, and nightlife. I would recommend doing some research to find a city that aligns with your interests and preferences.
 >
 >
 > ^^^^USER PROMPT^^^^^
+>
 > tell me more about rio
 >
 >
 > ^^^^^ASSISTANT RESPONSE^^^^^
+>
 > Rio de Janeiro, often simply called Rio, is the second-largest city in Brazil and one of the most iconic. It is known for its stunning beaches like Copacabana and Ipanema, the famous statue of Christ the Redeemer atop Corcovado mountain, the lively Carnival festival, and the vibrant Samba culture. 
 >
 > Rio has a diverse population and is famous for its beauty. Some popular places to visit include:
@@ -402,7 +405,6 @@ after generating two turns:
 >
 >
 > ^^^^^USER PROMPT^^^^^
->
 
 Note that the the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available.
 
