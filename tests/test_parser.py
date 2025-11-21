@@ -32,8 +32,9 @@ def stitch_tokens(tokens):
 
 def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
-        "A [[[5; stop(\"alpha\"); name(one)]]] B [[[2; name(two)]]] [[[\"one\" 'two']]] C [[[prefix]]] "
-        "D [[[suffix!]]] E [[[(note about things) after]]]" """ F"""
+        "A [[[5; stop(\"alpha\"); name(one)]]] "
+        "B [[[2; name(two)]]] [[[\"one\" 'two']]] "
+        "C [[[prefix]]] D [[[suffix!]]] E [[[(note about things) after]]]" """ F"""
     )
     tokens = list(parse_triple_tokens(content))
 
@@ -157,7 +158,8 @@ def test_string_literal_outside_function_rejected():
 
 def test_parse_fim_request_uses_new_ast(monkeypatch):
     content = (
-        "[[[prefix]]] AAA [[[5; keep_tags(); stop(\"alpha\"); chop('omega')]]] BBB [[[suffix hard]]]"
+        "[[[prefix]]] AAA [[[5; keep_tags(); stop(\"alpha\"); chop('omega')]]] "
+        "BBB [[[suffix hard]]]"
     )
     tokens = _collect_tags(content)
     marker = tokens[1]
