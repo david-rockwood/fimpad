@@ -49,7 +49,7 @@ Once you have your server running, open FIMpad. All examples of FIM generation b
 
 ## FIM tags
 
-All tags in FIMpad are wrapped in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM generated text to be inserted. Below is an example of a simple FIM tag before insertion.
+All tags in FIMpad are wrapped in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before insertion.
 ```
 Four score and seven[[[50]]]
 ```
