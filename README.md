@@ -1,6 +1,6 @@
 # FIMpad
 
-A lightweight text editor focused on LLM FIM (fill-in-the-middle) workflows within a text file.
+A text editor focused on LLM FIM (fill-in-the-middle) workflows within a text file.
 
 The first release will likely be in December 2025.
 
