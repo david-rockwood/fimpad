@@ -32,7 +32,7 @@ def stitch_tokens(tokens):
 
 def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
-        "A [[[5; \"alpha\"; name(one)]]] B [[[2; name(two)]]] [[[\"one\" 'two']]] C [[[prefix]]] "
+        "A [[[5; stop(\"alpha\"); name(one)]]] B [[[2; name(two)]]] [[[\"one\" 'two']]] C [[[prefix]]] "
         "D [[[suffix!]]] E [[[(note about things) after]]]" """ F"""
     )
     tokens = list(parse_triple_tokens(content))
@@ -60,7 +60,7 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
 def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multiline():
     content = (
         "[[[12; keep_tags();\n"
-        '    "alpha"; \'omega\';\n'
+        '    before:stop("alpha"); after:stop(\'omega\');\n'
         '    stop("beta"); after:stop(\'ga\\\'mma\');\n'
         '    chop("line\\n3"); name(foo)\n'
         "]]]\n"
@@ -150,8 +150,15 @@ def test_missing_semicolon_after_fim_count_rejected():
         list(parse_triple_tokens("[[[5 stop('cut')]]]"))
 
 
+def test_string_literal_outside_function_rejected():
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[5; \"alpha\"]]]"))
+
+
 def test_parse_fim_request_uses_new_ast(monkeypatch):
-    content = "[[[prefix]]] AAA [[[5; keep_tags(); \"alpha\"; 'omega']]] BBB [[[suffix hard]]]"
+    content = (
+        "[[[prefix]]] AAA [[[5; keep_tags(); stop(\"alpha\"); chop('omega')]]] BBB [[[suffix hard]]]"
+    )
     tokens = _collect_tags(content)
     marker = tokens[1]
     cursor_offset = marker.start + 2

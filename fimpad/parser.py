@@ -318,8 +318,7 @@ def _validate_sequence_names(tokens: list[Token]):
 
 def _token_to_function(token: _TokenPiece, seen_names: set[str]) -> FIMFunction:
     if token.kind == "string":
-        phase = "before" if token.quote == '"' else "after"
-        return FIMFunction(name="stop", args=(token.value,), phase=phase)
+        raise TagParseError("String literals must appear inside function calls")
     if token.kind != "word":
         raise TagParseError(f"Invalid token in FIM tag: {token.value}")
     return _parse_function(token.value, seen_names)
