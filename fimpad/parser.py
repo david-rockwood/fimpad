@@ -1,4 +1,4 @@
-"""Utilities for tokenizing and parsing triple-bracket FIM markers."""
+"""Utilities for tokenizing and parsing triple-bracket markers."""
 from __future__ import annotations
 
 import re
@@ -8,16 +8,10 @@ from dataclasses import dataclass
 DEFAULT_MARKER_MAX_TOKENS = 100
 
 TRIPLE_RE = re.compile(r"\[\[\[(?P<body>.*?)\]\]\]", re.DOTALL)
-MARKER_REGEX = re.compile(
-    r"""
-    \[\[\[ \s* (?P<body>
-        \d+
-        (?: \s*! \s* )?
-        (?: \s* (?: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' ) )*
-    ) \s* \]\]\]
-    """,
-    re.VERBOSE,
-)
+
+
+class TagParseError(ValueError):
+    """Raised when a triple-bracket tag cannot be parsed."""
 
 
 @dataclass(frozen=True)
@@ -28,14 +22,63 @@ class TextToken:
 
 
 @dataclass(frozen=True)
+class FIMFunction:
+    name: str
+    args: tuple[str, ...]
+    phase: str | None = None
+
+
+@dataclass(frozen=True)
+class FIMTag:
+    max_tokens: int
+    functions: tuple[FIMFunction, ...]
+
+
+@dataclass(frozen=True)
+class SequenceTag:
+    names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PrefixSuffixTag:
+    kind: str  # "prefix" or "suffix"
+    hardness: str  # "soft" or "hard"
+    is_close: bool = False
+
+
+@dataclass(frozen=True)
+class CommentTag:
+    body: str
+    position: str | None
+
+
+TagNode = FIMTag | SequenceTag | PrefixSuffixTag | CommentTag
+
+
+@dataclass(frozen=True)
 class TagToken:
     start: int
     end: int
     raw: str
     body: str
-    kind: str
-    name: str | None = None
-    is_close: bool = False
+    tag: TagNode | None
+    error: str | None = None
+
+    @property
+    def kind(self) -> str:
+        if self.error:
+            return "invalid"
+        if self.tag is None:
+            return "unknown"
+        if isinstance(self.tag, FIMTag):
+            return "fim"
+        if isinstance(self.tag, SequenceTag):
+            return "sequence"
+        if isinstance(self.tag, PrefixSuffixTag):
+            return self.tag.kind
+        if isinstance(self.tag, CommentTag):
+            return "comment"
+        return "unknown"
 
 
 Token = TextToken | TagToken
@@ -58,29 +101,43 @@ class FIMRequest:
     use_completion: bool
 
 
+@dataclass(frozen=True)
+class _TokenPiece:
+    kind: str
+    value: str
+    quote: str | None = None
+
+
+FUNCTION_SPECS: dict[str, dict[str, object]] = {
+    "keep": {"args": 0, "default_phase": "meta"},
+    "keep_tags": {"args": 0, "default_phase": "meta"},
+    "stop": {"args": 1, "default_phase": "before", "require_string": True},
+    "tail": {"args": 1, "default_phase": "after", "require_string": True},
+    "name": {"args": 1, "default_phase": "meta", "allow_any": True},
+}
+
+
+FUNCTION_RE = re.compile(
+    r"(?:(?P<phase>[A-Za-z_][\w-]*)\:)?(?P<name>[A-Za-z_][\w]*)\((?P<args>.*)\)$"
+)
+
+
 def parse_triple_tokens(content: str) -> Iterator[Token]:
     """Yield tokens for ``content`` splitting around ``[[[...]]]`` regions."""
+
     last_index = 0
+    seen_names: set[str] = set()
     for match in TRIPLE_RE.finditer(content):
         start, end = match.span()
         if start > last_index:
             yield TextToken(start=last_index, end=start, text=content[last_index:start])
+
         raw = match.group(0)
         inner = match.group("body") or ""
-        marker_match = MARKER_REGEX.fullmatch(raw)
-        if marker_match:
-            body = marker_match.group("body") or ""
-            yield TagToken(
-                start=start,
-                end=end,
-                raw=raw,
-                body=body,
-                kind="marker",
-            )
-        else:
-            token = _classify_tag(raw, inner, start, end)
-            yield token
+        tag = _parse_tag(inner, seen_names)
+        yield TagToken(start=start, end=end, raw=raw, body=inner, tag=tag)
         last_index = end
+
     if last_index < len(content):
         yield TextToken(start=last_index, end=len(content), text=content[last_index:])
 
@@ -92,23 +149,40 @@ def parse_fim_request(
 ) -> FIMRequest | None:
     """Parse FIM instructions around ``cursor_offset``.
 
-    Returns ``None`` when the cursor is not inside a numeric ``[[[N]]]`` marker.
+    Returns ``None`` when the cursor is not inside a FIM marker.
     """
 
-    tokens = list(parse_triple_tokens(content))
-    marker_token = _find_marker_token(tokens, cursor_offset)
-    if marker_token is None:
+    try:
+        tokens = list(parse_triple_tokens(content))
+    except TagParseError:
+        return None
+    marker_token = _find_fim_token(tokens, cursor_offset)
+    if marker_token is None or not isinstance(marker_token.tag, FIMTag):
         return None
 
+    fim_tag = marker_token.tag
     prefix_token, suffix_token = _find_prefix_suffix(tokens, marker_token)
     before_region, after_region = _extract_regions(
         content, marker_token, prefix_token, suffix_token
     )
-    safe_suffix = MARKER_REGEX.sub("", after_region)
+    safe_suffix = _strip_triple_tags(after_region)
     use_completion = after_region.strip() == ""
 
-    marker_body = (marker_token.body or "").strip()
-    marker_opts = _parse_marker_body(marker_body, default_n)
+    max_tokens = _clamp_tokens(fim_tag.max_tokens or default_n, default_n)
+    keep_tags = any(fn.name in {"keep", "keep_tags"} for fn in fim_tag.functions)
+
+    stops_before: list[str] = []
+    stops_after: list[str] = []
+    for fn in fim_tag.functions:
+        if fn.name == "stop":
+            (st,) = fn.args
+            if (fn.phase or "before") == "after":
+                stops_after.append(st)
+            else:
+                stops_before.append(st)
+        elif fn.name == "tail":
+            (st,) = fn.args
+            stops_after.append(st)
 
     return FIMRequest(
         marker=marker_token,
@@ -117,148 +191,235 @@ def parse_fim_request(
         before_region=before_region,
         after_region=after_region,
         safe_suffix=safe_suffix,
-        max_tokens=marker_opts.max_tokens,
-        keep_tags=marker_opts.keep_tags,
-        stops_before=marker_opts.stops_before,
-        stops_after=marker_opts.stops_after,
-        use_completion=use_completion,
-    )
-
-
-def _classify_tag(
-    raw: str,
-    inner: str,
-    start: int,
-    end: int,
-) -> TagToken:
-    body = inner.strip()
-    if not body:
-        return TagToken(start=start, end=end, raw=raw, body=body, kind="unknown")
-
-    is_close = False
-    if body.startswith("/"):
-        is_close = True
-        body = body[1:].lstrip()
-
-    name = body.strip()
-    name_key = name.casefold()
-
-    if name_key in {"prefix", "suffix"}:
-        return TagToken(
-            start=start,
-            end=end,
-            raw=raw,
-            body=name,
-            kind=name_key,
-            name=name_key,
-            is_close=is_close,
-        )
-
-    return TagToken(
-        start=start,
-        end=end,
-        raw=raw,
-        body=name,
-        kind="unknown",
-        name=name_key if name_key else None,
-        is_close=is_close,
-    )
-
-
-@dataclass(frozen=True)
-class _MarkerOptions:
-    max_tokens: int
-    keep_tags: bool
-    stops_before: list[str]
-    stops_after: list[str]
-
-
-def _parse_marker_body(body: str, default_n: int) -> _MarkerOptions:
-    remainder = body
-    token_value: int | str | None = None
-    keep_tags = False
-    if remainder:
-        n_match = re.match(r"(\d+)", remainder)
-        if n_match:
-            token_value = n_match.group(1)
-            remainder = remainder[n_match.end() :]
-            bang_match = re.match(r"\s*!\s*", remainder)
-            if bang_match:
-                keep_tags = True
-                remainder = remainder[bang_match.end() :]
-            remainder = remainder.strip()
-        else:
-            remainder = remainder.strip()
-    else:
-        remainder = ""
-
-    if token_value is None:
-        token_value = default_n
-
-    try:
-        max_tokens = max(1, min(4096, int(token_value)))
-    except Exception:
-        max_tokens = default_n
-
-    stops_before: list[str] = []
-    stops_after: list[str] = []
-
-    def _unescape_stop(s: str) -> str:
-        out: list[str] = []
-        i = 0
-        while i < len(s):
-            c = s[i]
-            if c != "\\":
-                out.append(c)
-                i += 1
-                continue
-            i += 1
-            if i >= len(s):
-                out.append("\\")
-                break
-            esc = s[i]
-            i += 1
-            if esc == "n":
-                out.append("\n")
-            elif esc == "t":
-                out.append("\t")
-            elif esc == "r":
-                out.append("\r")
-            elif esc == '"':
-                out.append('"')
-            elif esc == "'":
-                out.append("'")
-            elif esc == "\\":
-                out.append("\\")
-            else:
-                out.append(esc)
-        return "".join(out)
-
-    quote_re = re.compile(r"\"((?:\\.|[^\"\\])*)\"|'((?:\\.|[^'\\])*)'")
-    for qmatch in quote_re.finditer(remainder):
-        double_val = qmatch.group(1)
-        single_val = qmatch.group(2)
-        if double_val is not None:
-            unescaped = _unescape_stop(double_val)
-            if unescaped:
-                stops_before.append(unescaped)
-        elif single_val is not None:
-            unescaped = _unescape_stop(single_val)
-            if unescaped:
-                stops_after.append(unescaped)
-
-    return _MarkerOptions(
         max_tokens=max_tokens,
         keep_tags=keep_tags,
         stops_before=stops_before,
         stops_after=stops_after,
+        use_completion=use_completion,
     )
 
 
-def _find_marker_token(tokens: list[Token], cursor_offset: int) -> TagToken | None:
+def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
+    stripped = body.strip()
+    if not stripped:
+        return None
+
+    tokens = _scan_tokens(stripped)
+    if not tokens:
+        return None
+
+    first = tokens[0]
+    if first.kind == "comment":
+        position = None
+        if len(tokens) > 1 and tokens[1].kind == "word":
+            position = tokens[1].value
+        return CommentTag(body=first.value, position=position)
+
+    if first.kind == "word":
+        base_word = first.value
+        is_close = base_word.startswith("/")
+        normalized = base_word[1:] if is_close else base_word
+        hardness = "hard" if normalized.endswith("!") else "soft"
+        normalized = normalized.rstrip("!")
+        name_key = normalized.casefold()
+        if name_key in {"prefix", "suffix"}:
+            if len(tokens) > 1 and tokens[1].kind == "word":
+                nxt = tokens[1].value.casefold()
+                if nxt in {"hard", "soft"}:
+                    hardness = nxt
+            return PrefixSuffixTag(
+                kind=name_key, hardness=hardness, is_close=is_close
+            )
+
+        fim_match = re.fullmatch(r"(?P<num>\d+)(?P<keep>!)?", base_word)
+        if fim_match:
+            n_val = int(fim_match.group("num"))
+            functions: list[FIMFunction] = []
+            if fim_match.group("keep"):
+                functions.append(FIMFunction(name="keep_tags", args=(), phase="meta"))
+            for tok in tokens[1:]:
+                functions.append(_token_to_function(tok, seen_names))
+            return FIMTag(max_tokens=n_val, functions=tuple(functions))
+
+    if first.kind == "string":
+        names: list[str] = []
+        for tok in tokens:
+            if tok.kind != "string":
+                raise TagParseError("Sequence tags must contain only string literals")
+            names.append(tok.value)
+        return SequenceTag(names=tuple(names))
+
+    raise TagParseError(f"Unrecognized tag: {body}")
+
+
+def _token_to_function(token: _TokenPiece, seen_names: set[str]) -> FIMFunction:
+    if token.kind == "string":
+        phase = "before" if token.quote == '"' else "after"
+        return FIMFunction(name="stop", args=(token.value,), phase=phase)
+    if token.kind != "word":
+        raise TagParseError(f"Invalid token in FIM tag: {token.value}")
+    return _parse_function(token.value, seen_names)
+
+
+def _parse_function(func_text: str, seen_names: set[str]) -> FIMFunction:
+    match = FUNCTION_RE.fullmatch(func_text)
+    if not match:
+        raise TagParseError(f"Malformed function: {func_text}")
+
+    phase = match.group("phase")
+    name = match.group("name")
+    args_text = match.group("args").strip()
+
+    spec = FUNCTION_SPECS.get(name)
+    if spec is None:
+        raise TagParseError(f"Unknown function: {name}")
+
+    args: list[str] = []
+    if args_text:
+        pieces = [piece.strip() for piece in args_text.split(",") if piece.strip()]
+        for piece in pieces:
+            args.append(_parse_arg(piece))
+
+    expected_args = int(spec.get("args", 0))
+    if len(args) != expected_args:
+        raise TagParseError(
+            f"{name}() expects {expected_args} arg(s) but got {len(args)}"
+        )
+
+    if spec.get("require_string") and args and not isinstance(args[0], str):
+        raise TagParseError(f"{name}() requires a string argument")
+
+    if name == "name":
+        ident = str(args[0])
+        if ident in seen_names:
+            raise TagParseError(f"Duplicate name() id: {ident}")
+        seen_names.add(ident)
+
+    phase_value = phase or spec.get("default_phase")
+    return FIMFunction(name=name, args=tuple(str(a) for a in args), phase=phase_value)  # type: ignore[arg-type]
+
+
+def _parse_arg(piece: str) -> str:
+    if not piece:
+        return ""
+    if piece[0] in {'"', "'"}:
+        value, index = _parse_string_literal(piece, 0)
+        if index != len(piece):
+            raise TagParseError("Unexpected trailing characters in string argument")
+        return value
+    return piece
+
+
+def _scan_tokens(body: str) -> list[_TokenPiece]:
+    tokens: list[_TokenPiece] = []
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch.isspace():
+            i += 1
+            continue
+        if ch in {'"', "'"}:
+            value, new_i = _parse_string_literal(body, i)
+            tokens.append(_TokenPiece(kind="string", value=value, quote=ch))
+            i = new_i
+            continue
+        if ch == "(":
+            value, new_i = _parse_parenthetical(body, i)
+            tokens.append(_TokenPiece(kind="comment", value=value))
+            i = new_i
+            continue
+        j = i + 1
+        while j < len(body) and not body[j].isspace():
+            j += 1
+        tokens.append(_TokenPiece(kind="word", value=body[i:j]))
+        i = j
+    return tokens
+
+
+def _parse_string_literal(text: str, start: int) -> tuple[str, int]:
+    quote = text[start]
+    assert quote in {'"', "'"}
+    i = start + 1
+    chars: list[str] = []
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\":
+            i += 1
+            if i >= len(text):
+                chars.append("\\")
+                break
+            esc = text[i]
+            if esc == "n":
+                chars.append("\n")
+            elif esc == "t":
+                chars.append("\t")
+            elif esc == "r":
+                chars.append("\r")
+            elif esc == quote:
+                chars.append(quote)
+            else:
+                chars.append(esc)
+            i += 1
+            continue
+        if ch == quote:
+            return "".join(chars), i + 1
+        chars.append(ch)
+        i += 1
+    raise TagParseError("Unterminated string literal")
+
+
+def _parse_parenthetical(text: str, start: int) -> tuple[str, int]:
+    depth = 0
+    chars: list[str] = []
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\":
+            i += 1
+            if i < len(text):
+                chars.append(text[i])
+            i += 1
+            continue
+        if ch == "(":
+            depth += 1
+            if depth > 1:
+                chars.append(ch)
+            i += 1
+            continue
+        if ch == ")":
+            depth -= 1
+            if depth == 0:
+                return "".join(chars), i + 1
+            chars.append(ch)
+            i += 1
+            continue
+        chars.append(ch)
+        i += 1
+    raise TagParseError("Unterminated parenthetical in comment tag")
+
+
+def _strip_triple_tags(text: str) -> str:
+    parts: list[str] = []
+    last_index = 0
+    for match in TRIPLE_RE.finditer(text):
+        parts.append(text[last_index : match.start()])
+        last_index = match.end()
+    parts.append(text[last_index:])
+    return "".join(parts)
+
+
+def _clamp_tokens(n: int, default_n: int) -> int:
+    try:
+        value = int(n)
+    except Exception:
+        value = default_n
+    return max(1, min(4096, value))
+
+
+def _find_fim_token(tokens: list[Token], cursor_offset: int) -> TagToken | None:
     marker_token: TagToken | None = None
     for token in tokens:
-        if not isinstance(token, TagToken) or token.kind != "marker":
+        if not isinstance(token, TagToken) or token.kind != "fim":
             continue
         if not cursor_within_span(token.start, token.end, cursor_offset):
             continue
@@ -275,11 +436,13 @@ def _find_prefix_suffix(
     for token in tokens:
         if not isinstance(token, TagToken):
             continue
-        if token.kind == "prefix" and token.start < marker_token.start:
-            prefix_token = token
-        elif token.kind == "suffix" and token.start >= marker_token.end:
-            suffix_token = token
-            break
+        if token.kind == "prefix" and not getattr(token.tag, "is_close", False):
+            if token.start < marker_token.start:
+                prefix_token = token
+        elif token.kind == "suffix" and not getattr(token.tag, "is_close", False):
+            if token.start >= marker_token.end:
+                suffix_token = token
+                break
     return prefix_token, suffix_token
 
 
@@ -314,8 +477,13 @@ __all__ = [
     "Token",
     "TextToken",
     "TagToken",
+    "FIMTag",
+    "SequenceTag",
+    "PrefixSuffixTag",
+    "CommentTag",
+    "FIMFunction",
     "FIMRequest",
-    "MARKER_REGEX",
+    "TagParseError",
     "parse_triple_tokens",
     "parse_fim_request",
     "cursor_within_span",
