@@ -317,13 +317,96 @@ I must end the exploration of writing fiction with FIM here or this README will 
 
 One more thing here though: keep in mind that when you get a generation that you don't like, you can simply  press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling". Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
 
-## Virtual chat
+## Virtual chat roles
 
-Many who are familiar with LLMs are used to role-based chat, where the standard roles are: **system**, **user**, and **assistant**. The system prompt sets the overall rules for and the personality of the LLM assistant. The user prompts are messages that the human user sends to the LLM. The assistant responses are messages that the LLM sends back to the user.
+Many who are familiar with LLMs are used to role-based chat, where the standard roles are: **system**, **user**, and **assistant**. The system prompt sets the overall rules for, and the personality of, the LLM assistant. The user prompts are messages that the human user sends to the LLM. The assistant responses are messages that the LLM sends back to the user.
 
-Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags, with complementary closing tags for each, to enable standard role-based chat. But these tags made FIMpad unwieldy, overly complicated. And it turns out, likely due to the use of synthetic LLM training data that includes transcripts of role based chats, you can simulate this well with FIM generation. In fact, I am beginning to suspect that virtual role-based chat via FIM generation is superior to the real thing, because it seems to bypass instruct-tuning safety alignment, at least somewhat. And safety-aligned models can be a bit boring.
+Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags, with complementary closing tags for each, to enable standard role-based chat. But these tags made FIMpad unwieldy, overly complicated. And it turns out, likely due to the use of synthetic LLM training data that includes transcripts of role-based chats, you can simulate this well with FIM generation.
 
-Let's dive into an example.
+Below is an example of how to start a virtual role-based chat, before generation.
+
+> *****SYSTEM PROMPT*****
+>
+> You are a helpful assistant.
+>
+>
+> *****USER PROMPT*****
+>
+> what's up MAN!
+>
+>
+> *****ASSISTANT RESPONSE*****
+>
+> Hello! How can I help you today?
+>
+>
+> *****USER PROMPT*****
+>
+> oh im gonna travel to BRAZIL! what city should I go to in brazill where thier will be a lott of beatiful women?  i wanna meet them
+>
+>
+> *****ASSISTANT RESPONSE*****
+>
+> [[[1000;append("\n\n\n*****USER PROMPT*****\n")]]]
+
+after generating two turns:
+
+> *****SYSTEM PROMPT*****
+>
+> You are a helpful assistant.
+>
+>
+> *****USER PROMPT*****
+>
+> what's up MAN!
+>
+>
+> *****ASSISTANT RESPONSE*****
+>
+> Hello! How can I help you today?
+>
+>
+> *****USER PROMPT*****
+>
+> oh im gonna travel to BRAZIL! what city should I go to in brazill where thier will be a lott of beatiful women?  i wanna meet them
+>
+>
+> *****ASSISTANT RESPONSE*****
+> Brazil is a beautiful country with many vibrant cities. Some popular destinations that are known for their beauty include Rio de Janeiro, São Paulo, Salvador, and Florianópolis. Each city has its own unique culture, attractions, and nightlife. I would recommend doing some research to find a city that aligns with your interests and preferences.
+>
+>
+> *****USER PROMPT*****
+> tell me more about rio
+>
+>
+> *****ASSISTANT RESPONSE*****
+> Rio de Janeiro, often simply called Rio, is the second-largest city in Brazil and one of the most iconic. It is known for its stunning beaches like Copacabana and Ipanema, the famous statue of Christ the Redeemer atop Corcovado mountain, the lively Carnival festival, and the vibrant Samba culture. 
+>
+> Rio has a diverse population and is famous for its beauty. Some popular places to visit include:
+>
+> - The beaches of Copacabana, Ipanema, and Leblon
+>
+> - Christ the Redeemer statue and Corcovado mountain
+>
+> - Sugarloaf Mountain
+>
+> - The historic neighborhood of Santa Teresa
+>
+> - Maracanã Stadium, home of the 2014 World Cup and 2016 Olympics
+>
+> - Lively nightlife in Lapa and other neighborhoods
+>
+> Rio is a popular tourist destination with something to offer everyone, from stunning natural beauty to rich culture and history. Just be aware that like any major city, there are safety concerns to be aware of. Research the areas you plan to visit and use common sense precautions.
+>
+>I hope this gives you a good overview of what Rio de Janeiro has to offer! Let me know if you have any other questions.
+
+Note that the the first assistant response is shorter than the second assistant response, even though box were given a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available.
+
+
+
+
+
+
 
 
 
