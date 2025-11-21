@@ -289,7 +289,7 @@ after generation:
 >
 > Because of that, Jake started to get very nervous.
 
-The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph. The stop() function can take multiple arguments, the first candidate stop sequence encountered during streaming is the string that terminates the FIM insertion. We'll use that below to make sure that generation stops clean at the end of a paragraph.
+The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph. The stop() function can take multiple arguments. The first candidate stop sequence encountered during streaming is the string that terminates the FIM insertion. We'll use that below to make sure that generation stops clean at the end of a paragraph.
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
@@ -313,7 +313,17 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-I must end the exploration of writing fiction with FIM or this README will be unbelievably long. But the above examples demonstrate the three fundamental strategies: completion, replacement, and interpolation. These diminish or destroy writer's block.
+I must end the exploration of writing fiction with FIM here or this README will become unbelievably long. But the above examples demonstrate the three fundamental strategies: completion, replacement, and interpolation. These diminish or destroy writer's block.
+
+One more thing here though: keep in mind that when you get a generation that you don't like, you can simply  press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling". Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
+
+## Virtual chat
+
+Many who are familiar with LLMs are used to role-based chat, where the standard roles are: **system**, **user**, and **assistant**. The system prompt sets the overall rules for and the personality of the LLM assistant. The user prompts are messages that the human user sends to the LLM. The assistant responses are messages that the LLM sends back to the user.
+
+Early versions of FIMpad had [[[system]]], [[[user]]], and [[[assistant]]] tags, with complementary closing tags for each, to enable standard role-based chat. But these tags made FIMpad unwieldy, overly complicated. And it turns out, likely due to the use of synthetic LLM training data that includes transcripts of role based chats, you can simulate this well with FIM generation. In fact, I am beginning to suspect that virtual role-based chat via FIM generation is superior to the real thing, because it seems to bypass instruct-tuning safety alignment, at least somewhat. And safety-aligned models can be a bit boring.
+
+Let's dive into an example.
 
 
 
