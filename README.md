@@ -406,7 +406,7 @@ after generating two turns:
 >
 > ^^^^^USER PROMPT^^^^^
 
-Note that the the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available.
+Note that the the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available. In fact the second response looks far shorter than 1000 tokens as well. You don't always get the max from the LLM.
 
 
 
