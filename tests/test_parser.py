@@ -78,7 +78,7 @@ def test_fim_tag_functions_capture_phases_and_order():
 
     assert functions[1].phase == "before" and functions[1].args == ("alpha",)
     assert functions[2].phase == "after" and functions[2].args == ("omega",)
-    assert functions[3].phase == "before" and functions[3].args == ("beta",)
+    assert functions[3].phase == "init" and functions[3].args == ("beta",)
     assert functions[4].phase == "after" and functions[4].args == ("gamma",)
     assert functions[5].args == ("foo",)
 
@@ -116,9 +116,26 @@ def test_parse_fim_request_uses_new_ast(monkeypatch):
     assert fim_request.after_region == " BBB "
     assert fim_request.max_tokens == 5
     assert fim_request.keep_tags is True
-    assert fim_request.stops_before == ["alpha"]
-    assert fim_request.stops_after == ["omega"]
+    assert fim_request.stop_patterns == ["alpha"]
+    assert fim_request.chop_patterns == ["omega"]
     assert fim_request.safe_suffix == " BBB "
+
+
+def test_parse_fim_request_strips_comments_and_collects_overrides():
+    content = (
+        "[[[prefix soft]]] Hello [[[(note) before]]] "
+        "[[[3 stop(\"zip\") chop('zap') top_p(0.4) append('!')]]] [[[suffix]]]\n"
+    )
+    tokens = _collect_tags(content)
+    marker = tokens[2]
+    fim_request = parse_fim_request(content, marker.start + 1)
+
+    assert fim_request.before_region.strip() == "Hello"
+    assert fim_request.after_region.strip() == ""
+    assert fim_request.stop_patterns == ["zip"]
+    assert fim_request.chop_patterns == ["zap"]
+    assert fim_request.config_overrides["top_p"] == 0.4
+    assert [fn.name for fn in fim_request.post_functions] == ["append"]
 
 
 def test_cursor_within_span_accepts_immediate_after():
