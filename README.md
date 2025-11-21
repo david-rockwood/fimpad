@@ -16,9 +16,9 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do fill-in-the-middle generation at any point in a text file. If you do fill-in-the-middle generation at the very end of a text file, it works like completion. Fill-in-the-middle generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do fill-in-the-middle generation at any point in a text file. Fill-in-the-middle generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
 
-## The Server
+## The server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
