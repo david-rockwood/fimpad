@@ -20,7 +20,7 @@ import enchant
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .example_resources import iter_examples
-from .parser import MARKER_REGEX, FIMRequest, parse_fim_request
+from .parser import FIMRequest, parse_fim_request
 from .utils import offset_to_tkindex
 
 
@@ -1638,13 +1638,13 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             return
 
-        marker_match = MARKER_REGEX.search(marker)
-        if marker_match:
-            body_offset = marker_match.start("body") - marker_match.start()
+        body_offset = marker.find("[[[")
+        if body_offset == -1:
+            body_offset = 0
         else:
-            body_offset = marker.find("]]]")
-            if body_offset == -1:
-                body_offset = len(marker)
+            body_offset += 3
+        while body_offset < len(marker) and marker[body_offset].isspace():
+            body_offset += 1
 
         try:
             inside_index = text_widget.index(f"{start_index}+{body_offset}c")
