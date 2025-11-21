@@ -451,9 +451,29 @@ def _scan_single_token(body: str, i: int) -> tuple[_TokenPiece, int]:
         value, new_i = _parse_parenthetical(body, i)
         return _TokenPiece(kind="comment", value=value), new_i
 
-    j = i + 1
-    while j < len(body) and not body[j].isspace() and body[j] != ";":
+    depth = 0
+    j = i
+    while j < len(body):
+        ch = body[j]
+        if ch in {'"', "'"}:
+            _value, j = _parse_string_literal(body, j)
+            continue
+        if ch == "(":
+            depth += 1
+            j += 1
+            continue
+        if ch == ")":
+            if depth > 0:
+                depth -= 1
+            j += 1
+            continue
+        if depth == 0 and (ch.isspace() or ch == ";"):
+            break
+        if ch == "\\":
+            j += 2
+            continue
         j += 1
+
     return _TokenPiece(kind="word", value=body[i:j]), j
 
 
