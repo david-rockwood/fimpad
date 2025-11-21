@@ -436,13 +436,19 @@ def _find_prefix_suffix(
     for token in tokens:
         if not isinstance(token, TagToken):
             continue
-        if token.kind == "prefix" and not getattr(token.tag, "is_close", False):
-            if token.start < marker_token.start:
-                prefix_token = token
-        elif token.kind == "suffix" and not getattr(token.tag, "is_close", False):
-            if token.start >= marker_token.end:
-                suffix_token = token
-                break
+        if (
+            token.kind == "prefix"
+            and not getattr(token.tag, "is_close", False)
+            and token.start < marker_token.start
+        ):
+            prefix_token = token
+        elif (
+            token.kind == "suffix"
+            and not getattr(token.tag, "is_close", False)
+            and token.start >= marker_token.end
+        ):
+            suffix_token = token
+            break
     return prefix_token, suffix_token
 
 
