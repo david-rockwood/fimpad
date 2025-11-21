@@ -31,6 +31,7 @@ from .parser import (
     parse_fim_request,
     parse_triple_tokens,
 )
+from .stream_utils import compute_stream_tail, find_stream_match
 from .utils import offset_to_tkindex
 
 
@@ -1972,29 +1973,11 @@ class FIMPad(tk.Tk):
                         patterns = st.get("stream_patterns", [])
                         if patterns:
                             tail = st.get("stream_tail", "")
-                            combined = tail + piece
-                            best: tuple[int, int, int] | None = None
-                            best_pattern: dict[str, str] | None = None
-                            for patt in patterns:
-                                patt_text = patt.get("text", "")
-                                if not patt_text:
-                                    continue
-                                idx = combined.find(patt_text)
-                                if idx == -1:
-                                    continue
-                                priority = 0 if patt.get("action") == "chop" else 1
-                                cand = (idx, -len(patt_text), priority)
-                                if best is None or cand < best:
-                                    best = cand
-                                    best_pattern = patt
+                            match = find_stream_match(tail, piece, patterns)
 
-                            if best_pattern is not None and best is not None:
-                                match_index = best[0]
-                                patt_text = best_pattern.get("text", "")
-                                pre_len = max(0, match_index - len(tail))
-                                pre_piece = piece[:pre_len]
-                                if pre_piece:
-                                    st["stream_buffer"].append(pre_piece)
+                            if match is not None:
+                                if match.append_len > 0:
+                                    st["stream_buffer"].append(piece[: match.append_len])
                                 st["stream_mark"] = mark
                                 flush_mark = st.get("stream_mark") or "stream_here"
                                 self._force_flush_stream_buffer(frame, flush_mark)
@@ -2005,10 +1988,10 @@ class FIMPad(tk.Tk):
                                 stop_event = st.get("stream_stop_event")
                                 if stop_event is not None:
                                     stop_event.set()
-                                if patt_text:
+                                if match.action == "chop" and match.pattern:
                                     try:
                                         start_idx = text.index(
-                                            f"{flush_mark}-{len(patt_text)}c"
+                                            f"{flush_mark}-{len(match.pattern)}c"
                                         )
                                         text.delete(start_idx, flush_mark)
                                     except tk.TclError:
@@ -2021,12 +2004,9 @@ class FIMPad(tk.Tk):
                                 )
                                 continue
 
-                            maxlen = st.get("stream_pattern_maxlen", 0)
-                            if maxlen > 0:
-                                keep = maxlen - 1
-                                st["stream_tail"] = combined[-keep:] if keep > 0 else ""
-                            else:
-                                st["stream_tail"] = ""
+                            st["stream_tail"] = compute_stream_tail(
+                                tail, piece, patterns
+                            )
                         else:
                             st["stream_tail"] = ""
                     else:
