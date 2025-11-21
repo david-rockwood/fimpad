@@ -136,6 +136,34 @@ def test_duplicate_names_raise():
         list(parse_triple_tokens(content))
 
 
+def test_bare_fim_tag_without_functions():
+    tokens = _collect_tags("Before [[[7]]] After")
+    fim_token = tokens[0]
+
+    assert fim_token.kind == "fim"
+    assert isinstance(fim_token.tag, FIMTag)
+    assert fim_token.tag.max_tokens == 7
+    assert fim_token.tag.functions == ()
+
+
+def test_multifunction_tag_collects_stops_chops_and_post_actions():
+    content = (
+        "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append_nl('more'); "
+        "after:stop('tail')]]] BBB"
+    )
+    marker = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(content, marker.start + 1, default_n=50)
+    assert fim_request is not None
+    assert fim_request.max_tokens == 4
+    assert fim_request.stop_patterns == ["one"]
+    assert fim_request.chop_patterns == ["two", "tail"]
+    assert [fn.name for fn in fim_request.post_functions] == [
+        "append",
+        "append_nl",
+    ]
+
+
 def test_unknown_function_raises():
     with pytest.raises(TagParseError):
         list(parse_triple_tokens("[[[1; unknown()]]]]"))
@@ -238,6 +266,33 @@ def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness()
     assert prefix_token.tag.hardness == "soft"
     assert isinstance(suffix_token.tag, PrefixSuffixTag)
     assert suffix_token.tag.hardness == "hard"
+
+
+def test_prefix_suffix_comment_and_sequence_tags_still_parse():
+    content = (
+        "[[[prefix hard]]] [[[1; name(foo)]]] Body [[[suffix soft]]]\n"
+        "[[[(note) before]]] [[[\"foo\"]]]"
+    )
+    tokens = list(parse_triple_tokens(content))
+
+    kinds = [t.kind for t in tokens if isinstance(t, TagToken)]
+    assert kinds == ["prefix", "fim", "suffix", "comment", "sequence"]
+
+    prefix_token, fim_token, suffix_token, comment_token, sequence_token = [
+        t for t in tokens if isinstance(t, TagToken)
+    ]
+
+    assert isinstance(prefix_token.tag, PrefixSuffixTag)
+    assert prefix_token.tag.hardness == "hard"
+    assert isinstance(suffix_token.tag, PrefixSuffixTag)
+    assert suffix_token.tag.hardness == "soft"
+
+    assert isinstance(comment_token.tag, CommentTag)
+    assert comment_token.tag.body == "note"
+    assert comment_token.tag.position == "before"
+
+    assert isinstance(sequence_token.tag, SequenceTag)
+    assert sequence_token.tag.names == ("foo",)
 
 
 def test_parse_fim_request_strips_comments_and_collects_overrides():
