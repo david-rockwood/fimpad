@@ -368,11 +368,13 @@ class FIMPad(tk.Tk):
         frame = ttk.Frame(self.nb)
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
 
         content_frame = tk.Frame(
             text_frame, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
         )
-        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        content_frame.grid(row=0, column=0, sticky="nsew")
         content_frame.grid_columnconfigure(3, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
@@ -428,7 +430,7 @@ class FIMPad(tk.Tk):
         right_padding.grid(row=0, column=4, sticky="ns")
 
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.grid(row=0, column=1, sticky="ns")
         scrollbar.config(command=lambda *args, fr=frame: self._on_scrollbar_scroll(fr, *args))
         text.configure(
             font=self.app_font,
