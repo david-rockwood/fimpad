@@ -45,6 +45,182 @@ Granite Tiny is available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
+---
+
+# Understanding FIMpad’s tag tystem
+
+FIMpad adds a small, lightweight “language” on top of plain text so you can run **Fill-In-the-Middle (FIM)** completions directly inside your documents.
+Everything happens through **tags**, which are little blocks of text surrounded by:
+
+```
+[[[ ... ]]]
+```
+
+---
+
+## What tags are in FIMpad
+
+A tag is a short instruction you place inside your document that tells FIMpad to do something:
+
+* Generate text
+* Run a multi-step workflow
+* Mark where the “prefix” or “suffix” of a context should be
+* Add invisible annotations
+* Or just store notes that the model should not see
+
+Tags look like this:
+
+```
+[[[something here]]]
+```
+
+The **first character after `[[[`** tells FIMpad what *kind* of tag it is.
+
+---
+
+## The Four Tag Types
+
+### **FIM Tags: “Generate something here”**
+
+These begin with a digit:
+
+```
+[[[200]]]
+```
+
+And they can have optional functions:
+
+```
+[[[200; temp("0.9")]]]
+```
+
+A FIM tag is a tiny script:
+
+1. The number (`200`) says **how many tokens** the model may generate.
+2. After that you can optionally write a sequence of **functions** (like `stop("END")` or `append("\n")`) that tell FIMpad how to configure the model and how to post-process the output.
+
+Think of a FIM tag as:
+
+> “Take the surrounding text (between prefix and suffix tags), call the model, generate up to N tokens, then apply these rules to the result.”
+
+A FIM tag runs **right where it sits** in the document, and the generated text appears there.
+
+---
+
+### **Sequence Tags: “Run several named steps in order”**
+
+These begin with a double quote:
+
+```
+[[[
+  "step1";
+  "step2";
+  "step3";
+]]]
+```
+
+A sequence tag doesn’t contact the model itself.
+Instead, it tells FIMpad:
+
+> “Look up the FIM tags named `step1`, then `step2`, then `step3`, and run them in that order.”
+
+This is how you build **multi-step workflows** — like a pipeline where each FIM tag mutates the document for the next step.
+
+---
+
+### **Prefix/Suffix Tags: “Define what text the model will see”**
+
+These use a word:
+
+```
+[[[prefix]]]
+... some text ...
+[[[suffix]]]
+```
+
+Prefix/suffix tags carve out the **context window** that a nearby FIM tag will use. Whatever is between the nearest prefix and suffix tags is what the model sees. If no prefix or suffix tags are used, the model sees everything in the file that isn't a tag.'
+
+There are *soft* tags (`prefix`/`suffix`) and *hard* tags (`PREFIX`/`SUFFIX`):
+
+* **Soft** ones auto-delete after use
+* **Hard** ones stay permanently
+
+Soft tags make it easy to design workflows that progressively consume boundaries.
+
+Hard tags are good for long-lived structure, like chapter markers.
+
+You do *not* need prefix/suffix tags for simple completions — but once you start doing multi-step processing, they become very powerful.
+
+---
+
+### **Comment Tags: “Notes the model can’t see”**
+
+These start with `(`:
+
+```
+[[[(This is a note to myself; the model will never see it.)]]]
+```
+
+Comment tags are:
+
+* Visible to **you**
+* Invisible to **the model**
+* Never auto-deleted
+* Never affect context boundaries
+
+They’re ideal for instructions, reminders, metadata, or debugging notes embedded inside the document.
+
+---
+
+## How FIMpad Decides What Context to Send to the Model
+
+Whenever you execute a FIM tag:
+
+1. FIMpad searches **backwards** from the tag to find the nearest `prefix` or `PREFIX`.
+2. Then it searches **forward** to find the nearest `suffix` or `SUFFIX`.
+3. The model sees everything *between* those two boundaries.
+4. Comment tags inside that region are stripped out before sending to the model.
+5. After generation:
+
+   * **Soft** prefix/suffix tags that were used are automatically deleted.
+   * **Hard** tags remain.
+
+Simple mental model:
+
+> FIM tags generate.
+> Prefix/suffix tags define what they see.
+> Sequence tags run several named FIM tags in a row.
+> Comment tags are invisible to the model.
+
+---
+
+## Why This Tag System Exists
+
+FIMpad is built around **Fill-In-the-Middle (FIM)**: generation that happens *between* a prefix and a suffix, rather than only after a prefix (like chat).
+
+FIM is uniquely powerful when:
+
+* You want the model to *rewrite* or *extend* a region of a document.
+* You want multi-step pipelines (parse → analyze → rewrite → format).
+* You want simple orchestration without writing Python code.
+* You want deterministic stop conditions (`stop()`, `chop()`).
+* You want natural-language reasoning steps in between.
+
+The tag system gives you a structured way to use FIM inside a text editor, but without feeling like you’re writing a real programming language.
+
+---
+
+## 6. Summary Cheat Sheet
+
+| Tag Type          | Looks Like                      | Purpose                                   |
+| ----------------- | ------------------------------- | ----------------------------------------- |
+| **FIM Tag**       | `[[[100; stop("END")]]]`        | Generate text here using FIM, with rules. |
+| **Sequence Tag**  | `[[["step1"; "step2"]]]`        | Run named FIM tags in order.              |
+| **Prefix/Suffix** | `[[[prefix]]]` / `[[[suffix]]]` | Define what text the model sees.          |
+| **Comment Tag**   | `[[[(note)]]]`                  | Annotation; invisible to model.           |
+
+---
+
 ## FIM tags
 
 All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before insertion.
