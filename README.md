@@ -372,9 +372,9 @@ But context management isn't only about addition, it is also about subtraction, 
 
 ## Context boundary tags
 
-Context boundary tags are the second class of FIMpad tags. There are four tags in this class: [[[prefix]]], [[[suffix]]], [[[PREFIX]]], and [[[SUFFIX]]].
+Context boundary tags are the second class of FIMpad tags. There are four tags in this class: [[[prefix]]]  [[[suffix]]]  [[[PREFIX]]]  and  [[[SUFFIX]]].
 
-[[[prefix]]] and [[[PREFIX]]] mark the position in the document where the prefix begins. [[[suffix]]] and [[[SUFFIX]]] mark the position in the document where the suffix ends. These tags allow you to narrow the range of what is sent to the model as context when a FIM tag is executed. There can be multiple FIM tags and multiple context boundary tags in a document. When an FIM tag is executed, the nearest [[[prefix]]] or [[[PREFIX]]] above it applies. And the nearest suffix tag below. If the nearest context boundary tag is lowercase, it is deleted from the document when it is applied to a FIM generation. If it is uppercase it is not deleted.
+[[[prefix]]] and [[[PREFIX]]] mark the position in the document where the prefix begins. [[[suffix]]] and [[[SUFFIX]]] mark the position in the document where the suffix ends. These tags allow you to narrow the range of what is sent to the model as context when a FIM tag is executed. There can be multiple FIM tags and multiple context boundary tags in a document. When a FIM tag is executed, the nearest [[[prefix]]] or [[[PREFIX]]] above it applies. And the nearest suffix tag below. If the nearest context boundary tag is lowercase, it is deleted from the document when it is applied to a FIM generation. If it is uppercase it is not deleted.
 
 Below are some examples of uses for context boundary tags.
 
