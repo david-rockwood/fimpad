@@ -1,5 +1,0 @@
-This is a beginner example demonstrating how to do FIM generation. The [[[prefix]]] tag below is not necessary for your early experiments with FIM, it is only present in this example so that the sentences that you are reading at the top of this file won't be sent to the LLM as prefix text during the FIM generation. We only want to send Abraham Lincoln's words. Place your carat somewhere within, or immediately after, the [[[50!]]] tag at the end of this file by clicking where you want the carat to be. Then press Ctrl+Enter.
-
-After doing that, press Ctrl+z twice (two undo steps) to return the text file to the state that it was in before you executed the FIM generation. Then delete the exclamation point from the [[[50!]]] tag. Then press Ctrl+Enter again and note that, without the exclamation point, the [[[prefix]]] tag is deleted upon generating.
-[[[prefix]]]
-Four score and seven years ago[[[50!]]]

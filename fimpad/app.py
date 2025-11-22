@@ -11,6 +11,7 @@ import subprocess
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, filedialog, messagebox, ttk
@@ -20,7 +21,18 @@ import enchant
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .example_resources import iter_examples
-from .parser import MARKER_REGEX, FIMRequest, parse_fim_request
+from .parser import (
+    FIMRequest,
+    FIMTag,
+    PrefixSuffixTag,
+    SequenceTag,
+    TagParseError,
+    TagToken,
+    cursor_within_span,
+    parse_fim_request,
+    parse_triple_tokens,
+)
+from .stream_utils import find_stream_match
 from .utils import offset_to_tkindex
 
 
@@ -60,9 +72,14 @@ class FIMPad(tk.Tk):
         self._dictionary = self._load_dictionary(self._spell_lang)
         self._spell_ignore = set()  # session-level ignores
 
+        self._fim_log: list[dict[str, str]] = []
+
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
         self._fim_generation_active: bool = False
+        self._sequence_queue: list[str] = []
+        self._sequence_tab: str | None = None
+        self._sequence_names: tuple[str, ...] | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -78,6 +95,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
+        self.bind_all("<Control-l>", self._on_show_fim_log_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-Escape>", self._on_interrupt_stream)
@@ -351,11 +369,13 @@ class FIMPad(tk.Tk):
         frame = ttk.Frame(self.nb)
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
 
         content_frame = tk.Frame(
             text_frame, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
         )
-        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        content_frame.grid(row=0, column=0, sticky="nsew")
         content_frame.grid_columnconfigure(3, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
@@ -411,7 +431,7 @@ class FIMPad(tk.Tk):
         right_padding.grid(row=0, column=4, sticky="ns")
 
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.grid(row=0, column=1, sticky="ns")
         scrollbar.config(command=lambda *args, fr=frame: self._on_scrollbar_scroll(fr, *args))
         text.configure(
             font=self.app_font,
@@ -440,11 +460,11 @@ class FIMPad(tk.Tk):
             "stream_mark": None,
             "stream_following": False,
             "_stream_follow_primed": False,
-            "stops_after": [],
-            "stops_after_maxlen": 0,
-            "stream_tail": "",
+            "stream_patterns": [],
+            "stream_accumulated": "",
             "stream_cancelled": False,
             "stream_stop_event": None,
+            "post_actions": [],
             "last_insert": "1.0",
             "last_yview": 0.0,
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
@@ -472,6 +492,7 @@ class FIMPad(tk.Tk):
         text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
         text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
         text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<<Paste>>", self._on_text_paste, add="+")
 
         def on_modified(event=None):
             if st["suppress_modified"]:
@@ -556,6 +577,37 @@ class FIMPad(tk.Tk):
         text.see("insert")
         text.focus_set()
         self._schedule_line_number_update(frame, delay_ms=10)
+
+    def _log_fim_generation(self, fim_request: FIMRequest) -> None:
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        if fim_request.use_completion:
+            prefix_text = fim_request.before_region
+            suffix_text = fim_request.safe_suffix
+        else:
+            prefix_text = f"{self.cfg['fim_prefix']}{fim_request.before_region}"
+            suffix_text = (
+                f"{self.cfg['fim_suffix']}{fim_request.safe_suffix}{self.cfg['fim_middle']}"
+            )
+
+        self._fim_log.append(
+            {"time": timestamp, "prefix": prefix_text, "suffix": suffix_text}
+        )
+
+    def _open_fim_log_tab(self) -> None:
+        if not self._fim_log:
+            log_body = "FIM Generation Log is empty.\n"
+        else:
+            lines = ["FIM Generation Log", ""]
+            for entry in self._fim_log:
+                lines.append(f"[{entry['time']}]")
+                lines.append("Prefix:")
+                lines.append(entry["prefix"])
+                lines.append("Suffix:")
+                lines.append(entry["suffix"])
+                lines.append("")
+            log_body = "\n".join(lines).rstrip() + "\n"
+
+        self._new_tab(content=log_body, title="FIM Log")
 
     def _current_tab_state(self):
         tab = self.nb.select()
@@ -889,6 +941,20 @@ class FIMPad(tk.Tk):
     def _cur_text(self) -> tk.Text:
         st = self._current_tab_state()
         return st["text"]
+
+    def _on_text_paste(self, event: tk.Event) -> None:
+        widget = getattr(event, "widget", None)
+        if not isinstance(widget, tk.Text):
+            return
+
+        try:
+            sel_first = widget.index("sel.first")
+            sel_last = widget.index("sel.last")
+        except tk.TclError:
+            return
+
+        widget.mark_set(tk.INSERT, sel_first)
+        widget.delete(sel_first, sel_last)
 
     def _toggle_wrap_current(self):
         st = self._current_tab_state()
@@ -1436,6 +1502,16 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
+    def _show_unsupported_fim_error(self, exc: TagParseError) -> None:
+        messagebox.showerror(
+            "Generate",
+            (
+                "FIM marker could not be parsed. Legacy [[[N...]]] bodies and other "
+                "old syntax are no longer supported. Please update the marker and try "
+                f"again.\n\nDetails: {exc}"
+            ),
+        )
+
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
         if job is not None:
@@ -1446,14 +1522,124 @@ class FIMPad(tk.Tk):
         st["stream_mark"] = None
         st["stream_following"] = False
         st["_stream_follow_primed"] = False
-        st["stops_after"] = []
-        st["stops_after_maxlen"] = 0
-        st["stream_tail"] = ""
+        st["stream_patterns"] = []
+        st["stream_accumulated"] = ""
         st["stream_cancelled"] = False
+        st["post_actions"] = []
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
             stop_event.set()
         st["stream_stop_event"] = None
+        st["_stream_prev_autoseparators"] = None
+
+    def _begin_stream_undo_group(self, st):
+        text = st["text"]
+        try:
+            st["_stream_prev_autoseparators"] = text.cget("autoseparators")
+            text.configure(autoseparators=False)
+            text.edit_separator()
+        except tk.TclError:
+            st["_stream_prev_autoseparators"] = None
+
+    def _end_stream_undo_group(self, st):
+        text = st["text"]
+        prev_autoseparators = st.get("_stream_prev_autoseparators")
+        with contextlib.suppress(tk.TclError):
+            text.edit_separator()
+
+        if prev_autoseparators is not None:
+            with contextlib.suppress(tk.TclError):
+                text.configure(autoseparators=prev_autoseparators)
+        st["_stream_prev_autoseparators"] = None
+
+    def _find_active_tag(self, tokens, cursor_offset: int) -> TagToken | None:
+        marker_token: TagToken | None = None
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if not cursor_within_span(token.start, token.end, cursor_offset):
+                continue
+            if marker_token is None or token.start >= marker_token.start:
+                marker_token = token
+        return marker_token
+
+    def _build_name_registry(self, tokens) -> dict[str, TagToken]:
+        registry: dict[str, TagToken] = {}
+        for token in tokens:
+            if not isinstance(token, TagToken):
+                continue
+            if token.kind != "fim" or not isinstance(token.tag, FIMTag):
+                continue
+            for fn in token.tag.functions:
+                if fn.name == "name" and fn.args:
+                    registry[fn.args[0]] = token
+        return registry
+
+    def _run_sequence_step(self, st, *, tokens=None, registry=None):
+        if not self._sequence_queue:
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+
+        if self._fim_generation_active:
+            return
+
+        tab_id = self.nb.select()
+        if self._sequence_tab is not None and tab_id != self._sequence_tab:
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+
+        name = self._sequence_queue.pop(0)
+        text_widget = st["text"]
+        content = text_widget.get("1.0", tk.END)
+
+        completed = set(self._sequence_names or ()) - set(self._sequence_queue)
+        completed.discard(name)
+
+        try:
+            tokens = tokens or list(
+                parse_triple_tokens(
+                    content, allow_missing_sequence_names=completed
+                )
+            )
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+
+        registry = registry or self._build_name_registry(tokens)
+        marker_token = registry.get(name)
+        if marker_token is None or not isinstance(marker_token.tag, FIMTag):
+            messagebox.showerror(
+                "Generate", f"Sequence tag refers to missing id: {name}"
+            )
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+
+        try:
+            fim_request = parse_fim_request(
+                content, marker_token.start, tokens=tokens, marker_token=marker_token
+            )
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+        if fim_request is None:
+            messagebox.showerror("Generate", f"Invalid FIM tag referenced by {name}")
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
+            return
+
+        self._launch_fim_or_completion_stream(st, content, fim_request)
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -1543,9 +1729,46 @@ class FIMPad(tk.Tk):
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
 
-        fim_request = parse_fim_request(content, cursor_offset)
+        try:
+            tokens = list(parse_triple_tokens(content))
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            return
 
+        marker_token = self._find_active_tag(tokens, cursor_offset)
+        if marker_token is None:
+            messagebox.showinfo(
+                "Generate",
+                "Place the caret inside a [[[N]]] marker to generate.",
+            )
+            return
+
+        name_registry = self._build_name_registry(tokens)
+        if marker_token.kind == "sequence" and isinstance(marker_token.tag, SequenceTag):
+            names = list(marker_token.tag.names)
+            missing = [nm for nm in names if nm not in name_registry]
+            if missing:
+                messagebox.showerror(
+                    "Generate", f"Sequence references missing tags: {', '.join(missing)}"
+                )
+                return
+            self._sequence_queue = names
+            self._sequence_tab = self.nb.select()
+            self._sequence_names = tuple(names)
+            self._run_sequence_step(st, tokens=tokens, registry=name_registry)
+            return
+
+        try:
+            fim_request = parse_fim_request(
+                content, cursor_offset, tokens=tokens, marker_token=marker_token
+            )
+        except TagParseError as exc:
+            self._show_unsupported_fim_error(exc)
+            return
         if fim_request is not None:
+            self._sequence_queue = []
+            self._sequence_tab = None
+            self._sequence_names = None
             self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
@@ -1562,6 +1785,10 @@ class FIMPad(tk.Tk):
         self.interrupt_stream()
         return "break"
 
+    def _on_show_fim_log_shortcut(self, event):
+        self._open_fim_log_tab()
+        return "break"
+
     def interrupt_stream(self):
         if not self._fim_generation_active:
             return
@@ -1571,9 +1798,11 @@ class FIMPad(tk.Tk):
             return
 
         st["stream_cancelled"] = True
-        st["stops_after"] = []
-        st["stops_after_maxlen"] = 0
-        st["stream_tail"] = ""
+        st["stream_patterns"] = []
+        st["stream_accumulated"] = ""
+        self._sequence_queue = []
+        self._sequence_tab = None
+        self._sequence_names = None
 
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
@@ -1638,13 +1867,13 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             return
 
-        marker_match = MARKER_REGEX.search(marker)
-        if marker_match:
-            body_offset = marker_match.start("body") - marker_match.start()
+        body_offset = marker.find("[[[")
+        if body_offset == -1:
+            body_offset = 0
         else:
-            body_offset = marker.find("]]]")
-            if body_offset == -1:
-                body_offset = len(marker)
+            body_offset += 3
+        while body_offset < len(marker) and marker[body_offset].isspace():
+            body_offset += 1
 
         try:
             inside_index = text_widget.index(f"{start_index}+{body_offset}c")
@@ -1671,6 +1900,14 @@ class FIMPad(tk.Tk):
     def _launch_fim_or_completion_stream(self, st, content, fim_request: FIMRequest):
         cfg = self.cfg
         self._last_fim_marker = fim_request.marker.raw
+        self._log_fim_generation(fim_request)
+
+        request_cfg = {
+            "temperature": cfg["temperature"],
+            "top_p": cfg["top_p"],
+            "max_tokens": fim_request.max_tokens,
+        }
+        request_cfg.update(fim_request.config_overrides)
 
         if fim_request.use_completion:
             prompt = fim_request.before_region
@@ -1681,41 +1918,57 @@ class FIMPad(tk.Tk):
 
         payload = {
             "prompt": prompt,
-            "max_tokens": fim_request.max_tokens,
-            "temperature": cfg["temperature"],
-            "top_p": cfg["top_p"],
+            "max_tokens": request_cfg.get("max_tokens", fim_request.max_tokens),
+            "temperature": request_cfg.get("temperature", cfg["temperature"]),
+            "top_p": request_cfg.get("top_p", cfg["top_p"]),
             "stream": True,
         }
-        if fim_request.stops_before:
-            payload["stop"] = fim_request.stops_before
-
         text = st["text"]
         start_index = offset_to_tkindex(content, fim_request.marker.start)
         end_index = offset_to_tkindex(content, fim_request.marker.end)
 
         self._reset_stream_state(st)
+        self._begin_stream_undo_group(st)
 
         self._fim_generation_active = True
         try:
-            st["stops_after"] = fim_request.stops_after
-            st["stops_after_maxlen"] = max(
-                (len(s) for s in fim_request.stops_after), default=0
-            )
-            st["stream_tail"] = ""
+            st["stream_patterns"] = [
+                {"text": patt, "action": "stop"} for patt in fim_request.stop_patterns
+            ] + [
+                {"text": patt, "action": "chop"} for patt in fim_request.chop_patterns
+            ]
+            st["stream_accumulated"] = ""
             st["stream_cancelled"] = False
             st["stream_stop_event"] = threading.Event()
+            st["post_actions"] = []
+
+            for fn in fim_request.post_functions:
+                val = fn.args[0] if fn.args else ""
+                if fn.name == "append_nl" and not val.endswith("\n"):
+                    val = f"{val}\n"
+                st["post_actions"].append(val)
 
             self._set_busy(True)
 
             # Prepare streaming mark
             text.mark_set("stream_here", start_index)
             text.mark_gravity("stream_here", tk.RIGHT)
-            if fim_request.suffix_token is not None and not fim_request.keep_tags:
+            if (
+                fim_request.suffix_token is not None
+                and not fim_request.keep_tags
+                and isinstance(fim_request.suffix_token.tag, PrefixSuffixTag)
+                and fim_request.suffix_token.tag.hardness == "soft"
+            ):
                 s_s = offset_to_tkindex(content, fim_request.suffix_token.start)
                 s_e = offset_to_tkindex(content, fim_request.suffix_token.end)
                 with contextlib.suppress(tk.TclError):
                     text.delete(s_s, s_e)
-            if fim_request.prefix_token is not None and not fim_request.keep_tags:
+            if (
+                fim_request.prefix_token is not None
+                and not fim_request.keep_tags
+                and isinstance(fim_request.prefix_token.tag, PrefixSuffixTag)
+                and fim_request.prefix_token.tag.hardness == "soft"
+            ):
                 p_s = offset_to_tkindex(content, fim_request.prefix_token.start)
                 p_e = offset_to_tkindex(content, fim_request.prefix_token.end)
                 with contextlib.suppress(tk.TclError):
@@ -1761,6 +2014,8 @@ class FIMPad(tk.Tk):
         except Exception as exc:
             self._fim_generation_active = False
             self._set_busy(False)
+            with contextlib.suppress(Exception):
+                self._end_stream_undo_group(st)
             messagebox.showerror("Generation Error", str(exc))
             return
 
@@ -1771,123 +2026,133 @@ class FIMPad(tk.Tk):
             while True:
                 item = self._result_queue.get_nowait()
 
-                if not item.get("ok"):
-                    tab_id = item.get("tab")
-                    frame = self.nametowidget(tab_id) if tab_id else None
-                    if frame in self.tabs:
-                        st_err = self.tabs[frame]
-                        mark = st_err.get("stream_mark") or "stream_here"
-                        self._force_flush_stream_buffer(frame, mark)
-                    self._fim_generation_active = False
-                    self._set_busy(False)
-                    messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
-                    continue
-
-                kind = item.get("kind")
-                tab_id = item.get("tab")
-                frame = self.nametowidget(tab_id) if tab_id else None
-                if not frame or frame not in self.tabs:
-                    if kind == "stream_done":
+                try:
+                    st = None
+                    if not item.get("ok"):
+                        tab_id = item.get("tab")
+                        frame = self.nametowidget(tab_id) if tab_id else None
+                        st_err = None
+                        if frame in self.tabs:
+                            st_err = self.tabs[frame]
+                            mark = st_err.get("stream_mark") or "stream_here"
+                            self._force_flush_stream_buffer(frame, mark)
+                            self._end_stream_undo_group(st_err)
                         self._fim_generation_active = False
                         self._set_busy(False)
-                    continue
-                st = self.tabs[frame]
-                text = st["text"]
-
-                if kind == "stream_append":
-                    if st.get("stream_cancelled") and not item.get("allow_stream_cancelled"):
+                        self._sequence_queue = []
+                        self._sequence_tab = None
+                        self._sequence_names = None
+                        messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                         continue
 
-                    mark = item["mark"]
-                    piece = item["text"]
+                    kind = item.get("kind")
+                    tab_id = item.get("tab")
+                    frame = self.nametowidget(tab_id) if tab_id else None
+                    if not frame or frame not in self.tabs:
+                        if kind == "stream_done":
+                            self._fim_generation_active = False
+                            self._set_busy(False)
+                        continue
+                    st = self.tabs[frame]
+                    text = st["text"]
 
-                    if not item.get("allow_stream_cancelled"):
-                        after_stops = st.get("stops_after", [])
-                        if after_stops:
-                            tail = st.get("stream_tail", "")
-                            combined = tail + piece
-                            match_index = None
-                            match_stop = ""
-                            for stop in after_stops:
-                                idx = combined.find(stop)
-                                if idx == -1:
+                    if kind == "stream_append":
+                        if st.get("stream_cancelled") and not item.get("allow_stream_cancelled"):
+                            continue
+
+                        mark = item["mark"]
+                        piece = item["text"]
+
+                        if not item.get("allow_stream_cancelled"):
+                            patterns = st.get("stream_patterns", [])
+                            buffered = "".join(st.get("stream_buffer", []))
+                            accumulated = st.get("stream_accumulated", "")
+                            if patterns:
+                                candidate = f"{accumulated}{buffered}{piece}"
+                                match = find_stream_match(candidate, patterns)
+
+                                if match is not None:
+                                    target_text = (
+                                        candidate[: match.match_index]
+                                        if match.action == "chop"
+                                        else candidate[: match.end_index]
+                                    )
+                                    pending_insert = target_text[len(accumulated) :]
+                                    if pending_insert:
+                                        st["stream_buffer"] = [pending_insert]
+                                    else:
+                                        st["stream_buffer"].clear()
+                                    st["stream_mark"] = mark
+                                    flush_mark = st.get("stream_mark") or "stream_here"
+                                    self._force_flush_stream_buffer(frame, flush_mark)
+                                    st["stream_cancelled"] = True
+                                    st["stream_patterns"] = []
+                                    st["stream_accumulated"] = target_text
+                                    stop_event = st.get("stream_stop_event")
+                                    if stop_event is not None:
+                                        stop_event.set()
+                                    self._result_queue.put(
+                                        {"ok": True, "kind": "stream_done", "tab": tab_id}
+                                    )
+                                    self._result_queue.put(
+                                        {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
+                                    )
                                     continue
-                                if (
-                                    match_index is None
-                                    or idx < match_index
-                                    or (idx == match_index and len(stop) > len(match_stop))
-                                ):
-                                    match_index = idx
-                                    match_stop = stop
 
-                            if match_index is not None:
-                                pre_len = max(0, match_index - len(tail))
-                                pre_piece = piece[:pre_len]
-                                tail_overlap = max(0, len(tail) - match_index)
-                                stop_remaining = match_stop[tail_overlap:]
-                                if pre_piece:
-                                    st["stream_buffer"].append(pre_piece)
-                                if stop_remaining:
-                                    st["stream_buffer"].append(stop_remaining)
-                                st["stream_mark"] = mark
-                                flush_mark = st.get("stream_mark") or "stream_here"
-                                self._force_flush_stream_buffer(frame, flush_mark)
-                                st["stream_cancelled"] = True
-                                st["stops_after"] = []
-                                st["stops_after_maxlen"] = 0
-                                st["stream_tail"] = ""
-                                stop_event = st.get("stream_stop_event")
-                                if stop_event is not None:
-                                    stop_event.set()
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "stream_done", "tab": tab_id}
-                                )
-                                self._result_queue.put(
-                                    {"ok": True, "kind": "spellcheck_now", "tab": tab_id}
-                                )
-                                continue
-
-                            maxlen = st.get("stops_after_maxlen", 0)
-                            if maxlen > 0:
-                                keep = maxlen - 1
-                                st["stream_tail"] = combined[-keep:] if keep > 0 else ""
-                            else:
-                                st["stream_tail"] = ""
+                            st["stream_buffer"] = [buffered + piece]
+                            st["stream_accumulated"] = accumulated + piece
                         else:
-                            st["stream_tail"] = ""
-                    else:
-                        st["stream_tail"] = ""
+                            st["stream_buffer"].append(piece)
+                            st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
 
-                    st["stream_buffer"].append(piece)
-                    st["stream_mark"] = mark
-                    self._schedule_stream_flush(frame, mark)
+                        st["stream_mark"] = mark
+                        self._schedule_stream_flush(frame, mark)
 
-                elif kind == "stream_done":
-                    mark = st.get("stream_mark") or item.get("mark") or "stream_here"
-                    self._force_flush_stream_buffer(frame, mark)
-                    st["stops_after"] = []
-                    st["stops_after_maxlen"] = 0
-                    st["stream_tail"] = ""
-                    st["stream_stop_event"] = None
+                    elif kind == "stream_done":
+                        mark = st.get("stream_mark") or item.get("mark") or "stream_here"
+                        self._force_flush_stream_buffer(frame, mark)
+                        st["stream_patterns"] = []
+                        st["stream_accumulated"] = ""
+                        st["stream_stop_event"] = None
+                        for extra in st.get("post_actions", []):
+                            try:
+                                text.insert(mark, extra)
+                                mark = text.index(f"{mark}+{len(extra)}c")
+                            except tk.TclError:
+                                continue
+                        st["post_actions"] = []
+                        self._end_stream_undo_group(st)
+                        self._fim_generation_active = False
+                        self._set_busy(False)
+                        self._set_dirty(st, True)
+                        if self._sequence_queue and self._sequence_tab == tab_id:
+                            self.after_idle(lambda st=st: self._run_sequence_step(st))
+
+                    elif kind == "spellcheck_now":
+                        self._schedule_spellcheck_for_frame(frame, delay_ms=150)
+
+                    elif kind == "spell_result":
+                        # Apply tag updates
+                        text.tag_remove("misspelled", "1.0", "end")
+                        for sidx, eidx in item.get("spans", []):
+                            text.tag_add("misspelled", sidx, eidx)
+
+                except Exception as exc:  # noqa: BLE001
                     self._fim_generation_active = False
                     self._set_busy(False)
-
-                elif kind == "spellcheck_now":
-                    self._schedule_spellcheck_for_frame(frame, delay_ms=150)
-
-                elif kind == "spell_result":
-                    # Apply tag updates
-                    text.tag_remove("misspelled", "1.0", "end")
-                    for sidx, eidx in item.get("spans", []):
-                        text.tag_add("misspelled", sidx, eidx)
-
-                else:
-                    pass
+                    self._sequence_queue = []
+                    self._sequence_tab = None
+                    self._sequence_names = None
+                    with contextlib.suppress(Exception):
+                        self._end_stream_undo_group(st)
+                    messagebox.showerror(
+                        "Generation Error", f"Streaming update failed: {exc}"
+                    )
 
         except queue.Empty:
             pass
-
-        self.after(60, self._poll_queue)
+        finally:
+            self.after(60, self._poll_queue)
 
     # ---------- Spellcheck (enchant) ----------
 
