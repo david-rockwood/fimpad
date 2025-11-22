@@ -234,7 +234,7 @@ All tags in FIMpad are enclosed in triple brackets, in order to strongly differe
 > Four score and seven [[[50]]]
 
 
-The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. The tag will be deleted before streaming insertion. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly adjacent to the FIM tag. Then press Ctrl+Enter (or use the menu entry at AI->Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
+The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly after the FIM tag. Then press Ctrl+Enter (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
 
 > Four score and seven years ago, our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so
 
