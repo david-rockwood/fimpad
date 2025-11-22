@@ -45,10 +45,6 @@ Granite Tiny is available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-## Let us begin
-
-Once you have your server running, open FIMpad. All examples of FIM generation below were generated using llama-server and Granite Small at Q6 quantization.
-
 ## FIM tags
 
 All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before insertion.
