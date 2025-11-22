@@ -1,3 +1,5 @@
+---
+
 # FIMpad
 
 A text editor that can do fill-in-the-middle LLM text generation within a text file.
@@ -453,6 +455,7 @@ after generation:
 
 Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
 
+---
 
 
 
