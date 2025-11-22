@@ -1671,6 +1671,7 @@ class FIMPad(tk.Tk):
             cur = text.index(tk.END)
         should_follow = st.get("stream_following", self._should_follow(text))
         text.insert(cur, piece)
+        st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
         with contextlib.suppress(tk.TclError):
             text.tag_remove("misspelled", cur, f"{cur}+{len(piece)}c")
         if should_follow:
@@ -2100,7 +2101,7 @@ class FIMPad(tk.Tk):
                                     continue
 
                             st["stream_buffer"] = [buffered + piece]
-                            st["stream_accumulated"] = accumulated + piece
+                            st["stream_accumulated"] = accumulated
                         else:
                             st["stream_buffer"].append(piece)
                             st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
