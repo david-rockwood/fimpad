@@ -95,6 +95,9 @@ Each function belongs to **one** of two conceptual phases:
   * `top_p(float)`
   * (future: `model("id")`, `top_k(int)`, etc.)
 
+  Use `temp("0.5")` or `top_p("0.8")` to override the corresponding
+  sampling settings for a single FIM tag.
+
 * **Post-time (after streaming completes)**
   Evaluated in order on the final generated text.
 
