@@ -1,10 +1,8 @@
 # FIMpad
 
-A text editor that can do fill-in-the-middle LLM text generation within a text file.
+A text editor that can do Fill-In-the-Middle (FIM) text generation within a text file.
 
 The first release will likely be in December 2025.
-
-If you don't mind bugs you can try it early by following the quick start below, or by getting the latest CI artifact build for Linux in the actions tab.
 
 ---
 
@@ -22,7 +20,7 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do fill-in-the-middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do Fill-In-the-Middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
 
 ---
 
@@ -57,7 +55,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 
 ## Understanding FIMpad’s tag tystem
 
-FIMpad adds a small, lightweight “language” on top of plain text so you can run **Fill-In-the-Middle (FIM)** completions directly inside your documents.
+FIMpad adds a small, lightweight “language” on top of plain text so you can run FIM completions directly inside your documents.
 Everything happens through **tags**, which are little blocks of text surrounded by:
 
 ```
