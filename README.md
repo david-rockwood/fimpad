@@ -269,7 +269,7 @@ Keep in mind that when you get a generation that you don't like, you can simply 
 
 I must end the exploration of writing fiction with FIMpad here or this README will become too long, but the above examples demonstrate three fundamental ways to use FIM generation for stories: completion, replacement, and interpolation. These methods can diminish or even eliminate writer's block.
 
-## Virtual chat roles
+## Virtual role-based chat
 
 Many who are familiar with LLMs are used to role-based chat, where the standard roles are: **system**, **user**, and **assistant**. The system prompt sets the overall rules for, and the personality of, the LLM assistant. The user prompts are messages that the human user sends to the LLM. The assistant responses are messages that the LLM sends back to the user.
 
