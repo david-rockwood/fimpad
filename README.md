@@ -399,7 +399,7 @@ As a hard separator from text that does not match the format that you want to ge
 >
 > **[[[2000]]]**
 
-As a temporary way to hide some fact that you don't want the LLM to know
+As a temporary way to hide some fact that you don't want the LLM to know yet:
 
 > Sarah thought she heard something, but wasn't sure. It was probably nothing. Mittens was always knocking over the baskets in the laundry room. Sarah decided to **[[[100]]][[[suffix]]]***
 > Just then the killer emerged from a dark corner and lunged at Sarah.
