@@ -485,6 +485,7 @@ class FIMPad(tk.Tk):
         text.bind("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
         text.bind("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
         text.bind("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<<Paste>>", self._on_text_paste, add="+")
 
         def on_modified(event=None):
             if st["suppress_modified"]:
@@ -902,6 +903,20 @@ class FIMPad(tk.Tk):
     def _cur_text(self) -> tk.Text:
         st = self._current_tab_state()
         return st["text"]
+
+    def _on_text_paste(self, event: tk.Event) -> None:
+        widget = getattr(event, "widget", None)
+        if not isinstance(widget, tk.Text):
+            return
+
+        try:
+            sel_first = widget.index("sel.first")
+            sel_last = widget.index("sel.last")
+        except tk.TclError:
+            return
+
+        widget.mark_set(tk.INSERT, sel_first)
+        widget.delete(sel_first, sel_last)
 
     def _toggle_wrap_current(self):
         st = self._current_tab_state()
