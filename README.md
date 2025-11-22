@@ -391,11 +391,13 @@ As a hard separator from text that does not match the format that you want to ge
 >
 > Lt. Bixby: "Has anyone seen McAdams? Where is that guy?!"
 >
-> Officer Perez: Haven't seen him since before lunch, boss.
+> A beat.
+>
+> Officer Perez: "Haven't seen him since before lunch, boss."
 >
 > INTERIOR, A dark bar
 >
-> McAdams: Bartender! Another scotch please.
+> McAdams: "Bartender! Another scotch please."
 >
 > **[[[2000]]]**
 
