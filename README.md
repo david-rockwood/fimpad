@@ -135,7 +135,7 @@ and after generation:
 
 It is not guaranteed that the LLM will generate a specific stop sequence, but it becomes likely when there is a well-established pattern of consistent repetition of that sequence in the prefix and/or the suffix.
 
-In order to avoid retyping the FIM tag, you can press Ctrl+Shift+Enter (or use the menu entry at AI->Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Alt+Enter (or use the menu entry at AI->Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
+In order to avoid retyping the FIM tag, you can press Ctrl+Shift+Enter (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Alt+Enter (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
 
 So we now have a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
 
