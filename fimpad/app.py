@@ -96,8 +96,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-l>", self._on_show_fim_log_shortcut)
-        self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
-        self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
+        self.bind_all("<Control-f>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-Escape>", self._on_interrupt_stream)
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
@@ -720,9 +719,8 @@ class FIMPad(tk.Tk):
             label="Select All", accelerator="Ctrl+A", command=self._select_all_current
         )
         editmenu.add_separator()
-        editmenu.add_command(label="Find…", accelerator="Ctrl+F", command=self._open_find_dialog)
         editmenu.add_command(
-            label="Find & Replace…", accelerator="Ctrl+H", command=self._open_replace_dialog
+            label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
         )
         editmenu.add_separator()
         self._wrap_menu_var = tk.BooleanVar(value=True)
@@ -1184,45 +1182,6 @@ class FIMPad(tk.Tk):
         return True
 
     # ---------- Find / Replace ----------
-
-    def _open_find_dialog(self):
-        st = self._current_tab_state()
-        if not st:
-            return
-        text = st["text"]
-
-        w = tk.Toplevel(self)
-        w.title("Find")
-        w.resizable(False, False)
-        tk.Label(w, text="Find:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
-        patt_var = tk.StringVar()
-        e = tk.Entry(w, width=40, textvariable=patt_var)
-        e.grid(row=0, column=1, padx=8, pady=8)
-        e.focus_set()
-
-        def find_next():
-            patt = patt_var.get()
-            if not patt:
-                return
-            start = text.index(tk.INSERT)
-            pos = text.search(patt, start, stopindex=tk.END, nocase=False, regexp=False)
-            if not pos:
-                pos = text.search(patt, "1.0", stopindex=tk.END, nocase=False, regexp=False)
-                if not pos:
-                    messagebox.showinfo("Find", "Not found.")
-                    return
-            end = f"{pos}+{len(patt)}c"
-            text.tag_remove("sel", "1.0", tk.END)
-            text.tag_add("sel", pos, end)
-            text.mark_set(tk.INSERT, end)
-            text.see(pos)
-
-        ttk.Button(w, text="Find Next", command=find_next).grid(
-            row=1, column=1, padx=8, pady=8, sticky="e"
-        )
-
-        self._prepare_child_window(w)
-
     def _open_replace_dialog(self):
         st = self._current_tab_state()
         if not st:
@@ -1243,6 +1202,10 @@ class FIMPad(tk.Tk):
         e1.focus_set()
 
         match_tag = "find_replace_match"
+        status_var = tk.StringVar(value="")
+
+        def set_status(message: str) -> None:
+            status_var.set(message)
 
         def update_buttons():
             has_match = bool(text.tag_ranges(match_tag))
@@ -1250,10 +1213,12 @@ class FIMPad(tk.Tk):
             replace_btn.state((state,))
             replace_all_btn.state((state,))
 
-        def clear_highlight():
+        def clear_highlight(reset_status: bool = True):
             text.tag_remove("sel", "1.0", tk.END)
             text.tag_remove(match_tag, "1.0", tk.END)
             update_buttons()
+            if reset_status:
+                set_status("")
 
         def find_next():
             patt = find_var.get()
@@ -1265,8 +1230,8 @@ class FIMPad(tk.Tk):
             if not pos:
                 pos = text.search(patt, "1.0", stopindex=tk.END)
                 if not pos:
-                    messagebox.showinfo("Find", "Not found.")
                     clear_highlight()
+                    set_status("Not found.")
                     return
             end = f"{pos}+{len(patt)}c"
             text.tag_remove("sel", "1.0", tk.END)
@@ -1275,6 +1240,7 @@ class FIMPad(tk.Tk):
             text.tag_add(match_tag, pos, end)
             text.mark_set(tk.INSERT, end)
             text.see(pos)
+            set_status("")
             update_buttons()
 
         def replace_current():
@@ -1291,7 +1257,9 @@ class FIMPad(tk.Tk):
             text.tag_remove(match_tag, "1.0", tk.END)
             text.mark_set(tk.INSERT, f"{start}+{len(repl)}c")
             text.see(start)
+            set_status("Replaced current match.")
             update_buttons()
+            find_next()
 
         def replace_all():
             patt = find_var.get()
@@ -1310,11 +1278,12 @@ class FIMPad(tk.Tk):
                 text.insert(pos, repl)
                 idx = f"{pos}+{len(repl)}c"
                 count += 1
-            messagebox.showinfo("Replace All", f"Replaced {count} occurrences.")
-            clear_highlight()
+            set_status(f"Replaced {count} occurrences.")
+            clear_highlight(reset_status=False)
 
         def on_find_change(*_):
             clear_highlight()
+            set_status("")
 
         find_var.trace_add("write", on_find_change)
 
@@ -1330,6 +1299,9 @@ class FIMPad(tk.Tk):
         replace_all_btn = ttk.Button(btn_frame, text="Replace All", command=replace_all)
         replace_all_btn.grid(row=0, column=2, padx=(4, 0), sticky="e")
         update_buttons()
+
+        status = ttk.Label(w, textvariable=status_var, anchor="w")
+        status.grid(row=3, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
 
         self._prepare_child_window(w)
 
