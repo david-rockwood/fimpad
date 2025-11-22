@@ -319,6 +319,17 @@ def test_prefix_suffix_comment_and_sequence_tags_still_parse():
     assert sequence_token.tag.names == ("foo",)
 
 
+def test_sequence_allows_missing_names_when_explicitly_permitted():
+    content = "[[[\"foo\"; \"bar\"]]] [[[3; name(\"bar\")]]]"
+
+    tokens = list(
+        parse_triple_tokens(content, allow_missing_sequence_names={"foo"})
+    )
+
+    kinds = [t.kind for t in tokens if isinstance(t, TagToken)]
+    assert kinds == ["sequence", "fim"]
+
+
 def test_parse_fim_request_strips_comments_and_collects_overrides():
     content = (
         "[[[prefix soft]]] Hello [[[(note) before]]] "

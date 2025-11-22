@@ -79,6 +79,7 @@ class FIMPad(tk.Tk):
         self._fim_generation_active: bool = False
         self._sequence_queue: list[str] = []
         self._sequence_tab: str | None = None
+        self._sequence_names: tuple[str, ...] | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -1577,6 +1578,7 @@ class FIMPad(tk.Tk):
     def _run_sequence_step(self, st, *, tokens=None, registry=None):
         if not self._sequence_queue:
             self._sequence_tab = None
+            self._sequence_names = None
             return
 
         if self._fim_generation_active:
@@ -1586,18 +1588,27 @@ class FIMPad(tk.Tk):
         if self._sequence_tab is not None and tab_id != self._sequence_tab:
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             return
 
         name = self._sequence_queue.pop(0)
         text_widget = st["text"]
         content = text_widget.get("1.0", tk.END)
 
+        completed = set(self._sequence_names or ()) - set(self._sequence_queue)
+        completed.discard(name)
+
         try:
-            tokens = tokens or list(parse_triple_tokens(content))
+            tokens = tokens or list(
+                parse_triple_tokens(
+                    content, allow_missing_sequence_names=completed
+                )
+            )
         except TagParseError as exc:
             self._show_unsupported_fim_error(exc)
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             return
 
         registry = registry or self._build_name_registry(tokens)
@@ -1608,6 +1619,7 @@ class FIMPad(tk.Tk):
             )
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             return
 
         try:
@@ -1618,11 +1630,13 @@ class FIMPad(tk.Tk):
             self._show_unsupported_fim_error(exc)
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             return
         if fim_request is None:
             messagebox.showerror("Generate", f"Invalid FIM tag referenced by {name}")
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             return
 
         self._launch_fim_or_completion_stream(st, content, fim_request)
@@ -1740,6 +1754,7 @@ class FIMPad(tk.Tk):
                 return
             self._sequence_queue = names
             self._sequence_tab = self.nb.select()
+            self._sequence_names = tuple(names)
             self._run_sequence_step(st, tokens=tokens, registry=name_registry)
             return
 
@@ -1753,6 +1768,7 @@ class FIMPad(tk.Tk):
         if fim_request is not None:
             self._sequence_queue = []
             self._sequence_tab = None
+            self._sequence_names = None
             self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
@@ -1786,6 +1802,7 @@ class FIMPad(tk.Tk):
         st["stream_accumulated"] = ""
         self._sequence_queue = []
         self._sequence_tab = None
+        self._sequence_names = None
 
         stop_event = st.get("stream_stop_event")
         if stop_event is not None:
@@ -2024,6 +2041,7 @@ class FIMPad(tk.Tk):
                         self._set_busy(False)
                         self._sequence_queue = []
                         self._sequence_tab = None
+                        self._sequence_names = None
                         messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
                         continue
 
@@ -2124,6 +2142,7 @@ class FIMPad(tk.Tk):
                     self._set_busy(False)
                     self._sequence_queue = []
                     self._sequence_tab = None
+                    self._sequence_names = None
                     with contextlib.suppress(Exception):
                         self._end_stream_undo_group(st)
                     messagebox.showerror(

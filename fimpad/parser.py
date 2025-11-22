@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 DEFAULT_MARKER_MAX_TOKENS = 100
@@ -130,9 +130,12 @@ FUNCTION_RE = re.compile(
 )
 
 
-def parse_triple_tokens(content: str) -> Iterator[Token]:
+def parse_triple_tokens(
+    content: str, *, allow_missing_sequence_names: Iterable[str] | None = None
+) -> Iterator[Token]:
     """Yield tokens for ``content`` splitting around ``[[[...]]]`` regions."""
 
+    allowed_missing = set(allow_missing_sequence_names or [])
     last_index = 0
     seen_names: set[str] = set()
     tokens: list[Token] = []
@@ -154,7 +157,7 @@ def parse_triple_tokens(content: str) -> Iterator[Token]:
             TextToken(start=last_index, end=len(content), text=content[last_index:])
         )
 
-    _validate_sequence_names(tokens)
+    _validate_sequence_names(tokens, allow_missing=allowed_missing)
     yield from tokens
 
 
@@ -298,10 +301,13 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
     raise TagParseError(f"Unrecognized tag: {body}")
 
 
-def _validate_sequence_names(tokens: list[Token]):
+def _validate_sequence_names(
+    tokens: list[Token], *, allow_missing: set[str] | None = None
+):
     registry: set[str] = set()
     sequence_names: list[tuple[int, tuple[str, ...]]] = []
 
+    allow_missing = allow_missing or set()
     for token in tokens:
         if not isinstance(token, TagToken):
             continue
@@ -313,7 +319,7 @@ def _validate_sequence_names(tokens: list[Token]):
             sequence_names.append((token.start, token.tag.names))
 
     for _, names in sequence_names:
-        missing = [nm for nm in names if nm not in registry]
+        missing = [nm for nm in names if nm not in registry and nm not in allow_missing]
         if missing:
             missing_list = ", ".join(missing)
             raise TagParseError(f"Sequence references missing tags: {missing_list}")
