@@ -808,6 +808,38 @@ class FIMPad(tk.Tk):
         if gap is not None:
             gap.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
 
+    def _reflow_text_layout(self, st: dict) -> None:
+        text: tk.Text | None = st.get("text")
+        if text is None:
+            return
+
+        try:
+            insert_index = text.index("insert")
+        except tk.TclError:
+            insert_index = None
+
+        try:
+            yview = text.yview()[0]
+        except Exception:
+            yview = None
+
+        wrap_value = text.cget("wrap")
+        temp_wrap = tk.CHAR if wrap_value == tk.WORD else tk.WORD
+
+        try:
+            text.configure(wrap=temp_wrap)
+            text.update_idletasks()
+        finally:
+            text.configure(wrap=wrap_value)
+
+        if insert_index is not None:
+            with contextlib.suppress(tk.TclError):
+                text.mark_set("insert", insert_index)
+
+        if yview is not None:
+            with contextlib.suppress(Exception):
+                text.yview_moveto(yview)
+
     def _clear_line_spacing(self, text: tk.Text) -> None:
         text.configure(spacing1=0, spacing2=0, spacing3=0)
         for tag in text.tag_names():
@@ -1338,6 +1370,11 @@ class FIMPad(tk.Tk):
         available_spell_langs = self._available_spell_langs
         show_spell_lang = len(available_spell_langs) > 1
 
+        prev_pad = cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
+        prev_line_pad = cfg.get(
+            "line_number_padding_px", DEFAULTS["line_number_padding_px"]
+        )
+
         row = 0
         add_row(row, "Endpoint (base, no path):", endpoint_var)
         row += 1
@@ -1460,8 +1497,10 @@ class FIMPad(tk.Tk):
                 self.cfg["fim_middle"] = fim_mid_var.get()
                 self.cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
                 self.cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
-                self.cfg["editor_padding_px"] = max(0, int(pad_var.get()))
-                self.cfg["line_number_padding_px"] = max(0, int(line_pad_var.get()))
+                new_pad = max(0, int(pad_var.get()))
+                new_line_pad = max(0, int(line_pad_var.get()))
+                self.cfg["editor_padding_px"] = new_pad
+                self.cfg["line_number_padding_px"] = new_line_pad
                 self.cfg["fg"] = fg_var.get().strip()
                 self.cfg["bg"] = bg_var.get().strip()
                 self.cfg["highlight1"] = highlight1_var.get().strip()
@@ -1475,6 +1514,8 @@ class FIMPad(tk.Tk):
             except Exception as e:
                 messagebox.showerror("Settings", f"Invalid value: {e}")
                 return
+
+            pad_changed = (new_pad != prev_pad) or (new_line_pad != prev_line_pad)
             save_config(self.cfg)
             self._dictionary = self._load_dictionary(self._spell_lang)
             self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
@@ -1498,6 +1539,8 @@ class FIMPad(tk.Tk):
                     content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
                 self._apply_editor_padding(st, self.cfg["editor_padding_px"])
                 self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
+                if pad_changed:
+                    self._reflow_text_layout(st)
                 self._clear_line_spacing(t)
                 self._render_line_numbers(st)
                 self._schedule_line_number_update(frame, delay_ms=15)
