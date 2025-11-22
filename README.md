@@ -199,7 +199,7 @@ after generation:
 >
 >One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
 
-I don't want George to be known for his playful antics, so I estimate the description for something else that he could be known for at about 5 tokens, and I do this:
+I don't want George to be known for his playful antics, so I estimate the token length of the description of something else that he could be known for at about 5 tokens, and I do this:
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
