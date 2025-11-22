@@ -1477,6 +1477,27 @@ class FIMPad(tk.Tk):
         if stop_event is not None:
             stop_event.set()
         st["stream_stop_event"] = None
+        st["_stream_prev_autoseparators"] = None
+
+    def _begin_stream_undo_group(self, st):
+        text = st["text"]
+        try:
+            st["_stream_prev_autoseparators"] = text.cget("autoseparators")
+            text.configure(autoseparators=False)
+            text.edit_separator()
+        except tk.TclError:
+            st["_stream_prev_autoseparators"] = None
+
+    def _end_stream_undo_group(self, st):
+        text = st["text"]
+        prev_autoseparators = st.get("_stream_prev_autoseparators")
+        with contextlib.suppress(tk.TclError):
+            text.edit_separator()
+
+        if prev_autoseparators is not None:
+            with contextlib.suppress(tk.TclError):
+                text.configure(autoseparators=prev_autoseparators)
+        st["_stream_prev_autoseparators"] = None
 
     def _find_active_tag(self, tokens, cursor_offset: int) -> TagToken | None:
         marker_token: TagToken | None = None
@@ -1833,6 +1854,7 @@ class FIMPad(tk.Tk):
         end_index = offset_to_tkindex(content, fim_request.marker.end)
 
         self._reset_stream_state(st)
+        self._begin_stream_undo_group(st)
 
         self._fim_generation_active = True
         try:
@@ -1918,6 +1940,8 @@ class FIMPad(tk.Tk):
         except Exception as exc:
             self._fim_generation_active = False
             self._set_busy(False)
+            with contextlib.suppress(Exception):
+                self._end_stream_undo_group(st)
             messagebox.showerror("Generation Error", str(exc))
             return
 
@@ -1929,13 +1953,16 @@ class FIMPad(tk.Tk):
                 item = self._result_queue.get_nowait()
 
                 try:
+                    st = None
                     if not item.get("ok"):
                         tab_id = item.get("tab")
                         frame = self.nametowidget(tab_id) if tab_id else None
+                        st_err = None
                         if frame in self.tabs:
                             st_err = self.tabs[frame]
                             mark = st_err.get("stream_mark") or "stream_here"
                             self._force_flush_stream_buffer(frame, mark)
+                            self._end_stream_undo_group(st_err)
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._sequence_queue = []
@@ -2019,6 +2046,7 @@ class FIMPad(tk.Tk):
                             except tk.TclError:
                                 continue
                         st["post_actions"] = []
+                        self._end_stream_undo_group(st)
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._set_dirty(st, True)
@@ -2039,6 +2067,8 @@ class FIMPad(tk.Tk):
                     self._set_busy(False)
                     self._sequence_queue = []
                     self._sequence_tab = None
+                    with contextlib.suppress(Exception):
+                        self._end_stream_undo_group(st)
                     messagebox.showerror(
                         "Generation Error", f"Streaming update failed: {exc}"
                     )
