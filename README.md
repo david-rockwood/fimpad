@@ -209,7 +209,7 @@ and after generation:
 >
 > John: 
 
-This finally gives us what we want, a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do, in order to continue chatting with Jane, is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
+This finally gives us what we want, a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
 
 Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
 
