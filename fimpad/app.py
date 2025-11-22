@@ -1082,6 +1082,16 @@ class FIMPad(tk.Tk):
         t.mark_set(tk.INSERT, "1.0")
         t.see("1.0")
 
+    def _show_error(self, title: str, message: str, detail: str | None = None) -> None:
+        try:
+            self.clipboard_clear()
+            clip_text = message if detail is None else f"{message}\n\nDetails: {detail}"
+            self.clipboard_append(clip_text)
+        except tk.TclError:
+            pass
+
+        messagebox.showerror(title, message, detail=detail)
+
     # ---------- Examples ----------
 
     def _open_example_resource(self, title: str, resource: Traversable) -> None:
@@ -1089,7 +1099,9 @@ class FIMPad(tk.Tk):
             with resources.as_file(resource) as path, open(path, encoding="utf-8") as f:
                 content = f.read()
         except Exception as exc:
-            messagebox.showerror("Example Error", f"Failed to load '{title}': {exc}")
+            self._show_error(
+                "Example Error", "Could not load the example.", detail=f"{title}: {exc}"
+            )
             return
 
         self._new_tab(content=content, title=title)
@@ -1123,7 +1135,7 @@ class FIMPad(tk.Tk):
             self._set_dirty(st, False)
             self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=200)
         except Exception as e:
-            messagebox.showerror("Open Error", str(e))
+            self._show_error("Open Error", "Could not open the file.", detail=str(e))
 
     def _save_file_current(self):
         st = self._current_tab_state()
@@ -1138,7 +1150,7 @@ class FIMPad(tk.Tk):
             st["text"].edit_modified(False)
             self._set_dirty(st, False)
         except Exception as e:
-            messagebox.showerror("Save Error", str(e))
+            self._show_error("Save Error", "Could not save the file.", detail=str(e))
 
     def _save_file_as_current(self):
         st = self._current_tab_state()
@@ -1154,7 +1166,9 @@ class FIMPad(tk.Tk):
             st["text"].edit_modified(False)
             self._set_dirty(st, False)
         except Exception as e:
-            messagebox.showerror("Save As Error", str(e))
+            self._show_error(
+                "Save As Error", "Could not save the file as new.", detail=str(e)
+            )
 
     def _maybe_save(self, st) -> bool:
         if not st.get("dirty"):
@@ -1512,7 +1526,7 @@ class FIMPad(tk.Tk):
                     self._spell_lang = DEFAULTS.get("spell_lang", "en_US")
                     self.cfg.pop("spell_lang", None)
             except Exception as e:
-                messagebox.showerror("Settings", f"Invalid value: {e}")
+                self._show_error("Settings", "Invalid settings value.", detail=str(e))
                 return
 
             pad_changed = (new_pad != prev_pad) or (new_line_pad != prev_line_pad)
@@ -1567,14 +1581,7 @@ class FIMPad(tk.Tk):
         return last >= 0.999
 
     def _show_unsupported_fim_error(self, exc: TagParseError) -> None:
-        messagebox.showerror(
-            "Generate",
-            (
-                "FIM marker could not be parsed. Legacy [[[N...]]] bodies and other "
-                "old syntax are no longer supported. Please update the marker and try "
-                f"again.\n\nDetails: {exc}"
-            ),
-        )
+        self._show_error("Generate", "FIM marker could not be parsed.", detail=str(exc))
 
     def _reset_stream_state(self, st):
         job = st.get("stream_flush_job")
@@ -1678,8 +1685,8 @@ class FIMPad(tk.Tk):
         registry = registry or self._build_name_registry(tokens)
         marker_token = registry.get(name)
         if marker_token is None or not isinstance(marker_token.tag, FIMTag):
-            messagebox.showerror(
-                "Generate", f"Sequence tag refers to missing id: {name}"
+            self._show_error(
+                "Generate", "Sequence tag is missing a reference.", detail=name
             )
             self._sequence_queue = []
             self._sequence_tab = None
@@ -1697,7 +1704,9 @@ class FIMPad(tk.Tk):
             self._sequence_names = None
             return
         if fim_request is None:
-            messagebox.showerror("Generate", f"Invalid FIM tag referenced by {name}")
+            self._show_error(
+                "Generate", "FIM tag reference is invalid.", detail=name
+            )
             self._sequence_queue = []
             self._sequence_tab = None
             self._sequence_names = None
@@ -1773,8 +1782,10 @@ class FIMPad(tk.Tk):
 
     def generate(self):
         if self._fim_generation_active:
-            messagebox.showerror(
-                "Generate", "A FIM generation is already running. Please wait."
+            self._show_error(
+                "Generate",
+                "A FIM generation is already running.",
+                detail="Please wait for the current request to finish.",
             )
             return
 
@@ -1813,8 +1824,10 @@ class FIMPad(tk.Tk):
             names = list(marker_token.tag.names)
             missing = [nm for nm in names if nm not in name_registry]
             if missing:
-                messagebox.showerror(
-                    "Generate", f"Sequence references missing tags: {', '.join(missing)}"
+                self._show_error(
+                    "Generate",
+                    "Sequence references are missing tags.",
+                    detail=", ".join(missing),
                 )
                 return
             self._sequence_queue = names
@@ -1907,8 +1920,10 @@ class FIMPad(tk.Tk):
 
     def repeat_last_fim(self):
         if self._fim_generation_active:
-            messagebox.showerror(
-                "Generate", "A FIM generation is already running. Please wait."
+            self._show_error(
+                "Generate",
+                "A FIM generation is already running.",
+                detail="Please wait for the current request to finish.",
             )
             return
 
@@ -2081,7 +2096,7 @@ class FIMPad(tk.Tk):
             self._set_busy(False)
             with contextlib.suppress(Exception):
                 self._end_stream_undo_group(st)
-            messagebox.showerror("Generation Error", str(exc))
+            self._show_error("Generation Error", "Generation failed to start.", detail=str(exc))
             return
 
     # ---------- Queue handling ----------
@@ -2107,7 +2122,11 @@ class FIMPad(tk.Tk):
                         self._sequence_queue = []
                         self._sequence_tab = None
                         self._sequence_names = None
-                        messagebox.showerror("Generation Error", item.get("error", "Unknown error"))
+                        self._show_error(
+                            "Generation Error",
+                            "Generation failed during streaming.",
+                            detail=item.get("error", "Unknown error"),
+                        )
                         continue
 
                     kind = item.get("kind")
@@ -2210,8 +2229,10 @@ class FIMPad(tk.Tk):
                     self._sequence_names = None
                     with contextlib.suppress(Exception):
                         self._end_stream_undo_group(st)
-                    messagebox.showerror(
-                        "Generation Error", f"Streaming update failed: {exc}"
+                    self._show_error(
+                        "Generation Error",
+                        "Streaming update failed.",
+                        detail=str(exc),
                     )
 
         except queue.Empty:
