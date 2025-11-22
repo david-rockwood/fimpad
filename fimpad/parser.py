@@ -117,6 +117,7 @@ FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "chop": {"min_args": 1, "default_phase": "init", "require_string": True},
     "tail": {"args": 1, "default_phase": "after", "require_string": True},
     "name": {"args": 1, "default_phase": "meta", "allow_any": True},
+    "temp": {"args": 1, "default_phase": "init", "allow_any": True},
     "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
     "top_p": {"args": 1, "default_phase": "init", "allow_any": True},
     "append": {"args": 1, "default_phase": "post", "require_string": True},
@@ -199,7 +200,7 @@ def parse_fim_request(
     for fn in fim_tag.functions:
         if fn.name in {"keep", "keep_tags", "name"}:
             continue
-        if fn.name == "temperature" and fn.args:
+        if fn.name in {"temperature", "temp"} and fn.args:
             try:
                 config_overrides["temperature"] = float(fn.args[0])
             except Exception:

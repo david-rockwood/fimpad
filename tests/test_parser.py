@@ -336,6 +336,16 @@ def test_parse_fim_request_strips_comments_and_collects_overrides():
     assert [fn.name for fn in fim_request.post_functions] == ["append"]
 
 
+def test_temp_and_top_p_overrides_accept_string_numbers():
+    content = '[[[4; temp(".5"); top_p("0.8")]]]'
+    token = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(content, token.start + 1)
+
+    assert fim_request.config_overrides["temperature"] == 0.5
+    assert fim_request.config_overrides["top_p"] == 0.8
+
+
 def test_stop_and_chop_tie_breaking_prefers_chop():
     content = "[[[2; stop(\"shared\"); chop('shared'); after:stop('later')]]]"
     token = _collect_tags(content)[0]
