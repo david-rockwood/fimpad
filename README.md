@@ -410,13 +410,13 @@ As a temporary way to hide some fact that you don't want the LLM to know yet:
 Multiple separate tasks in one document:
 > 7 * 2 + 3 = [[[2]]]
 >
-> **[[[SUFFIX]]][[[PREFIX]]]**
+> [[[SUFFIX]]][[[PREFIX]]]
 >
 > The following is a four line stanza about Toronto in winter:
 >
 > [[[64]]]
 >
-> **[[[SUFFIX]]][[[PREFIX]]]**
+> [[[SUFFIX]]][[[PREFIX]]]
 >
 > 0 1 1 2[[[7]]]13 21
 
