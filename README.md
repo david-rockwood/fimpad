@@ -4,6 +4,8 @@ A text editor focused on LLM FIM (fill-in-the-middle) workflows within a text fi
 
 The first release will likely be in December 2025.
 
+If you don't mind bugs you can try it early by following the quick start below, or by getting the latest CI build for Linux in the actions tab.
+
 ## Quick start
 
 ```bash
@@ -313,9 +315,9 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-I must end the exploration of writing fiction with FIM here or this README will become unbelievably long. But the above examples demonstrate the three fundamental strategies: completion, replacement, and interpolation. These diminish or destroy writer's block.
+Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
 
-One more thing here though: keep in mind that when you get a generation that you don't like, you can simply  press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling". Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
+I must end the exploration of writing fiction with FIM here or this README will become unbelievably long. But the above examples demonstrate the three fundamental strategies: completion, replacement, and interpolation. These diminish or destroy writer's block. They generate something like random fills that fit loosely within the constraints of contextual appropriateness.
 
 ## Virtual chat roles
 
@@ -408,7 +410,9 @@ after generating two turns:
 
 Note that the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available. In fact, the second response looks far shorter than 1000 tokens as well. You don't always get the max from the LLM. If you wanted the assistant to give longer responses, you could probably achieve that by writing a longer example response for the assistant in the prefix. And if you didn't feel like writing that long example assistant response, you could generate it by completions with FIM tags. Every time the LLM stopped early, you would type the first few words of a new sentence and then generate again.
 
+## Slicing up context
 
+At first glance it seems like FIM generation lacks memory in comparison to standard role-based (system/user/assistant) chats with LLMs. After all, role-based chats have a chat history, a list of messages that all make up the context for the duration of a chat session. But FIM generation does have memory; it lives in the prefix and in the suffix. And in FIMpad, the prefix and the suffix are on full display in the document. And they are editable.
 
 
 
