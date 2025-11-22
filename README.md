@@ -195,7 +195,7 @@ Still, if we are going to be talking with Jane for a while, it is annoying to ha
 
 ## The FIM tag append() function
 
-The append function simply adds some text on to the end of a streamed FIM insertion. See the example below, before generation.
+The append function simply adds some text onto the end of a streamed FIM insertion. See the example below, before generation.
 
 > John: Hello Jane.
 >
