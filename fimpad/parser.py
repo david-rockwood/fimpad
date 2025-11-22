@@ -260,9 +260,11 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
         base_word = first.value
         is_close = base_word.startswith("/")
         normalized = base_word[1:] if is_close else base_word
+        normalized_no_bang = normalized.rstrip("!")
         hardness = "hard" if normalized.endswith("!") else "soft"
-        normalized = normalized.rstrip("!")
-        name_key = normalized.casefold()
+        if hardness == "soft" and normalized_no_bang.isupper():
+            hardness = "hard"
+        name_key = normalized_no_bang.casefold()
         if name_key in {"prefix", "suffix"}:
             if len(tokens) > 1 and tokens[1].kind == "word":
                 nxt = tokens[1].value.casefold()

@@ -58,6 +58,23 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     assert comment.tag.position == "after"
 
 
+def test_uppercase_prefix_suffix_tags_are_hard_by_default():
+    content = "[[[PREFIX]]] Body [[[3]]] Tail [[[SUFFIX]]]"
+    tokens = _collect_tags(content)
+
+    prefix_token, fim_token, suffix_token = tokens
+
+    assert prefix_token.kind == "prefix"
+    assert isinstance(prefix_token.tag, PrefixSuffixTag)
+    assert prefix_token.tag.hardness == "hard"
+
+    assert fim_token.kind == "fim"
+
+    assert suffix_token.kind == "suffix"
+    assert isinstance(suffix_token.tag, PrefixSuffixTag)
+    assert suffix_token.tag.hardness == "hard"
+
+
 def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multiline():
     content = (
         "[[[12; keep_tags();\n"
