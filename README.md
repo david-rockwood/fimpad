@@ -362,7 +362,7 @@ Note that the first assistant response is shorter than the second assistant resp
 
 ## Context as memory
 
-At first glance it seems like FIM generation lacks memory in comparison to standard role-based (system/user/assistant) chats with LLMs. After all, role-based chats have a chat history, a list of messages that all make up the context for the duration of a chat session. But FIM generation does have memory; it lives in the prefix and in the suffix. And in FIMpad, the prefix and the suffix are on full display in the document. And they are editable.
+At first glance it seems like FIM generation lacks memory in comparison to standard role-based (system/user/assistant) chats. After all, role-based chats have a chat history, a list of messages that all make up the context for the duration of a chat session. But FIM generation does have memory; it lives in the prefix and in the suffix. And in FIMpad, the prefix and the suffix are on full display in the document. And they are editable.
 
 
 
