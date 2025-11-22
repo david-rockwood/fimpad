@@ -1,5 +1,3 @@
----
-
 # FIMpad
 
 A text editor that can do fill-in-the-middle LLM text generation within a text file.
