@@ -239,7 +239,9 @@ after generation:
 >
 > Because of that, Jake started to get very nervous.
 
-The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph. The stop() function can take multiple arguments. The first candidate stop sequence encountered during streaming is the string that terminates the FIM insertion. We'll use that below to make sure that generation stops clean at the end of a paragraph.
+The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph.
+
+The stop() function can take multiple arguments that represent multiple potential stop sequences for a single FIM generation. The first of these potential stop sequence encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops clean at the end of a paragraph, by stopping at any point where there is a new line following a period, a question mark, or an exclamation point.
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
