@@ -102,7 +102,6 @@ Each function belongs to **one** of two conceptual phases:
 
   * `append(string)`
   * `append_nl(int)`  (append `int` newline characters, default 1 if omitted)
-  * (future: `trim_ws()`, `dedent()`, `reindent("  ")`, etc.)
 
 #### Execution Order
 
