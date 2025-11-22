@@ -267,7 +267,7 @@ after generation:
 
 Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
 
-I must end the exploration of writing fiction with FIM here or this README will become unbelievably long. But the above examples demonstrate the three fundamental strategies: completion, replacement, and interpolation. These diminish or destroy writer's block. They generate something like random fills that fit loosely within the constraints of contextual appropriateness.
+I must end the exploration of writing fiction with FIM here or this README will become too long, but the above examples demonstrate three fundamental ways to use FIM generation for stories: completion, replacement, and interpolation. These ways of using FIM generation can diminish or even eliminate writer's block.
 
 ## Virtual chat roles
 
