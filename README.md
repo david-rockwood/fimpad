@@ -81,7 +81,7 @@ Within FIM tags you can list functions that will modify what the FIM tag does. B
 >
 > John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
 >
-> Jane: [[[75]]]
+> Jane: **[[[75]]]**
 
 and, after execution:
 
@@ -115,7 +115,7 @@ In a situation where you want to chat as John with a character (Jane) that you h
 >
 > John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
 >
-> Jane: [[[75;stop("John: ")]]]
+> Jane: **[[[75;stop("John: ")]]]**
 
 and after generation:
 
@@ -151,7 +151,7 @@ But there is another issue that still makes chatting with Jane inconvenient. See
 >
 > Jane: 3D printers will make the scarcity of resources seem even more preposterous.
 >
-> John: That's an interesting angle.[[[75;stop("John: ")]]]
+> John: That's an interesting angle. **[[[75;stop("John: ")]]]**
 
 and after generation:
 
@@ -187,7 +187,7 @@ The model continued speaking for John. Then it ran out of tokens mid-sentence du
 >
 > John: That's an interesting angle.
 >
-> Jane: [[[75;stop("John: ")]]]
+> Jane: **[[[75;stop("John: ")]]]**
 
 and after generation:
 
@@ -231,7 +231,7 @@ The append function simply adds some text onto the end of a streamed FIM inserti
 >
 > John: That's an interesting angle.
 >
-> Jane: [[[75;stop("John: ");append("\nJane: ")]]]
+> Jane: **[[[75;stop("John: ");append("\nJane: ")]]]**
 
 and after generation:
 
@@ -261,7 +261,7 @@ Now all you have to do is click after the "John: " label and type your response,
 
 One strategy for writing a story with FIMpad is to start with a sentence that you don't know how to finish.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, [[[120]]]
+> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, **[[[120]]]**
 
 after generation:
 
@@ -275,7 +275,7 @@ I don't want George to be known for his playful antics, so I estimate the descri
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his [[[5]]], his love of bananas, and his uncanny ability to mimic human behavior.
+> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his **[[[5]]]** , his love of bananas, and his uncanny ability to mimic human behavior.
 >
 >One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
 
@@ -293,7 +293,7 @@ Now let's provide a suffix after this next tag to drive Jake's paragraph towards
 >
 > The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
 >
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,[[[120]]]
+> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, **[[[120]]]**
 >
 > Because of that, Jake started to get very nervous.
 
@@ -307,7 +307,7 @@ after generation:
 >
 > That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
 >
-> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer
+> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer,
 >
 > Because of that, Jake started to get very nervous.
 
@@ -321,7 +321,7 @@ The "Jake's heart" paragraph near the end was cut off by the max token limit of 
 >
 > That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
 >
-> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer[[[55;stop(".\n","?\n","!\n")]]]
+> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, **[[[55;stop(".\n","?\n","!\n")]]]**
 
 after generation:
 
@@ -369,7 +369,7 @@ Below is an example of how to start a virtual role-based chat, before generation
 >
 > ^^^^^ASSISTANT RESPONSE^^^^^
 >
-> [[[1000;append("\n\n\n^^^^^USER PROMPT^^^^^\n")]]]
+> **[[[1000;append("\n\n\n^^^^^USER PROMPT^^^^^\n")]]]**
 
 after generating two turns:
 
