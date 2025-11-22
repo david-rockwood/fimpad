@@ -6,6 +6,8 @@ The first release will likely be in December 2025.
 
 If you don't mind bugs you can try it early by following the quick start below, or by getting the latest CI artifact build for Linux in the actions tab.
 
+---
+
 ## Quick start
 
 ```bash
@@ -16,9 +18,13 @@ pip install -e ".[dev]"
 python -m fimpad
 ```
 
+---
+
 ## Overview
 
 FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do fill-in-the-middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
+
+---
 
 ## The server
 
@@ -29,6 +35,8 @@ A recent build of llama.cpp llama-server is recommended, available at:
 https://github.com/ggml-org/llama.cpp
 ```
 When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster, larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
+
+---
 
 ## The LLMs
 
@@ -47,7 +55,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 
 ---
 
-# Understanding FIMpad’s tag tystem
+## Understanding FIMpad’s tag tystem
 
 FIMpad adds a small, lightweight “language” on top of plain text so you can run **Fill-In-the-Middle (FIM)** completions directly inside your documents.
 Everything happens through **tags**, which are little blocks of text surrounded by:
@@ -210,7 +218,7 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 
 ---
 
-## 6. Summary Cheat Sheet
+## Tag Summary
 
 | Tag Type          | Looks Like                      | Purpose                                   |
 | ----------------- | ------------------------------- | ----------------------------------------- |
@@ -221,7 +229,7 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 
 ---
 
-## FIM tags
+## Using FIM tags
 
 All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before insertion.
 
@@ -238,6 +246,8 @@ Upon execution of the FIM tag, the tag is deleted from the document. All of the 
 In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
 
 Any valid tag that has an integer as the fourth character after the three opening bracket characters is a FIM tag.
+
+---
 
 ## The FIM tag stop() function
 
@@ -313,6 +323,8 @@ So we now have a single comment from Jane, followed by a new line with the carat
 
 Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
 
+---
+
 ## The FIM tag append() function
 
 The append function simply adds some text onto the end of a streamed FIM insertion. See the example below, before generation.
@@ -356,6 +368,8 @@ and after generation:
 > Jane: 
 
 Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the carat, then press Ctrl+Shift+Enter.
+
+---
 
 ## Writing a story with FIMpad
 
