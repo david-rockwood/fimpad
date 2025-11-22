@@ -4,7 +4,7 @@ A text editor focused on LLM FIM (fill-in-the-middle) workflows within a text fi
 
 The first release will likely be in December 2025.
 
-If you don't mind bugs you can try it early by following the quick start below, or by getting the latest CI build for Linux in the actions tab.
+If you don't mind bugs you can try it early by following the quick start below, or by getting the latest CI artifact build for Linux in the actions tab.
 
 ## Quick start
 
