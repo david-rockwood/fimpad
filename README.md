@@ -135,81 +135,9 @@ and after generation:
 
 It is not guaranteed that the LLM will generate a specific stop sequence, but it becomes likely when there is a well-established pattern of consistent repetition of that sequence in the prefix and/or the suffix.
 
-So with the stop() function you are set up to just start typing your reply to Jane after the FIM generation. When you are ready to get more text from the LLM, in order to avoid retyping the FIM tag, you can press Ctrl+Shift+Enter (or use the menu entry at AI->Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Alt+Enter (or use the menu entry at AI->Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
+In order to avoid retyping the FIM tag, you can press Ctrl+Shift+Enter (or use the menu entry at AI->Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Alt+Enter (or use the menu entry at AI->Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
 
-But there is another issue that still makes chatting with Jane inconvenient. See the example below, where a statement from John has been typed and then Ctrl+Alt+Enter has been pressed to paste in the previously executed FIM tag. This is before generation.
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle. **[[[75;stop("John: ")]]]**
-
-and after generation:
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle. But, as I was saying, I am eager to see a paradigm shift towards a more sensible allocation of resources. I think that people will start to value things that are useful and that have a longer lifespan.
->
-> Jane: Yes, I agree. I think that people will start to value things that are useful and that have a longer lifespan. I think that the economy will start
-
-The model continued speaking for John. Then it ran out of tokens mid-sentence during Jane's comment. To avoid this you need to type "Jane: " on a new line. Then put the tag after "Jane: ". See how this looks below, before generation.
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle.
->
-> Jane: **[[[75;stop("John: ")]]]**
-
-and after generation:
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle.
->
-> Jane: 3D printers are like a second Industrial Revolution.
->
-> John: 
-
-This finally gives us what we want, a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
+So we now have a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
 
 Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
 
