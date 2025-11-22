@@ -114,13 +114,15 @@ class FIMPad(tk.Tk):
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    def _center_window(self, window: tk.Toplevel) -> None:
+    def _center_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
+        parent_widget = parent or window.master or self
         try:
+            parent_widget = parent_widget.winfo_toplevel()
             window.update_idletasks()
-            parent_x = self.winfo_rootx()
-            parent_y = self.winfo_rooty()
-            parent_w = self.winfo_width()
-            parent_h = self.winfo_height()
+            parent_x = parent_widget.winfo_rootx()
+            parent_y = parent_widget.winfo_rooty()
+            parent_w = parent_widget.winfo_width()
+            parent_h = parent_widget.winfo_height()
             win_w = window.winfo_width()
             win_h = window.winfo_height()
             x = parent_x + max(0, (parent_w - win_w) // 2)
@@ -129,11 +131,16 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             pass
 
-    def _prepare_child_window(self, window: tk.Toplevel) -> None:
-        window.transient(self)
+    def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
+        parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
-            window.attributes("-topmost", True)
-        self._center_window(window)
+            parent_widget = parent_widget.winfo_toplevel()
+            window.transient(parent_widget)
+            window.lift(parent_widget)
+            parent_widget.lift()
+            parent_widget.bind("<FocusIn>", lambda _e, w=window: w.lift(), add="+")
+        window.bind("<FocusIn>", lambda e: e.widget.lift(), add="+")
+        self._center_window(window, parent_widget)
 
     # ---------- Notebook / Tabs ----------
 
