@@ -360,7 +360,7 @@ after generating two turns:
 
 Note that the first assistant response is shorter than the second assistant response, even though both FIM tags specified a max of 1000 tokens. This is apparently because a shorter response seemed appropriate to the LLM for the first user prompt, so it didn't use the full amount of tokens available. In fact, the second response looks far shorter than 1000 tokens as well. You don't always get the max from the LLM. If you wanted the assistant to give longer responses, you could probably achieve that by writing a longer example response for the assistant in the prefix. And if you didn't feel like writing that long example assistant response, you could generate it by completions with FIM tags. Every time the LLM stopped early, you would type the first few words of a new sentence and then generate again.
 
-## Slicing up context
+## Context as memory
 
 At first glance it seems like FIM generation lacks memory in comparison to standard role-based (system/user/assistant) chats with LLMs. After all, role-based chats have a chat history, a list of messages that all make up the context for the duration of a chat session. But FIM generation does have memory; it lives in the prefix and in the suffix. And in FIMpad, the prefix and the suffix are on full display in the document. And they are editable.
 
