@@ -374,7 +374,7 @@ But context management isn't only about addition, it is also about subtraction, 
 
 Context boundary tags are the second class of FIMpad tags. There are four tags in this class: [[[prefix]]]  [[[suffix]]]  [[[PREFIX]]]  and  [[[SUFFIX]]].
 
-[[[prefix]]] and [[[PREFIX]]] mark the position in the document where the prefix begins. [[[suffix]]] and [[[SUFFIX]]] mark the position in the document where the suffix ends. These tags allow you to narrow the range of what is sent to the model as context when a FIM tag is executed. There can be multiple FIM tags and multiple context boundary tags in a document. When a FIM tag is executed, the nearest [[[prefix]]] or [[[PREFIX]]] above it applies. And the nearest suffix tag below. If the nearest context boundary tag is lowercase, it is deleted from the document when it is applied to a FIM generation. If it is uppercase it is not deleted.
+[[[prefix]]] and [[[PREFIX]]] mark the position in the document where the prefix begins. [[[suffix]]] and [[[SUFFIX]]] mark the position in the document where the suffix ends. These tags allow you to narrow the range of what is sent to the model as context when a FIM tag is executed. There can be multiple FIM tags and multiple context boundary tags in a document. When a FIM tag is executed, the nearest [[[prefix]]] or [[[PREFIX]]] above it applies. And the nearest suffix tag below. If the nearest context boundary tag is lowercase, it is deleted from the document when it is applied to a FIM generation. If it is uppercase it is not deleted. Context boundary tags are optional companions to FIM tags. A FIM tag can use zero, one, or two boundary tags.
 
 Below are some examples of uses for context boundary tags.
 
@@ -391,7 +391,7 @@ As a hard separator from text that does not match the format that you want to ge
 >
 > Lt. Bixby: "Has anyone seen McAdams? Where is that guy?!"
 >
-> Officer Perez: Haven't seen him since lunch, boss.
+> Officer Perez: Haven't seen him since before lunch, boss.
 >
 > INTERIOR, A dark bar
 >
@@ -401,11 +401,24 @@ As a hard separator from text that does not match the format that you want to ge
 
 As a temporary way to hide some fact that you don't want the LLM to know yet:
 
-> Sarah thought she heard something, but wasn't sure. It was probably nothing. Mittens was always knocking over the baskets in the laundry room. Sarah decided to **[[[100]]][[[suffix]]]***
-> Just then the killer emerged from a dark corner and lunged at Sarah.
+> Sarah thought she heard something, but wasn't sure. It was probably nothing. Mittens was always knocking over the baskets in the laundry room. Sarah decided to **[[[100]]] [[[suffix]]]**
+>
+> Just then the killer emerged from a dark corner and lunged at Sarah!
 
 Multiple separate tasks in one document:
-> 
+> 7 * 2 + 3 = [[[2]]]
+>
+> **[[[SUFFIX]]][[[PREFIX]]]**
+>
+> The following is a four line stanza about Toronto in winter:
+>
+> [[[64]]]
+>
+> **[[[SUFFIX]]][[[PREFIX]]]**
+>
+> 0 1 1 2[[[7]]]13 21
+
+That last one will usually fill in the missing parts of the Fibonacci sequence.
 
 
 
