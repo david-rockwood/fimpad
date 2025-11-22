@@ -11,6 +11,7 @@ import subprocess
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, filedialog, messagebox, ttk
@@ -71,6 +72,8 @@ class FIMPad(tk.Tk):
         self._dictionary = self._load_dictionary(self._spell_lang)
         self._spell_ignore = set()  # session-level ignores
 
+        self._fim_log: list[dict[str, str]] = []
+
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
         self._fim_generation_active: bool = False
@@ -91,6 +94,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Shift-KP_Enter>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Control-Alt-Return>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
+        self.bind_all("<Control-l>", self._on_show_fim_log_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_find_dialog())
         self.bind_all("<Control-h>", lambda e: self._open_replace_dialog())
         self.bind_all("<Control-Escape>", self._on_interrupt_stream)
@@ -570,6 +574,37 @@ class FIMPad(tk.Tk):
         text.see("insert")
         text.focus_set()
         self._schedule_line_number_update(frame, delay_ms=10)
+
+    def _log_fim_generation(self, fim_request: FIMRequest) -> None:
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        if fim_request.use_completion:
+            prefix_text = fim_request.before_region
+            suffix_text = fim_request.safe_suffix
+        else:
+            prefix_text = f"{self.cfg['fim_prefix']}{fim_request.before_region}"
+            suffix_text = (
+                f"{self.cfg['fim_suffix']}{fim_request.safe_suffix}{self.cfg['fim_middle']}"
+            )
+
+        self._fim_log.append(
+            {"time": timestamp, "prefix": prefix_text, "suffix": suffix_text}
+        )
+
+    def _open_fim_log_tab(self) -> None:
+        if not self._fim_log:
+            log_body = "FIM Generation Log is empty.\n"
+        else:
+            lines = ["FIM Generation Log", ""]
+            for entry in self._fim_log:
+                lines.append(f"[{entry['time']}]")
+                lines.append("Prefix:")
+                lines.append(entry["prefix"])
+                lines.append("Suffix:")
+                lines.append(entry["suffix"])
+                lines.append("")
+            log_body = "\n".join(lines).rstrip() + "\n"
+
+        self._new_tab(content=log_body, title="FIM Log")
 
     def _current_tab_state(self):
         tab = self.nb.select()
@@ -1732,6 +1767,10 @@ class FIMPad(tk.Tk):
         self.interrupt_stream()
         return "break"
 
+    def _on_show_fim_log_shortcut(self, event):
+        self._open_fim_log_tab()
+        return "break"
+
     def interrupt_stream(self):
         if not self._fim_generation_active:
             return
@@ -1842,6 +1881,7 @@ class FIMPad(tk.Tk):
     def _launch_fim_or_completion_stream(self, st, content, fim_request: FIMRequest):
         cfg = self.cfg
         self._last_fim_marker = fim_request.marker.raw
+        self._log_fim_generation(fim_request)
 
         request_cfg = {
             "temperature": cfg["temperature"],
