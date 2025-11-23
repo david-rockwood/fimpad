@@ -29,6 +29,10 @@ DEFAULTS = {
     "scroll_speed_multiplier": 1,
     "line_numbers_enabled": False,
     "spellcheck_enabled": True,
+    # Spellcheck tweaks
+    "spellcheck_view_buffer_lines": 30,
+    "spellcheck_scroll_debounce_ms": 4000,
+    "spellcheck_full_document_line_threshold": 300,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
     "follow_stream_enabled": True,
 }
