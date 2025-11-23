@@ -980,6 +980,13 @@ class FIMPad(tk.Tk):
         if scrollbar:
             scrollbar.set(first, last)
         self._schedule_line_number_update(frame, delay_ms=10)
+        scroll_delay = int(
+            self.cfg.get(
+                "spellcheck_scroll_debounce_ms",
+                DEFAULTS["spellcheck_scroll_debounce_ms"],
+            )
+        )
+        self._schedule_spellcheck_for_frame(frame, delay_ms=scroll_delay)
 
     def _on_scrollbar_scroll(self, frame, *args) -> None:
         st = self.tabs.get(frame)
@@ -2579,7 +2586,12 @@ class FIMPad(tk.Tk):
 
                     elif kind == "spell_result":
                         # Apply tag updates
-                        text.tag_remove("misspelled", "1.0", "end")
+                        region = item.get("region")
+                        if region:
+                            start_region, end_region = region
+                            text.tag_remove("misspelled", start_region, end_region)
+                        else:
+                            text.tag_remove("misspelled", "1.0", "end")
                         for sidx, eidx in item.get("spans", []):
                             text.tag_add("misspelled", sidx, eidx)
 
@@ -2723,6 +2735,54 @@ class FIMPad(tk.Tk):
         # schedule a new one
         st["_spell_timer"] = self.after(delay_ms, lambda fr=frame: self._spawn_spellcheck(fr))
 
+    @staticmethod
+    def _relative_index_to_absolute(
+        base_line: int, base_col: int, relative_index: str
+    ) -> str:
+        rel_line_str, rel_col_str = relative_index.split(".")
+        rel_line = int(rel_line_str)
+        rel_col = int(rel_col_str)
+        abs_line = base_line + rel_line - 1
+        abs_col = rel_col + (base_col if rel_line == 1 else 0)
+        return f"{abs_line}.{abs_col}"
+
+    def _spell_region_for_text(self, text: tk.Text) -> tuple[str, str, int, int]:
+        total_lines = int(text.index("end-1c").split(".")[0])
+        threshold = int(
+            self.cfg.get(
+                "spellcheck_full_document_line_threshold",
+                DEFAULTS["spellcheck_full_document_line_threshold"],
+            )
+        )
+        if total_lines <= threshold:
+            start_idx = "1.0"
+            end_idx = "end-1c"
+        else:
+            buffer_lines = int(
+                self.cfg.get(
+                    "spellcheck_view_buffer_lines",
+                    DEFAULTS["spellcheck_view_buffer_lines"],
+                )
+            )
+            try:
+                first_visible = text.index("@0,0")
+                last_visible = text.index(f"@0,{text.winfo_height()}")
+            except tk.TclError:
+                first_visible = "1.0"
+                last_visible = "1.0"
+
+            start_line = max(1, int(first_visible.split(".")[0]) - buffer_lines)
+            end_line = min(total_lines, int(last_visible.split(".")[0]) + buffer_lines)
+
+            start_idx = f"{start_line}.0"
+            try:
+                end_idx = text.index(f"{end_line}.end")
+            except tk.TclError:
+                end_idx = text.index("end-1c")
+
+        base_line_str, base_col_str = start_idx.split(".")
+        return start_idx, end_idx, int(base_line_str), int(base_col_str)
+
     def _spawn_spellcheck(self, frame):
         dictionary = getattr(self, "_dictionary", None)
         if not self.cfg.get("spellcheck_enabled", True):
@@ -2741,13 +2801,29 @@ class FIMPad(tk.Tk):
         if frame not in self.tabs:
             return
         st = self.tabs[frame]
+        st["_spell_timer"] = None
         t = st["text"]
         # Snapshot text (must be on main thread)
-        txt = t.get("1.0", "end-1c")
+        region_start, region_end, base_line, base_col = self._spell_region_for_text(t)
+        txt = t.get(region_start, region_end)
         ignore = set(self._spell_ignore)  # copy
         dictionary = getattr(self, "_dictionary", None)
+        region = (region_start, region_end)
 
-        def worker(tab_id, text_snapshot, ignore_set, dict_obj):
+        def worker(
+            tab_id, text_snapshot, ignore_set, dict_obj, base_ln: int, base_col: int, span_region
+        ):
+            def emit(spans: list[tuple[str, str]]):
+                self._result_queue.put(
+                    {
+                        "ok": True,
+                        "kind": "spell_result",
+                        "tab": tab_id,
+                        "spans": spans,
+                        "region": span_region,
+                    }
+                )
+
             try:
                 # Extract words + offsets
                 words = []
@@ -2759,9 +2835,7 @@ class FIMPad(tk.Tk):
                     words.append(w)
                     offsets.append((m.start(), m.end()))
                 if not words:
-                    self._result_queue.put(
-                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
-                    )
+                    emit([])
                     return
 
                 if dict_obj:
@@ -2773,21 +2847,19 @@ class FIMPad(tk.Tk):
                     miss = {w for w in miss if w not in ignore_set}
 
                     if not miss:
-                        self._result_queue.put(
-                            {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
-                        )
+                        emit([])
                         return
 
                     content = text_snapshot
                     out_spans = []
                     for w, (s_off, e_off) in zip(words, offsets, strict=False):
                         if w in miss:
-                            sidx = offset_to_tkindex(content, s_off)
-                            eidx = offset_to_tkindex(content, e_off)
+                            sidx_rel = offset_to_tkindex(content, s_off)
+                            eidx_rel = offset_to_tkindex(content, e_off)
+                            sidx = self._relative_index_to_absolute(base_ln, base_col, sidx_rel)
+                            eidx = self._relative_index_to_absolute(base_ln, base_col, eidx_rel)
                             out_spans.append((sidx, eidx))
-                    self._result_queue.put(
-                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
-                    )
+                    emit(out_spans)
                     return
 
                 # Fallback path for environments without dictionaries (used by tests)
@@ -2809,30 +2881,36 @@ class FIMPad(tk.Tk):
                     miss = {w for w in miss if w not in ignore_set}
 
                     if not miss:
-                        self._result_queue.put(
-                            {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
-                        )
+                        emit([])
                         return
 
                     content = text_snapshot
                     out_spans = []
                     for w, (s_off, e_off) in zip(words, offsets, strict=False):
                         if w in miss:
-                            sidx = offset_to_tkindex(content, s_off)
-                            eidx = offset_to_tkindex(content, e_off)
+                            sidx_rel = offset_to_tkindex(content, s_off)
+                            eidx_rel = offset_to_tkindex(content, e_off)
+                            sidx = self._relative_index_to_absolute(base_ln, base_col, sidx_rel)
+                            eidx = self._relative_index_to_absolute(base_ln, base_col, eidx_rel)
                             out_spans.append((sidx, eidx))
-                    self._result_queue.put(
-                        {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": out_spans}
-                    )
+                    emit(out_spans)
                     return
             except Exception:
                 # swallow spell errors silently
-                self._result_queue.put(
-                    {"ok": True, "kind": "spell_result", "tab": tab_id, "spans": []}
-                )
+                emit([])
 
         threading.Thread(
-            target=worker, args=(self.nb.select(), txt, ignore, dictionary), daemon=True
+            target=worker,
+            args=(
+                self.nb.select(),
+                txt,
+                ignore,
+                dictionary,
+                base_line,
+                base_col,
+                region,
+            ),
+            daemon=True,
         ).start()
 
     def _spell_context_menu(self, event, frame):

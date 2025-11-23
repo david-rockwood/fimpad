@@ -24,6 +24,12 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 ---
 
+## Spellcheck behavior
+
+FIMpad spellchecks the visible portion of a document and a buffer of nearby lines so that large files do not constantly reprocess the full text while you scroll. By default, files under roughly 300 lines are checked in full. Larger files check about 30 lines above and below the viewport, and scrolling debounces for around four seconds before re-running the check. The buffer size, debounce interval, and full-document threshold can be customized in the config file via the keys `spellcheck_view_buffer_lines`, `spellcheck_scroll_debounce_ms`, and `spellcheck_full_document_line_threshold`.
+
+---
+
 ## The server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
