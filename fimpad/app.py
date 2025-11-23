@@ -21,7 +21,7 @@ import enchant
 
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
-from .example_resources import iter_examples
+from .library_resources import iter_library
 from .parser import (
     FIMRequest,
     FIMTag,
@@ -55,7 +55,7 @@ class FIMPad(tk.Tk):
         except Exception:
             pass
 
-        self._examples = iter_examples()
+        self._library = iter_library()
         self._spell_menu_var: tk.BooleanVar | None = None
         self._wrap_menu_var: tk.BooleanVar | None = None
         self._follow_menu_var: tk.BooleanVar | None = None
@@ -823,18 +823,30 @@ class FIMPad(tk.Tk):
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
-        examples_menu = tk.Menu(menubar, tearoff=0)
-        if not self._examples:
-            examples_menu.add_command(label="(No examples found)", state="disabled")
+        library_menu = tk.Menu(menubar, tearoff=0)
+        if not self._library:
+            library_menu.add_command(label="(No library files found)", state="disabled")
         else:
-            for title, resource in self._examples:
-                examples_menu.add_command(
+            top_level_items = self._library.get(None, [])
+            for title, resource in top_level_items:
+                library_menu.add_command(
                     label=title,
-                    command=lambda t=title, r=resource: self._open_example_resource(
-                        t, r
-                    ),
+                    command=lambda t=title, r=resource: self._open_library_resource(t, r),
                 )
-        menubar.add_cascade(label="Examples", menu=examples_menu)
+
+            for group, entries in self._library.items():
+                if group is None:
+                    continue
+                submenu = tk.Menu(library_menu, tearoff=0)
+                for title, resource in entries:
+                    submenu.add_command(
+                        label=title,
+                        command=lambda t=title, r=resource: self._open_library_resource(
+                            t, r
+                        ),
+                    )
+                library_menu.add_cascade(label=group, menu=submenu)
+        menubar.add_cascade(label="Library", menu=library_menu)
 
         self.config(menu=menubar)
 
@@ -1178,15 +1190,15 @@ class FIMPad(tk.Tk):
 
         messagebox.showerror(title, message, detail=detail)
 
-    # ---------- Examples ----------
+    # ---------- Library ----------
 
-    def _open_example_resource(self, title: str, resource: Traversable) -> None:
+    def _open_library_resource(self, title: str, resource: Traversable) -> None:
         try:
             with resources.as_file(resource) as path, open(path, encoding="utf-8") as f:
                 content = f.read()
         except Exception as exc:
             self._show_error(
-                "Example Error", "Could not load the example.", detail=f"{title}: {exc}"
+                "Library Error", "Could not load the library file.", detail=f"{title}: {exc}"
             )
             return
 
