@@ -1493,7 +1493,7 @@ class FIMPad(tk.Tk):
             if not pattern:
                 return
             content = text.get("1.0", tk.END)
-            start_offset = int(text.count("1.0", text.index(tk.INSERT), "chars")[0])
+            start_offset = len(text.get("1.0", tk.INSERT))
             match = pattern.search(content, start_offset)
             wrapped = False
             if match is None:
