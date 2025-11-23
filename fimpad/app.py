@@ -150,15 +150,24 @@ class FIMPad(tk.Tk):
                 except tk.TclError:
                     self.attributes("-zoomed", False)
 
+    def _lift_if_exists(self, widget: tk.Misc) -> None:
+        with contextlib.suppress(tk.TclError):
+            if widget.winfo_exists():
+                widget.lift()
+
     def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
             window.transient(parent_widget)
             window.lift(parent_widget)
-            parent_widget.lift()
-            parent_widget.bind("<FocusIn>", lambda _e, w=window: w.lift(), add="+")
-        window.bind("<FocusIn>", lambda e: e.widget.lift(), add="+")
+            self._lift_if_exists(parent_widget)
+            parent_widget.bind(
+                "<FocusIn>",
+                lambda _e, w=window: self._lift_if_exists(w),
+                add="+",
+            )
+        window.bind("<FocusIn>", lambda e: self._lift_if_exists(e.widget), add="+")
         self._center_window(window, parent_widget)
 
     def _configure_find_highlight(self, text: tk.Text, tag: str = "find_replace_match") -> None:
