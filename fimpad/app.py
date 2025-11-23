@@ -2747,7 +2747,10 @@ class FIMPad(tk.Tk):
         return f"{abs_line}.{abs_col}"
 
     def _spell_region_for_text(self, text: tk.Text) -> tuple[str, str, int, int]:
-        total_lines = int(text.index("end-1c").split(".")[0])
+        try:
+            total_lines = int(text.index("end-1c").split(".")[0])
+        except Exception:
+            return "1.0", "end-1c", 1, 0
         threshold = int(
             self.cfg.get(
                 "spellcheck_full_document_line_threshold",
@@ -2804,7 +2807,12 @@ class FIMPad(tk.Tk):
         st["_spell_timer"] = None
         t = st["text"]
         # Snapshot text (must be on main thread)
-        region_start, region_end, base_line, base_col = self._spell_region_for_text(t)
+        try:
+            region_start, region_end, base_line, base_col = self._spell_region_for_text(t)
+        except AttributeError:
+            region_start, region_end, base_line, base_col = FIMPad._spell_region_for_text(
+                self, t
+            )
         txt = t.get(region_start, region_end)
         ignore = set(self._spell_ignore)  # copy
         dictionary = getattr(self, "_dictionary", None)
@@ -2856,8 +2864,8 @@ class FIMPad(tk.Tk):
                         if w in miss:
                             sidx_rel = offset_to_tkindex(content, s_off)
                             eidx_rel = offset_to_tkindex(content, e_off)
-                            sidx = self._relative_index_to_absolute(base_ln, base_col, sidx_rel)
-                            eidx = self._relative_index_to_absolute(base_ln, base_col, eidx_rel)
+                            sidx = FIMPad._relative_index_to_absolute(base_ln, base_col, sidx_rel)
+                            eidx = FIMPad._relative_index_to_absolute(base_ln, base_col, eidx_rel)
                             out_spans.append((sidx, eidx))
                     emit(out_spans)
                     return
@@ -2890,8 +2898,8 @@ class FIMPad(tk.Tk):
                         if w in miss:
                             sidx_rel = offset_to_tkindex(content, s_off)
                             eidx_rel = offset_to_tkindex(content, e_off)
-                            sidx = self._relative_index_to_absolute(base_ln, base_col, sidx_rel)
-                            eidx = self._relative_index_to_absolute(base_ln, base_col, eidx_rel)
+                            sidx = FIMPad._relative_index_to_absolute(base_ln, base_col, sidx_rel)
+                            eidx = FIMPad._relative_index_to_absolute(base_ln, base_col, eidx_rel)
                             out_spans.append((sidx, eidx))
                     emit(out_spans)
                     return
