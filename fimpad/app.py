@@ -75,8 +75,10 @@ class FIMPad(tk.Tk):
         self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._build_menu()
-        self._tab_title_max_chars = 20
-        self._tab_fixed_width = 170
+        self._tab_max_width = 200
+        self._tab_min_width = 120
+        self._tab_min_width_threshold = 11
+        self._current_tab_width = self._tab_max_width
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -204,7 +206,7 @@ class FIMPad(tk.Tk):
         self._tab_scroll_left = ttk.Button(
             container, text="◀", width=2, command=lambda: self._shift_tab_focus(-1)
         )
-        self._tab_scroll_left.grid(row=0, column=0, sticky="ns")
+        self._tab_scroll_left.grid(row=0, column=0, sticky="n")
 
         self.nb = ttk.Notebook(container)
         self.nb.grid(row=0, column=1, sticky="nsew")
@@ -213,7 +215,7 @@ class FIMPad(tk.Tk):
         self._tab_scroll_right = ttk.Button(
             container, text="▶", width=2, command=lambda: self._shift_tab_focus(1)
         )
-        self._tab_scroll_right.grid(row=0, column=2, sticky="ns")
+        self._tab_scroll_right.grid(row=0, column=2, sticky="n")
 
         self.tabs = {}  # frame -> state dict
         self._tab_close_image: tk.PhotoImage | None = None
@@ -223,7 +225,9 @@ class FIMPad(tk.Tk):
         self._tab_close_compound_padding = (8, 4, 16, 4)
         self._tab_close_hover_tab: str | None = None
         self._setup_closable_tabs()
+        self.nb.bind("<Configure>", lambda e: self._update_tab_width(), add="+")
         self._update_tab_scroll_buttons()
+        self._update_tab_width()
 
     def _setup_closable_tabs(self) -> None:
         self._tab_close_image = self._create_close_image(
@@ -292,7 +296,7 @@ class FIMPad(tk.Tk):
             style.configure(
                 "ClosableNotebook.TNotebook.Tab",
                 padding=(8, 4, 16, 4),
-                width=self._tab_fixed_width,
+                width=self._current_tab_width,
                 anchor="w",
             )
             self.nb.configure(style="ClosableNotebook.TNotebook")
@@ -304,7 +308,7 @@ class FIMPad(tk.Tk):
 
         with contextlib.suppress(tk.TclError):
             ttk.Style(self).configure(
-                "TNotebook.Tab", width=self._tab_fixed_width, anchor="w"
+                "TNotebook.Tab", width=self._current_tab_width, anchor="w"
             )
 
         self._tab_close_support = "compound"
@@ -331,9 +335,32 @@ class FIMPad(tk.Tk):
                     paint(bl_tr[0] + dx, bl_tr[1] + dy)
         return image
 
+    def _apply_tab_width(self, width: int) -> None:
+        self._current_tab_width = width
+        style = getattr(self, "style", None) or ttk.Style(self)
+        if self._tab_close_support == "element":
+            style.configure("ClosableNotebook.TNotebook.Tab", width=width)
+        else:
+            style.configure("TNotebook.Tab", width=width)
+
+    def _truncate_tab_title(self, title: str) -> str:
+        font = self.app_font
+        available_width = max(24, self._current_tab_width - 28)
+        if self._tab_close_support == "compound" and self._tab_close_compound_padding:
+            available_width -= self._tab_close_compound_padding[2]
+        if self._tab_close_image:
+            available_width -= self._tab_close_image.width()
+        if font.measure(title) <= available_width:
+            return title
+        ellipsis = "…"
+        for i in range(len(title), 0, -1):
+            candidate = f"{title[:i]}{ellipsis}"
+            if font.measure(candidate) <= available_width:
+                return candidate
+        return ellipsis
+
     def _apply_tab_title(self, tab_id, title: str) -> None:
-        if len(title) > self._tab_title_max_chars:
-            title = f"{title[: self._tab_title_max_chars - 1]}…"
+        title = self._truncate_tab_title(title)
         if self._tab_close_support == "compound":
             if not tab_id:
                 return
@@ -352,6 +379,25 @@ class FIMPad(tk.Tk):
             self.nb.tab(tab_id, **kwargs)
         else:
             self.nb.tab(tab_id, text=title)
+
+    def _update_tab_width(self) -> None:
+        tabs = self.nb.tabs()
+        try:
+            total_width = self.nb.winfo_width()
+        except tk.TclError:
+            return
+        if not total_width:
+            return
+        tab_count = max(1, len(tabs))
+        if tab_count >= self._tab_min_width_threshold:
+            target_width = self._tab_min_width
+        else:
+            target_width = total_width // tab_count
+            target_width = max(self._tab_min_width, min(self._tab_max_width, target_width))
+        self._apply_tab_width(target_width)
+        for frame, st in self.tabs.items():
+            title = self._format_tab_title(st)
+            self._apply_tab_title(frame, title)
 
     def _shift_tab_focus(self, delta: int) -> None:
         tabs = self.nb.tabs()
@@ -630,6 +676,7 @@ class FIMPad(tk.Tk):
         self._apply_tab_title(frame, title)
         self.nb.select(frame)
         self._update_tab_scroll_buttons()
+        self._update_tab_width()
 
         if self._last_tab is None:
             self._last_tab = self.nb.select()
@@ -659,6 +706,7 @@ class FIMPad(tk.Tk):
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
             self._schedule_line_number_update(current, delay_ms=10)
         self._update_tab_scroll_buttons()
+        self._update_tab_width()
 
         self._last_tab = current
         self._sync_wrap_menu_var()
@@ -771,6 +819,7 @@ class FIMPad(tk.Tk):
         self.nb.forget(cur)
         self.tabs.pop(frame, None)
         self._update_tab_scroll_buttons()
+        self._update_tab_width()
         if not self.tabs:
             self._new_tab()
 
