@@ -17,7 +17,7 @@ DEFAULTS = {
     "fim_prefix": "<|fim_prefix|>",
     "fim_suffix": "<|fim_suffix|>",
     "fim_middle": "<|fim_middle|>",
-    "font_family": "DejaVu Sans Mono",
+    "font_family": "TkFixedFont",
     "font_size": 16,
     "editor_padding_px": 10,
     "line_number_padding_px": 10,
