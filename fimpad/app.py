@@ -518,6 +518,7 @@ class FIMPad(tk.Tk):
             st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
         )
         self._clear_line_spacing(text)
+        self._bind_scroll_events(frame, text, line_numbers, gutter_gap, content_frame)
 
         # Spellcheck tag + bindings
         text.tag_configure(
@@ -923,8 +924,53 @@ class FIMPad(tk.Tk):
                 except (TypeError, ValueError):
                     pass
                 options[opt] = 0
-            if options:
-                text.tag_configure(tag, **options)
+                if options:
+                    text.tag_configure(tag, **options)
+
+    def _bind_scroll_events(
+        self,
+        frame,
+        text: tk.Text,
+        line_numbers: tk.Canvas,
+        gutter_gap: tk.Frame,
+        content_frame: tk.Frame,
+    ) -> None:
+        widgets = (text, line_numbers, gutter_gap, content_frame)
+        for widget in widgets:
+            widget.bind(
+                "<MouseWheel>",
+                lambda e, fr=frame: self._on_mousewheel(fr, e),
+                add="+",
+            )
+            widget.bind(
+                "<Button-4>",
+                lambda e, fr=frame: self._on_mousewheel(fr, e),
+                add="+",
+            )
+            widget.bind(
+                "<Button-5>",
+                lambda e, fr=frame: self._on_mousewheel(fr, e),
+                add="+",
+            )
+
+    def _on_mousewheel(self, frame, event) -> str | None:
+        st = self.tabs.get(frame)
+        if not st:
+            return None
+
+        multiplier = max(1, int(self.cfg.get("scroll_speed_multiplier", 1)))
+        direction = 0
+        if getattr(event, "delta", 0):
+            direction = -1 if event.delta > 0 else 1
+        elif getattr(event, "num", None) in (4, 5):
+            direction = -1 if event.num == 4 else 1
+
+        if direction == 0:
+            return None
+
+        st["text"].yview_scroll(direction * multiplier, "units")
+        self._schedule_line_number_update(frame, delay_ms=10)
+        return "break"
 
     def _on_text_scroll(self, frame, first: str, last: str) -> None:
         st = self.tabs.get(frame)
@@ -1655,6 +1701,11 @@ class FIMPad(tk.Tk):
                 )
             )
         )
+        scroll_speed_var = tk.StringVar(
+            value=str(
+                cfg.get("scroll_speed_multiplier", DEFAULTS["scroll_speed_multiplier"])
+            )
+        )
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
@@ -1684,6 +1735,15 @@ class FIMPad(tk.Tk):
             onvalue=True,
             offvalue=False,
         ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
+        row += 1
+
+        add_combobox_row(
+            row,
+            "Scroll speed multiplier:",
+            scroll_speed_var,
+            [str(v) for v in range(1, 11)],
+            width=5,
+        )
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -1809,6 +1869,9 @@ class FIMPad(tk.Tk):
                 self.cfg["highlight1"] = highlight1_var.get().strip()
                 self.cfg["highlight2"] = highlight2_var.get().strip()
                 self.cfg["open_maximized"] = bool(open_maximized_var.get())
+                self.cfg["scroll_speed_multiplier"] = max(
+                    1, min(10, int(scroll_speed_var.get()))
+                )
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
                     self.cfg["spell_lang"] = self._spell_lang

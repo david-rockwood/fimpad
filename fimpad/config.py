@@ -26,6 +26,7 @@ DEFAULTS = {
     "highlight1": "#b40a0a",
     "highlight2": "#a4a4a4",
     "open_maximized": False,
+    "scroll_speed_multiplier": 1,
     "line_numbers_enabled": False,
     "spellcheck_enabled": True,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
