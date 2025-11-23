@@ -45,6 +45,8 @@ class FIMPad(tk.Tk):
         self.cfg = load_config()
         self.app_font = tkfont.Font(family=self.cfg["font_family"], size=self.cfg["font_size"])
 
+        self._apply_open_maximized(self.cfg.get("open_maximized", False))
+
         try:
             self.style = ttk.Style(self)
             if "clam" in self.style.theme_names():
@@ -131,6 +133,19 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             pass
 
+    def _apply_open_maximized(self, open_maximized: bool) -> None:
+        with contextlib.suppress(tk.TclError):
+            if open_maximized:
+                try:
+                    self.state("zoomed")
+                except tk.TclError:
+                    self.attributes("-zoomed", True)
+            else:
+                try:
+                    self.state("normal")
+                except tk.TclError:
+                    self.attributes("-zoomed", False)
+
     def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
@@ -141,6 +156,13 @@ class FIMPad(tk.Tk):
             parent_widget.bind("<FocusIn>", lambda _e, w=window: w.lift(), add="+")
         window.bind("<FocusIn>", lambda e: e.widget.lift(), add="+")
         self._center_window(window, parent_widget)
+
+    def _configure_find_highlight(self, text: tk.Text, tag: str = "find_replace_match") -> None:
+        text.tag_configure(
+            tag,
+            background=self.cfg["highlight2"],
+            foreground=self.cfg["bg"],
+        )
 
     # ---------- Notebook / Tabs ----------
 
@@ -447,6 +469,7 @@ class FIMPad(tk.Tk):
             selectbackground=self.cfg["highlight2"],
             selectforeground=self.cfg["bg"],
         )
+        self._configure_find_highlight(text)
         st = {
             "frame": frame,
             "path": None,
@@ -1209,6 +1232,7 @@ class FIMPad(tk.Tk):
         e1.focus_set()
 
         match_tag = "find_replace_match"
+        self._configure_find_highlight(text, match_tag)
         status_var = tk.StringVar(value="")
 
         def set_status(message: str) -> None:
@@ -1359,6 +1383,7 @@ class FIMPad(tk.Tk):
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
         highlight2_var = tk.StringVar(value=cfg["highlight2"])
+        open_maximized_var = tk.BooleanVar(value=cfg.get("open_maximized", False))
         spell_lang_var = tk.StringVar(value=self._spell_lang)
         available_spell_langs = self._available_spell_langs
         show_spell_lang = len(available_spell_langs) > 1
@@ -1374,6 +1399,15 @@ class FIMPad(tk.Tk):
         add_row(row, "Temperature:", temp_var)
         row += 1
         add_row(row, "Top-p:", top_p_var)
+        row += 1
+
+        tk.Checkbutton(
+            w,
+            text="Open maximized on startup",
+            variable=open_maximized_var,
+            onvalue=True,
+            offvalue=False,
+        ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -1498,6 +1532,7 @@ class FIMPad(tk.Tk):
                 self.cfg["bg"] = bg_var.get().strip()
                 self.cfg["highlight1"] = highlight1_var.get().strip()
                 self.cfg["highlight2"] = highlight2_var.get().strip()
+                self.cfg["open_maximized"] = bool(open_maximized_var.get())
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
                     self.cfg["spell_lang"] = self._spell_lang
@@ -1510,6 +1545,7 @@ class FIMPad(tk.Tk):
 
             pad_changed = (new_pad != prev_pad) or (new_line_pad != prev_line_pad)
             save_config(self.cfg)
+            self._apply_open_maximized(self.cfg["open_maximized"])
             self._dictionary = self._load_dictionary(self._spell_lang)
             self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
             for frame, st in self.tabs.items():
@@ -1522,6 +1558,7 @@ class FIMPad(tk.Tk):
                     selectbackground=self.cfg["highlight2"],
                     selectforeground=self.cfg["bg"],
                 )
+                self._configure_find_highlight(t)
                 t.tag_configure(
                     "misspelled",
                     underline=True,
