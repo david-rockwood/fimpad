@@ -1243,14 +1243,64 @@ class FIMPad(tk.Tk):
         t.see("1.0")
 
     def _show_error(self, title: str, message: str, detail: str | None = None) -> None:
-        try:
-            self.clipboard_clear()
-            clip_text = message if detail is None else f"{message}\n\nDetails: {detail}"
-            self.clipboard_append(clip_text)
-        except tk.TclError:
-            pass
+        dialog = tk.Toplevel(self)
+        dialog.title(title)
+        dialog.transient(self)
+        dialog.resizable(False, False)
+        dialog.grab_set()
 
-        messagebox.showerror(title, message, detail=detail)
+        frame = ttk.Frame(dialog, padding=12)
+        frame.grid(row=0, column=0, sticky="nsew")
+        dialog.columnconfigure(0, weight=1)
+
+        message_label = ttk.Label(frame, text=message, justify="left", wraplength=480)
+        message_label.grid(row=0, column=0, columnspan=2, sticky="w")
+
+        row = 1
+        if detail:
+            detail_font = (
+                self.app_font.cget("family"),
+                self.app_font.cget("size"),
+                "bold",
+            )
+            detail_label = ttk.Label(frame, text="Details:", font=detail_font)
+            detail_label.grid(row=row, column=0, sticky="nw", pady=(10, 2))
+
+            detail_text = tk.Text(
+                frame,
+                height=6,
+                width=60,
+                wrap="word",
+                state="normal",
+                background=self.cget("background"),
+                relief=tk.SOLID,
+                borderwidth=1,
+            )
+            detail_text.insert("1.0", detail)
+            detail_text.config(state="disabled")
+            detail_text.grid(row=row + 1, column=0, columnspan=2, sticky="nsew")
+            row += 2
+
+        def _copy_error_message() -> None:
+            clip_text = message if detail is None else f"{message}\n\nDetails: {detail}"
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(clip_text)
+            except tk.TclError:
+                pass
+
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=row, column=0, columnspan=2, pady=(12, 0), sticky="e")
+
+        copy_btn = ttk.Button(buttons, text="Copy error message", command=_copy_error_message)
+        copy_btn.grid(row=0, column=0, padx=(0, 8))
+
+        ok_btn = ttk.Button(buttons, text="OK", command=dialog.destroy)
+        ok_btn.grid(row=0, column=1)
+        ok_btn.focus_set()
+
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self.wait_window(dialog)
 
     # ---------- Library ----------
 
