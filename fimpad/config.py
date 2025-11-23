@@ -12,8 +12,8 @@ SPELLCHECK_DEFAULT_LANG = "en_US"
 
 DEFAULTS = {
     "endpoint": "http://localhost:8080",
-    "temperature": 0.9,
-    "top_p": 1.0,
+    "temperature": 0.85,
+    "top_p": 0.95,
     "fim_prefix": "<|fim_prefix|>",
     "fim_suffix": "<|fim_suffix|>",
     "fim_middle": "<|fim_middle|>",
@@ -31,8 +31,8 @@ DEFAULTS = {
     "spellcheck_enabled": True,
     # Spellcheck tweaks
     "spellcheck_view_buffer_lines": 30,
-    "spellcheck_scroll_debounce_ms": 4000,
-    "spellcheck_full_document_line_threshold": 300,
+    "spellcheck_scroll_debounce_ms": 2000,
+    "spellcheck_full_document_line_threshold": 100,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
     "follow_stream_enabled": True,
 }
