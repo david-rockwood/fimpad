@@ -57,6 +57,7 @@ class FIMPad(tk.Tk):
         self._examples = iter_examples()
         self._spell_menu_var: tk.BooleanVar | None = None
         self._wrap_menu_var: tk.BooleanVar | None = None
+        self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._build_menu()
         self._build_notebook()
@@ -102,6 +103,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Escape>", self._on_interrupt_stream)
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
+        self.bind_all("<Alt-f>", lambda e: self._toggle_follow_stream())  # follow toggle
         self.bind_all("<Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
         self.bind_all("<Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
@@ -760,6 +762,15 @@ class FIMPad(tk.Tk):
             variable=self._wrap_menu_var,
             command=self._on_wrap_menu_toggled,
         )
+        self._follow_menu_var = tk.BooleanVar(
+            value=self.cfg.get("follow_stream_enabled", True)
+        )
+        editmenu.add_checkbutton(
+            label="Toggle Follow",
+            accelerator="Alt+F",
+            variable=self._follow_menu_var,
+            command=self._on_follow_menu_toggled,
+        )
         self._line_numbers_menu_var = tk.BooleanVar(
             value=self.cfg.get("line_numbers_enabled", False)
         )
@@ -1068,6 +1079,26 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         wrap_word = True if not st else st.get("wrap", "word") != "none"
         self._wrap_menu_var.set(wrap_word)
+
+    def _toggle_follow_stream(self):
+        self._set_follow_stream_enabled(
+            not self.cfg.get("follow_stream_enabled", True)
+        )
+
+    def _on_follow_menu_toggled(self) -> None:
+        if self._follow_menu_var is None:
+            return
+        self._set_follow_stream_enabled(self._follow_menu_var.get())
+
+    def _set_follow_stream_enabled(self, enabled: bool) -> None:
+        self.cfg["follow_stream_enabled"] = enabled
+        save_config(self.cfg)
+        if self._follow_menu_var is not None:
+            self._follow_menu_var.set(enabled)
+        if not enabled:
+            for st in self.tabs.values():
+                st["stream_following"] = False
+                st["_stream_follow_primed"] = False
 
     def _toggle_line_numbers(self):
         enabled = not self.cfg.get("line_numbers_enabled", False)
@@ -1758,7 +1789,14 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        should_follow = st.get("stream_following", self._should_follow(text))
+        cfg = self.__dict__.get("cfg") or {}
+        follow_enabled = cfg.get("follow_stream_enabled", True)
+        if follow_enabled:
+            should_follow = st.get("stream_following", self._should_follow(text))
+        else:
+            should_follow = False
+            st["stream_following"] = False
+            st["_stream_follow_primed"] = False
         text.insert(cur, piece)
         st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
         with contextlib.suppress(tk.TclError):
@@ -1779,7 +1817,7 @@ class FIMPad(tk.Tk):
                 except Exception:
                     st["stream_following"] = False
                     st["_stream_follow_primed"] = False
-        elif self._should_follow(text):
+        elif follow_enabled and self._should_follow(text):
             st["stream_following"] = True
             st["_stream_follow_primed"] = False
         self._set_dirty(st, True)

@@ -29,6 +29,7 @@ DEFAULTS = {
     "line_numbers_enabled": False,
     "spellcheck_enabled": True,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
+    "follow_stream_enabled": True,
 }
 
 WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
