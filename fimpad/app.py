@@ -9,9 +9,11 @@ import os
 import queue
 import re
 import subprocess
+import sys
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
+from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -575,6 +577,8 @@ class FIMPad(tk.Tk):
         self._sync_wrap_menu_var()
         self._sync_line_numbers_menu_var()
         self._schedule_line_number_update(frame, delay_ms=10)
+
+        return st
 
     def _on_tab_changed(self, event=None):
         previous = self._last_tab
@@ -1331,8 +1335,20 @@ class FIMPad(tk.Tk):
         path = filedialog.askopenfilename()
         if not path:
             return
+        self._load_file_into_tab(st, path)
+
+    def _can_reuse_tab_for_open(self, st: dict) -> bool:
+        if st.get("dirty") or st.get("path"):
+            return False
+        text: tk.Text | None = st.get("text")
+        if not text:
+            return False
+        return text.get("1.0", "end-1c") == ""
+
+    def _load_file_into_tab(self, st: dict, path: str) -> bool:
+        normalized = os.path.abspath(os.path.expanduser(path))
         try:
-            with open(path, encoding="utf-8") as f:
+            with open(normalized, encoding="utf-8") as f:
                 data = f.read()
             st["suppress_modified"] = True
             st["text"].delete("1.0", tk.END)
@@ -1341,11 +1357,34 @@ class FIMPad(tk.Tk):
             st["text"].focus_set()
             st["text"].edit_modified(False)
             st["suppress_modified"] = False
-            st["path"] = path
+            st["path"] = normalized
             self._set_dirty(st, False)
-            self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=200)
+            frame = st.get("frame") or self.nb.select()
+            self._schedule_spellcheck_for_frame(frame, delay_ms=200)
+            self._schedule_line_number_update(frame, delay_ms=10)
+            return True
         except Exception as e:
             self._show_error("Open Error", "Could not open the file.", detail=str(e))
+            return False
+
+    def open_files(self, paths: Iterable[str]) -> None:
+        path_list = [os.path.abspath(os.path.expanduser(p)) for p in paths if p]
+        if not path_list:
+            return
+
+        reuse_current = True
+        for path in path_list:
+            st = None
+            if reuse_current:
+                current = self._current_tab_state()
+                if current and self._can_reuse_tab_for_open(current):
+                    st = current
+                reuse_current = False
+            if st is None:
+                st = self._new_tab()
+            if not st:
+                continue
+            self._load_file_into_tab(st, path)
 
     def _save_file_current(self):
         st = self._current_tab_state()
@@ -3093,8 +3132,16 @@ class FIMPad(tk.Tk):
         self.destroy()
 
 
-def main():
-    app = FIMPad()
+def main(
+    argv: Sequence[str] | None = None,
+    app_factory: Callable[[], FIMPad] = FIMPad,
+) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    app = app_factory()
+    if args:
+        open_files = getattr(app, "open_files", None)
+        if callable(open_files):
+            open_files(args)
     app.mainloop()
 
 
