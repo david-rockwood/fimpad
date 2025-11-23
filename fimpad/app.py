@@ -75,6 +75,8 @@ class FIMPad(tk.Tk):
         self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._build_menu()
+        self._tab_title_max_chars = 20
+        self._tab_fixed_width = 170
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -194,9 +196,25 @@ class FIMPad(tk.Tk):
     # ---------- Notebook / Tabs ----------
 
     def _build_notebook(self):
-        self.nb = ttk.Notebook(self)
-        self.nb.pack(fill=tk.BOTH, expand=True)
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(1, weight=1)
+
+        self._tab_scroll_left = ttk.Button(
+            container, text="◀", width=2, command=lambda: self._shift_tab_focus(-1)
+        )
+        self._tab_scroll_left.grid(row=0, column=0, sticky="ns")
+
+        self.nb = ttk.Notebook(container)
+        self.nb.grid(row=0, column=1, sticky="nsew")
         self.nb.enable_traversal()
+
+        self._tab_scroll_right = ttk.Button(
+            container, text="▶", width=2, command=lambda: self._shift_tab_focus(1)
+        )
+        self._tab_scroll_right.grid(row=0, column=2, sticky="ns")
+
         self.tabs = {}  # frame -> state dict
         self._tab_close_image: tk.PhotoImage | None = None
         self._tab_close_image_active: tk.PhotoImage | None = None
@@ -205,6 +223,7 @@ class FIMPad(tk.Tk):
         self._tab_close_compound_padding = (8, 4, 16, 4)
         self._tab_close_hover_tab: str | None = None
         self._setup_closable_tabs()
+        self._update_tab_scroll_buttons()
 
     def _setup_closable_tabs(self) -> None:
         self._tab_close_image = self._create_close_image(
@@ -271,7 +290,10 @@ class FIMPad(tk.Tk):
                 ],
             )
             style.configure(
-                "ClosableNotebook.TNotebook.Tab", padding=(8, 4, 16, 4)
+                "ClosableNotebook.TNotebook.Tab",
+                padding=(8, 4, 16, 4),
+                width=self._tab_fixed_width,
+                anchor="w",
             )
             self.nb.configure(style="ClosableNotebook.TNotebook")
             self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
@@ -279,6 +301,11 @@ class FIMPad(tk.Tk):
             return
         except tk.TclError:
             pass
+
+        with contextlib.suppress(tk.TclError):
+            ttk.Style(self).configure(
+                "TNotebook.Tab", width=self._tab_fixed_width, anchor="w"
+            )
 
         self._tab_close_support = "compound"
         self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
@@ -305,6 +332,8 @@ class FIMPad(tk.Tk):
         return image
 
     def _apply_tab_title(self, tab_id, title: str) -> None:
+        if len(title) > self._tab_title_max_chars:
+            title = f"{title[: self._tab_title_max_chars - 1]}…"
         if self._tab_close_support == "compound":
             if not tab_id:
                 return
@@ -323,6 +352,32 @@ class FIMPad(tk.Tk):
             self.nb.tab(tab_id, **kwargs)
         else:
             self.nb.tab(tab_id, text=title)
+
+    def _shift_tab_focus(self, delta: int) -> None:
+        tabs = self.nb.tabs()
+        if not tabs:
+            return
+        current = self.nb.select()
+        try:
+            idx = tabs.index(current)
+        except ValueError:
+            idx = 0
+        target = min(max(idx + delta, 0), len(tabs) - 1)
+        self.nb.select(tabs[target])
+        self._update_tab_scroll_buttons()
+
+    def _update_tab_scroll_buttons(self) -> None:
+        tabs = self.nb.tabs()
+        current = self.nb.select()
+        try:
+            idx = tabs.index(current)
+        except ValueError:
+            idx = 0
+        left_state = tk.NORMAL if idx > 0 and len(tabs) > 1 else tk.DISABLED
+        right_state = tk.NORMAL if idx < len(tabs) - 1 else tk.DISABLED
+        with contextlib.suppress(tk.TclError):
+            self._tab_scroll_left.configure(state=left_state)
+            self._tab_scroll_right.configure(state=right_state)
 
     def _identify_tab_index_at(self, x: int, y: int) -> int | None:
         try:
@@ -574,6 +629,7 @@ class FIMPad(tk.Tk):
         self.nb.add(frame, text=title)
         self._apply_tab_title(frame, title)
         self.nb.select(frame)
+        self._update_tab_scroll_buttons()
 
         if self._last_tab is None:
             self._last_tab = self.nb.select()
@@ -602,6 +658,7 @@ class FIMPad(tk.Tk):
             self._restore_tab_view(current)
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
             self._schedule_line_number_update(current, delay_ms=10)
+        self._update_tab_scroll_buttons()
 
         self._last_tab = current
         self._sync_wrap_menu_var()
@@ -713,6 +770,7 @@ class FIMPad(tk.Tk):
         frame = self.nametowidget(cur)
         self.nb.forget(cur)
         self.tabs.pop(frame, None)
+        self._update_tab_scroll_buttons()
         if not self.tabs:
             self._new_tab()
 
@@ -721,6 +779,7 @@ class FIMPad(tk.Tk):
         if index < 0 or index >= len(tabs):
             return
         self.nb.select(tabs[index])
+        self._update_tab_scroll_buttons()
 
     # ---------- Menu / Toolbar ----------
 
