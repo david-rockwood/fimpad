@@ -759,7 +759,7 @@ class FIMPad(tk.Tk):
             label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
         )
         editmenu.add_command(
-            label="REGEX & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
+            label="Regex & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
         )
         editmenu.add_separator()
         self._wrap_menu_var = tk.BooleanVar(value=True)
@@ -1401,7 +1401,7 @@ class FIMPad(tk.Tk):
         text = st["text"]
 
         w = tk.Toplevel(self)
-        w.title("REGEX & Replace")
+        w.title("Regex & Replace")
         w.resizable(False, False)
         tk.Label(w, text="Regex:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
         tk.Label(w, text="Replace:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
