@@ -7,6 +7,7 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 import contextlib
 import os
 import queue
+import re
 import subprocess
 import threading
 import tkinter as tk
@@ -100,6 +101,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Alt-KP_Enter>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-l>", self._on_show_fim_log_shortcut)
         self.bind_all("<Control-f>", lambda e: self._open_replace_dialog())
+        self.bind_all("<Control-r>", lambda e: self._open_regex_replace_dialog())
         self.bind_all("<Control-Escape>", self._on_interrupt_stream)
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-z>", lambda e: self._toggle_wrap_current())  # wrap toggle
@@ -756,6 +758,9 @@ class FIMPad(tk.Tk):
         editmenu.add_command(
             label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
         )
+        editmenu.add_command(
+            label="Regex & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
+        )
         editmenu.add_separator()
         self._wrap_menu_var = tk.BooleanVar(value=True)
         editmenu.add_checkbutton(
@@ -1368,6 +1373,148 @@ class FIMPad(tk.Tk):
         def on_find_change(*_):
             clear_highlight()
             set_status("")
+
+        find_var.trace_add("write", on_find_change)
+
+        btn_frame = ttk.Frame(w)
+        btn_frame.grid(row=2, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame.columnconfigure((0, 1, 2), weight=1)
+
+        ttk.Button(btn_frame, text="Find", command=find_next).grid(
+            row=0, column=0, padx=(0, 4), sticky="w"
+        )
+        replace_btn = ttk.Button(btn_frame, text="Replace", command=replace_current)
+        replace_btn.grid(row=0, column=1)
+        replace_all_btn = ttk.Button(btn_frame, text="Replace All", command=replace_all)
+        replace_all_btn.grid(row=0, column=2, padx=(4, 0), sticky="e")
+        update_buttons()
+
+        status = ttk.Label(w, textvariable=status_var, anchor="w")
+        status.grid(row=3, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+
+        self._prepare_child_window(w)
+
+    def _open_regex_replace_dialog(self):
+        st = self._current_tab_state()
+        if not st:
+            return
+        text = st["text"]
+
+        w = tk.Toplevel(self)
+        w.title("Regex & Replace")
+        w.resizable(False, False)
+        tk.Label(w, text="Regex:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
+        tk.Label(w, text="Replace:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+        find_var = tk.StringVar()
+        repl_var = tk.StringVar()
+        e1 = tk.Entry(w, width=42, textvariable=find_var)
+        e2 = tk.Entry(w, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=8, pady=8)
+        e2.grid(row=1, column=1, padx=8, pady=8)
+        e1.focus_set()
+
+        match_tag = "regex_replace_match"
+        self._configure_find_highlight(text, match_tag)
+        status_var = tk.StringVar(value="")
+
+        def set_status(message: str) -> None:
+            status_var.set(message)
+
+        def clear_highlight(reset_status: bool = True):
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            if reset_status:
+                set_status("")
+
+        def update_buttons():
+            has_match = bool(text.tag_ranges(match_tag))
+            state = "!disabled" if has_match else "disabled"
+            replace_btn.state((state,))
+            replace_all_btn.state((state,))
+
+        def get_pattern() -> re.Pattern[str] | None:
+            patt = find_var.get()
+            if not patt:
+                clear_highlight()
+                return None
+            try:
+                return re.compile(patt)
+            except re.error as exc:
+                clear_highlight(reset_status=False)
+                set_status(f"Invalid regex: {exc}")
+                update_buttons()
+                return None
+
+        def find_next():
+            pattern = get_pattern()
+            if not pattern:
+                return
+            content = text.get("1.0", tk.END)
+            start_offset = text.count("1.0", text.index(tk.INSERT), "chars")[0]
+            match = pattern.search(content, start_offset)
+            if match is None:
+                match = pattern.search(content, 0)
+                if match is None:
+                    clear_highlight()
+                    set_status("Not found.")
+                    update_buttons()
+                    return
+
+            start_idx = offset_to_tkindex(content, match.start())
+            end_idx = offset_to_tkindex(content, match.end())
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.tag_add("sel", start_idx, end_idx)
+            text.tag_add(match_tag, start_idx, end_idx)
+            text.mark_set(tk.INSERT, end_idx)
+            text.see(start_idx)
+            set_status("")
+            update_buttons()
+
+        def replace_current():
+            pattern = get_pattern()
+            if not pattern:
+                return
+            ranges = text.tag_ranges(match_tag)
+            if not ranges:
+                update_buttons()
+                return
+            start, end = ranges[0], ranges[1]
+            match_text = text.get(start, end)
+            replacement = pattern.sub(repl_var.get(), match_text, count=1)
+            text.delete(start, end)
+            text.insert(start, replacement)
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.mark_set(tk.INSERT, f"{start}+{len(replacement)}c")
+            text.see(start)
+            set_status("Replaced current match.")
+            update_buttons()
+            find_next()
+
+        def replace_all():
+            pattern = get_pattern()
+            if not pattern:
+                return
+            content = text.get("1.0", tk.END)
+            replaced_text, count = pattern.subn(repl_var.get(), content)
+            if count == 0:
+                clear_highlight(reset_status=False)
+                set_status("No matches to replace.")
+                update_buttons()
+                return
+            text.delete("1.0", tk.END)
+            text.insert("1.0", replaced_text)
+            text.mark_set(tk.INSERT, "1.0")
+            text.see("1.0")
+            clear_highlight()
+            set_status(f"Replaced {count} occurrences.")
+            update_buttons()
+
+        def on_find_change(*_):
+            clear_highlight()
+            set_status("")
+            update_buttons()
 
         find_var.trace_add("write", on_find_change)
 
