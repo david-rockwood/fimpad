@@ -38,6 +38,18 @@ from .parser import (
 from .stream_utils import find_stream_match
 from .utils import offset_to_tkindex
 
+CORE_TK_FONT_NAMES: tuple[str, ...] = (
+    "TkDefaultFont",
+    "TkTextFont",
+    "TkFixedFont",
+    "TkMenuFont",
+    "TkHeadingFont",
+    "TkIconFont",
+    "TkTooltipFont",
+    "TkSmallCaptionFont",
+    "TkCaptionFont",
+)
+
 
 class FIMPad(tk.Tk):
     def __init__(self):
@@ -1857,10 +1869,15 @@ class FIMPad(tk.Tk):
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
-        available_fonts = sorted(set(tkfont.families()))
+        available_fonts_set = set(tkfont.families())
+        for font_name in CORE_TK_FONT_NAMES:
+            with contextlib.suppress(tk.TclError):
+                tkfont.nametofont(font_name)
+                available_fonts_set.add(font_name)
         current_fontfam = fontfam_var.get().strip()
-        if current_fontfam and current_fontfam not in available_fonts:
-            available_fonts.append(current_fontfam)
+        if current_fontfam:
+            available_fonts_set.add(current_fontfam)
+        available_fonts = sorted(available_fonts_set)
         add_combobox_row(row, "Font family:", fontfam_var, available_fonts)
         row += 1
         add_row(row, "Font size:", fontsize_var)
