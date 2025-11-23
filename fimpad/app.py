@@ -1493,7 +1493,7 @@ class FIMPad(tk.Tk):
             if not pattern:
                 return
             content = text.get("1.0", tk.END)
-            start_offset = text.count("1.0", text.index(tk.INSERT), "chars")[0]
+            start_offset = int(text.count("1.0", text.index(tk.INSERT), "chars")[0])
             match = pattern.search(content, start_offset)
             wrapped = False
             if match is None:
@@ -1568,13 +1568,9 @@ class FIMPad(tk.Tk):
         multiline_var.trace_add("write", on_find_change)
         dotall_var.trace_add("write", on_find_change)
 
-        def on_close() -> None:
-            clear_highlight()
-            w.destroy()
-
         btn_frame = ttk.Frame(w)
         btn_frame.grid(row=3, column=1, padx=8, pady=6, sticky="ew")
-        btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        btn_frame.columnconfigure((0, 1, 2), weight=1)
 
         ttk.Button(btn_frame, text="Find next", command=find_next).grid(
             row=0, column=0, padx=(0, 4), sticky="w"
@@ -1583,13 +1579,14 @@ class FIMPad(tk.Tk):
         replace_btn.grid(row=0, column=1)
         replace_all_btn = ttk.Button(btn_frame, text="Replace all", command=replace_all)
         replace_all_btn.grid(row=0, column=2)
-        ttk.Button(btn_frame, text="Close", command=on_close).grid(
-            row=0, column=3, padx=(4, 0), sticky="e"
-        )
         update_buttons()
 
         status = ttk.Label(w, textvariable=status_var, anchor="w")
         status.grid(row=4, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+
+        def on_close() -> None:
+            clear_highlight()
+            w.destroy()
 
         w.protocol("WM_DELETE_WINDOW", on_close)
         self._prepare_child_window(w)
