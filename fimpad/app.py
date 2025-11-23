@@ -200,22 +200,19 @@ class FIMPad(tk.Tk):
     def _build_notebook(self):
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True)
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(1, weight=1)
+        self._tab_container = container
+
+        self.nb = ttk.Notebook(container)
+        self.nb.pack(fill=tk.BOTH, expand=True)
+        self.nb.enable_traversal()
 
         self._tab_scroll_left = ttk.Button(
             container, text="◀", width=2, command=lambda: self._shift_tab_focus(-1)
         )
-        self._tab_scroll_left.grid(row=0, column=0, sticky="n")
-
-        self.nb = ttk.Notebook(container)
-        self.nb.grid(row=0, column=1, sticky="nsew")
-        self.nb.enable_traversal()
 
         self._tab_scroll_right = ttk.Button(
             container, text="▶", width=2, command=lambda: self._shift_tab_focus(1)
         )
-        self._tab_scroll_right.grid(row=0, column=2, sticky="n")
 
         self.tabs = {}  # frame -> state dict
         self._tab_close_image: tk.PhotoImage | None = None
@@ -226,8 +223,13 @@ class FIMPad(tk.Tk):
         self._tab_close_hover_tab: str | None = None
         self._setup_closable_tabs()
         self.nb.bind("<Configure>", lambda e: self._update_tab_width(), add="+")
+        self.nb.bind("<Configure>", lambda e: self._position_tab_scroll_buttons(), add="+")
+        container.bind(
+            "<Configure>", lambda e: self._position_tab_scroll_buttons(), add="+"
+        )
         self._update_tab_scroll_buttons()
         self._update_tab_width()
+        self.after_idle(self._position_tab_scroll_buttons)
 
     def _setup_closable_tabs(self) -> None:
         self._tab_close_image = self._create_close_image(
@@ -236,82 +238,12 @@ class FIMPad(tk.Tk):
         self._tab_close_image_active = self._create_close_image(
             fill="#cc3333", size=16, margin=3, stroke=2
         )
-
-        style = getattr(self, "style", None) or ttk.Style(self)
-
-        try:
-            style.element_create(
-                "Notebook.close",
-                "image",
-                self._tab_close_image,
-                ("active", self._tab_close_image_active),
-                border=0,
-                sticky="",
-            )
-            style.layout(
-                "ClosableNotebook.TNotebook.Tab",
-                [
-                    (
-                        "Notebook.tab",
-                        {
-                            "sticky": "nswe",
-                            "children": [
-                                (
-                                    "Notebook.padding",
-                                    {
-                                        "side": "top",
-                                        "sticky": "nswe",
-                                        "children": [
-                                            (
-                                                "Notebook.focus",
-                                                {
-                                                    "side": "top",
-                                                    "sticky": "nswe",
-                                                    "children": [
-                                                        (
-                                                            "Notebook.label",
-                                                            {
-                                                                "side": "left",
-                                                                "sticky": "",
-                                                            },
-                                                        ),
-                                                        (
-                                                            "Notebook.close",
-                                                            {
-                                                                "side": "right",
-                                                                "sticky": "",
-                                                            },
-                                                        ),
-                                                    ],
-                                                },
-                                            )
-                                        ],
-                                    },
-                                )
-                            ],
-                        },
-                    )
-                ],
-            )
-            style.configure(
-                "ClosableNotebook.TNotebook.Tab",
-                padding=(8, 4, 16, 4),
-                width=self._current_tab_width,
-                anchor="w",
-            )
-            self.nb.configure(style="ClosableNotebook.TNotebook")
-            self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
-            self._tab_close_support = "element"
-            return
-        except tk.TclError:
-            pass
-
+        self._tab_close_support = "compound"
         with contextlib.suppress(tk.TclError):
             ttk.Style(self).configure(
                 "TNotebook.Tab", width=self._current_tab_width, anchor="w"
             )
 
-        self._tab_close_support = "compound"
         self.nb.bind("<Button-1>", self._handle_tab_close_click, add="+")
         self.nb.bind("<Motion>", self._handle_tab_motion, add="+")
         self.nb.bind("<Leave>", lambda e: self._set_close_hover_tab(None), add="+")
@@ -424,6 +356,33 @@ class FIMPad(tk.Tk):
         with contextlib.suppress(tk.TclError):
             self._tab_scroll_left.configure(state=left_state)
             self._tab_scroll_right.configure(state=right_state)
+
+    def _position_tab_scroll_buttons(self) -> None:
+        container = getattr(self, "_tab_container", None)
+        left_btn = getattr(self, "_tab_scroll_left", None)
+        right_btn = getattr(self, "_tab_scroll_right", None)
+        if not container or not left_btn or not right_btn:
+            return
+        try:
+            container_width = container.winfo_width()
+            tab_height = 0
+            tabs = self.nb.tabs()
+            if tabs:
+                bbox = self.nb.bbox(tabs[0])
+                if bbox:
+                    tab_height = bbox[3]
+            if tab_height <= 0:
+                tab_height = left_btn.winfo_reqheight()
+            vertical_offset = max(0, (tab_height - left_btn.winfo_reqheight()) // 2)
+            padding = 4
+            left_btn.place(x=padding, y=vertical_offset + padding)
+            right_btn_width = right_btn.winfo_reqwidth()
+            right_btn.place(
+                x=max(padding, container_width - right_btn_width - padding),
+                y=vertical_offset + padding,
+            )
+        except tk.TclError:
+            return
 
     def _identify_tab_index_at(self, x: int, y: int) -> int | None:
         try:
