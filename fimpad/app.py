@@ -526,6 +526,8 @@ class FIMPad(tk.Tk):
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
+        text.bind("<Control-Home>", self._on_ctrl_home_key)
+        text.bind("<Control-End>", self._on_ctrl_end_key)
 
         def on_modified(event=None):
             if st["suppress_modified"]:
@@ -1034,11 +1036,31 @@ class FIMPad(tk.Tk):
         if not isinstance(widget, tk.Text):
             return None
 
+        target_index = widget.index("insert linestart")
+        widget.mark_set(tk.INSERT, target_index)
+        widget.see(target_index)
+        return "break"
+
+    def _on_ctrl_home_key(self, event: tk.Event) -> str | None:
+        widget = getattr(event, "widget", None)
+        if not isinstance(widget, tk.Text):
+            return None
+
         widget.mark_set(tk.INSERT, "1.0")
         widget.see("1.0")
         return "break"
 
     def _on_end_key(self, event: tk.Event) -> str | None:
+        widget = getattr(event, "widget", None)
+        if not isinstance(widget, tk.Text):
+            return None
+
+        target_index = widget.index("insert lineend")
+        widget.mark_set(tk.INSERT, target_index)
+        widget.see(target_index)
+        return "break"
+
+    def _on_ctrl_end_key(self, event: tk.Event) -> str | None:
         widget = getattr(event, "widget", None)
         if not isinstance(widget, tk.Text):
             return None
