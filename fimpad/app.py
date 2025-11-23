@@ -1789,7 +1789,8 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        follow_enabled = self.cfg.get("follow_stream_enabled", True)
+        cfg = getattr(self, "cfg", None) or {}
+        follow_enabled = cfg.get("follow_stream_enabled", True)
         if follow_enabled:
             should_follow = st.get("stream_following", self._should_follow(text))
         else:
