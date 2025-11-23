@@ -65,7 +65,7 @@ strict = false
 
 [tool.hatch.build]
 include = [
-  "fimpad/examples/**/*.md",
-  "fimpad/examples/**/*.txt",
+  "fimpad/library/**/*.md",
+  "fimpad/library/**/*.txt",
 ]
 

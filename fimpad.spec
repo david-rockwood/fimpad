@@ -20,8 +20,8 @@ a = Analysis(
     binaries=[],
     datas=[
         (
-            'fimpad/examples',
-            'fimpad/examples',
+            'fimpad/library',
+            'fimpad/library',
         ),
         *enchant_datas,
     ],
