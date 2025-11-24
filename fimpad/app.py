@@ -126,7 +126,9 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
         self.bind_all("<Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
         self.bind_all("<Control-a>", lambda e: self._select_all_current())  # select all
-        self.bind_all("<Control-t>", lambda e: self._open_settings())
+        self.bind_all("<Control-g>", lambda e: self._open_settings())
+        # Disable Tk's default Ctrl+T transpose binding so it does nothing in FIMpad
+        self.bind_all("<Control-t>", lambda _e: "break")
 
         for idx in range(1, 10):
             self.bind_all(
@@ -841,7 +843,7 @@ class FIMPad(tk.Tk):
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
+            label="Settings…", accelerator="Ctrl+G", command=self._open_settings
         )
         menubar.add_cascade(label="Edit", menu=editmenu)
 
