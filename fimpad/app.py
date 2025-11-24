@@ -114,7 +114,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-u>", lambda e: self._event_on_current_text("<<Undo>>"))
         self.bind_all("<Alt-r>", lambda e: self._event_on_current_text("<<Redo>>"))
         self.bind_all("<Alt-slash>", lambda e: self._open_replace_dialog())
-        self.bind_all("<Alt-.>", lambda e: self._open_regex_replace_dialog())
+        self.bind_all("<Alt-period>", lambda e: self._open_regex_replace_dialog())
         self.bind_all("<Delete>", lambda e: self._event_on_current_text("<<Clear>>"))
         self.bind_all("<Control-a>", lambda e: self._select_all_current())
         self.bind_all("<Control-x>", lambda e: self._event_on_current_text("<<Cut>>"))
