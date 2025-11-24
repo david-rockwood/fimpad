@@ -109,7 +109,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-t>", lambda e: self._new_tab())
         self.bind_all("<Alt-o>", lambda e: self._open_file_into_current())
         self.bind_all("<Alt-s>", lambda e: self._save_file_current())
-        self.bind_all("<Alt-c>", lambda e: self._save_file_as_current())
+        self.bind_all("<Alt-a>", lambda e: self._save_file_as_current())
         self.bind_all("<Alt-q>", lambda e: self._on_close())
         self.bind_all("<Alt-u>", lambda e: self._event_on_current_text("<<Undo>>"))
         self.bind_all("<Alt-r>", lambda e: self._event_on_current_text("<<Redo>>"))
@@ -129,8 +129,8 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Shift-I>", self._on_interrupt_stream)
         self.bind_all("<Control-Shift-L>", self._on_show_fim_log_shortcut)
-        self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
-        self.bind_all("<Control-t>", lambda e: self._open_settings())
+        self.bind_all("<Alt-c>", lambda e: self._close_current_tab())  # close tab
+        self.bind_all("<Alt-semicolon>", lambda e: self._open_settings())
 
         for idx in range(1, 10):
             self.bind_all(
@@ -759,11 +759,11 @@ class FIMPad(tk.Tk):
         )
         filemenu.add_command(label="Save", accelerator="Alt+S", command=self._save_file_current)
         filemenu.add_command(
-            label="Save As…", accelerator="Alt+C", command=self._save_file_as_current
+            label="Save As…", accelerator="Alt+A", command=self._save_file_as_current
         )
         filemenu.add_separator()
         filemenu.add_command(
-            label="Close Tab", accelerator="Ctrl+W", command=self._close_current_tab
+            label="Close Tab", accelerator="Alt+C", command=self._close_current_tab
         )
         filemenu.add_separator()
         filemenu.add_command(label="Quit", accelerator="Alt+Q", command=self._on_close)
@@ -814,7 +814,7 @@ class FIMPad(tk.Tk):
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
+            label="Settings…", accelerator="Alt+;", command=self._open_settings
         )
         menubar.add_cascade(label="Edit", menu=editmenu)
 
