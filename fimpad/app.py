@@ -37,6 +37,8 @@ from .parser import (
     cursor_within_span,
     parse_fim_request,
     parse_triple_tokens,
+    _parse_tag,
+    _validate_sequence_names,
 )
 from .stream_utils import find_stream_match
 from .utils import offset_to_tkindex
@@ -129,6 +131,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Shift-I>", self._on_interrupt_stream)
         self.bind_all("<Control-Shift-L>", self._on_show_fim_log_shortcut)
+        self.bind_all("<Control-Shift-V>", self._on_validate_tags_shortcut)
         self.bind_all("<Alt-c>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-semicolon>", lambda e: self._open_settings())
 
@@ -571,6 +574,7 @@ class FIMPad(tk.Tk):
         text.bind("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
         text.bind("<Control-Shift-I>", self._on_interrupt_stream)
         text.bind("<Control-Shift-L>", self._on_show_fim_log_shortcut)
+        text.bind("<Control-Shift-V>", self._on_validate_tags_shortcut)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
@@ -878,6 +882,11 @@ class FIMPad(tk.Tk):
             label="Show Log",
             accelerator="Ctrl+Shift+l",
             command=self.show_fim_log,
+        )
+        aimenu.add_command(
+            label="Validate Tags",
+            accelerator="Ctrl+Shift+v",
+            command=self.validate_tags_current,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 
@@ -2234,6 +2243,73 @@ class FIMPad(tk.Tk):
         self._apply_config_changes(new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad)
         messagebox.showinfo("Config Tag", "Settings applied from config tag.")
 
+    def validate_tags_current(self) -> None:
+        st = self._current_tab_state()
+        if not st:
+            return
+
+        text_widget: tk.Text | None = st.get("text")
+        if text_widget is None:
+            return
+
+        content = text_widget.get("1.0", tk.END)
+        seen_names: set[str] = set()
+        tokens: list[TagToken] = []
+
+        for match in TRIPLE_RE.finditer(content):
+            body = match.group("body") or ""
+            try:
+                tag = _parse_tag(body, seen_names)
+            except TagParseError as exc:
+                self._highlight_tag_span(
+                    st, start=match.start(), end=match.end(), content=content
+                )
+                self._show_error(
+                    "Validate Tags", "Tag could not be parsed.", detail=str(exc)
+                )
+                return
+
+            tokens.append(
+                TagToken(
+                    start=match.start(),
+                    end=match.end(),
+                    raw=match.group(0),
+                    body=body,
+                    tag=tag,
+                )
+            )
+
+        try:
+            _validate_sequence_names(tokens)
+        except TagParseError as exc:
+            registry: set[str] = set()
+            offending: TagToken | None = None
+            for token in tokens:
+                if isinstance(token.tag, FIMTag):
+                    for fn in token.tag.functions:
+                        if fn.name == "name" and fn.args:
+                            registry.add(fn.args[0])
+                elif isinstance(token.tag, SequenceTag):
+                    missing = [nm for nm in token.tag.names if nm not in registry]
+                    if missing:
+                        offending = token
+                        break
+
+            if offending is not None:
+                self._highlight_tag_span(
+                    st,
+                    start=offending.start,
+                    end=offending.end,
+                    content=content,
+                )
+
+            self._show_error(
+                "Validate Tags", "Sequence references are missing tags.", detail=str(exc)
+            )
+            return
+
+        messagebox.showinfo("Validate Tags", "All tags are valid.")
+
     # ---------- Generate (streaming) ----------
 
     def _should_follow(self, text_widget: tk.Text) -> bool:
@@ -2595,6 +2671,10 @@ class FIMPad(tk.Tk):
 
     def _on_show_fim_log_shortcut(self, event):
         self._open_fim_log_tab()
+        return "break"
+
+    def _on_validate_tags_shortcut(self, event):
+        self.validate_tags_current()
         return "break"
 
     def interrupt_stream(self):
