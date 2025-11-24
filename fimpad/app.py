@@ -75,9 +75,9 @@ class FIMPad(tk.Tk):
         self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._build_menu()
-        self._tab_max_width = 200
-        self._tab_min_width = 120
-        self._tab_min_width_threshold = 11
+        self._tab_max_width = 160
+        self._tab_min_width = 160
+        self._tab_min_width_threshold = 10
         self._current_tab_width = self._tab_max_width
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
@@ -219,7 +219,7 @@ class FIMPad(tk.Tk):
         self._tab_close_image_active: tk.PhotoImage | None = None
         self._tab_close_support: str | None = None
         self._tab_close_hit_padding = 6
-        self._tab_close_compound_padding = (8, 4, 16, 4)
+        self._tab_close_compound_padding = (10, 4, 10, 4)
         self._tab_close_hover_tab: str | None = None
         self._setup_closable_tabs()
         self.nb.bind("<Configure>", lambda e: self._update_tab_width(), add="+")
@@ -277,11 +277,13 @@ class FIMPad(tk.Tk):
 
     def _truncate_tab_title(self, title: str) -> str:
         font = self.app_font
-        available_width = max(24, self._current_tab_width - 28)
+        available_width = max(24, self._current_tab_width)
         if self._tab_close_support == "compound" and self._tab_close_compound_padding:
-            available_width -= self._tab_close_compound_padding[2]
+            left_pad, _top_pad, right_pad, _bottom_pad = self._tab_close_compound_padding
+            available_width -= left_pad + right_pad
         if self._tab_close_image:
             available_width -= self._tab_close_image.width()
+        available_width -= 6  # breathing room for focus/active indicators
         if font.measure(title) <= available_width:
             return title
         ellipsis = "…"
@@ -305,6 +307,7 @@ class FIMPad(tk.Tk):
                 "text": title,
                 "compound": tk.RIGHT,
                 "padding": self._tab_close_compound_padding,
+                "anchor": "w",
             }
             if image is not None:
                 kwargs["image"] = image
@@ -313,19 +316,7 @@ class FIMPad(tk.Tk):
             self.nb.tab(tab_id, text=title)
 
     def _update_tab_width(self) -> None:
-        tabs = self.nb.tabs()
-        try:
-            total_width = self.nb.winfo_width()
-        except tk.TclError:
-            return
-        if not total_width:
-            return
-        tab_count = max(1, len(tabs))
-        if tab_count >= self._tab_min_width_threshold:
-            target_width = self._tab_min_width
-        else:
-            target_width = total_width // tab_count
-            target_width = max(self._tab_min_width, min(self._tab_max_width, target_width))
+        target_width = self._tab_max_width
         self._apply_tab_width(target_width)
         for frame, st in self.tabs.items():
             title = self._format_tab_title(st)
@@ -420,11 +411,13 @@ class FIMPad(tk.Tk):
             return False
         tab_x, tab_y, width, height = bbox
         image_width = self._tab_close_image.width() if self._tab_close_image else 0
+        if image_width <= 0:
+            image_width = 12
         right_pad = self._tab_close_compound_padding[2] if self._tab_close_compound_padding else 0
-        button_right = tab_x + width - right_pad
-        button_left = button_right - image_width
         hit_pad = self._tab_close_hit_padding or 0
-        if x < button_left - hit_pad or x > button_right + hit_pad:
+        button_right = tab_x + width - max(0, right_pad - hit_pad)
+        button_left = button_right - image_width - hit_pad
+        if x < button_left or x > button_right:
             return False
         return not (y < tab_y or y > tab_y + height)
 
