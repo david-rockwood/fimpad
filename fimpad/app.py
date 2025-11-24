@@ -26,6 +26,7 @@ from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .icons import set_app_icon
 from .library_resources import iter_library
 from .parser import (
+    TRIPLE_RE,
     ConfigTag,
     FIMRequest,
     FIMTag,
@@ -2202,7 +2203,14 @@ class FIMPad(tk.Tk):
 
         return updates
 
-    def _apply_config_tag(self, tag: ConfigTag) -> None:
+    def _apply_config_tag(
+        self,
+        st: dict,
+        tag: ConfigTag,
+        *,
+        marker_token: TagToken | None = None,
+        content: str | None = None,
+    ) -> None:
         prev_pad = self.cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
         prev_line_pad = self.cfg.get(
             "line_number_padding_px", DEFAULTS["line_number_padding_px"]
@@ -2210,6 +2218,13 @@ class FIMPad(tk.Tk):
         try:
             updates = self._normalize_config_tag_settings(tag.settings)
         except ValueError as exc:
+            if marker_token is not None:
+                self._highlight_tag_span(
+                    st,
+                    start=marker_token.start,
+                    end=marker_token.end,
+                    content=content,
+                )
             self._show_error("Config Tag", "Invalid config tag.", detail=str(exc))
             return
 
@@ -2282,6 +2297,39 @@ class FIMPad(tk.Tk):
                 marker_token = token
         return marker_token
 
+    def _highlight_tag_span(
+        self, st: dict, *, start: int, end: int, content: str | None = None
+    ) -> None:
+        text: tk.Text | None = st.get("text") if st else None
+        if not text:
+            return
+
+        if content is None:
+            content = text.get("1.0", tk.END)
+
+        try:
+            start_index = offset_to_tkindex(content, start)
+            end_index = offset_to_tkindex(content, end)
+        except Exception:
+            return
+
+        with contextlib.suppress(tk.TclError):
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_add("sel", start_index, end_index)
+            text.mark_set(tk.INSERT, start_index)
+            text.see(start_index)
+            text.focus_set()
+
+    def _highlight_tag_at_cursor(
+        self, st: dict, *, content: str, cursor_offset: int
+    ) -> None:
+        for match in TRIPLE_RE.finditer(content):
+            if cursor_within_span(match.start(), match.end(), cursor_offset):
+                self._highlight_tag_span(
+                    st, start=match.start(), end=match.end(), content=content
+                )
+                break
+
     def _build_name_registry(self, tokens) -> dict[str, TagToken]:
         registry: dict[str, TagToken] = {}
         for token in tokens:
@@ -2346,12 +2394,24 @@ class FIMPad(tk.Tk):
                 content, marker_token.start, tokens=tokens, marker_token=marker_token
             )
         except TagParseError as exc:
+            self._highlight_tag_span(
+                st,
+                start=marker_token.start,
+                end=marker_token.end,
+                content=content,
+            )
             self._show_unsupported_fim_error(exc)
             self._sequence_queue = []
             self._sequence_tab = None
             self._sequence_names = None
             return
         if fim_request is None:
+            self._highlight_tag_span(
+                st,
+                start=marker_token.start,
+                end=marker_token.end,
+                content=content,
+            )
             self._show_error(
                 "Generate", "FIM tag reference is invalid.", detail=name
             )
@@ -2463,6 +2523,7 @@ class FIMPad(tk.Tk):
         try:
             tokens = list(parse_triple_tokens(content))
         except TagParseError as exc:
+            self._highlight_tag_at_cursor(st, content=content, cursor_offset=cursor_offset)
             self._show_unsupported_fim_error(exc)
             return
 
@@ -2476,7 +2537,12 @@ class FIMPad(tk.Tk):
 
         name_registry = self._build_name_registry(tokens)
         if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
-            self._apply_config_tag(marker_token.tag)
+            self._apply_config_tag(
+                st,
+                marker_token.tag,
+                marker_token=marker_token,
+                content=content,
+            )
             return
         if marker_token.kind == "sequence" and isinstance(marker_token.tag, SequenceTag):
             names = list(marker_token.tag.names)
@@ -2499,6 +2565,12 @@ class FIMPad(tk.Tk):
                 content, cursor_offset, tokens=tokens, marker_token=marker_token
             )
         except TagParseError as exc:
+            self._highlight_tag_span(
+                st,
+                start=marker_token.start,
+                end=marker_token.end,
+                content=content,
+            )
             self._show_unsupported_fim_error(exc)
             return
         if fim_request is not None:
