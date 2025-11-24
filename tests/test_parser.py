@@ -2,6 +2,7 @@ import pytest
 
 from fimpad.parser import (
     CommentTag,
+    ConfigTag,
     FIMFunction,
     FIMRequest,
     FIMTag,
@@ -35,6 +36,7 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
         "A [[[5; stop(\"alpha\"); name(one)]]] "
         "B [[[2; name(two)]]] [[[\"one\" 'two']]] "
         "C [[[prefix]]] D [[[suffix hard]]] E [[[(note about things) after]]]" """ F"""
+        " [[[ {font:'TkDefaultFont'; bgColor:'#ffffff'} ]]]"
     )
     tokens = list(parse_triple_tokens(content))
 
@@ -42,7 +44,7 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
 
     tag_tokens = _collect_tags(content)
     kinds = [t.kind for t in tag_tokens]
-    assert kinds == ["fim", "fim", "sequence", "prefix", "suffix", "comment"]
+    assert kinds == ["fim", "fim", "sequence", "prefix", "suffix", "comment", "config"]
 
     prefix = tag_tokens[3]
     assert isinstance(prefix.tag, PrefixSuffixTag)
@@ -56,6 +58,13 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     assert isinstance(comment.tag, CommentTag)
     assert comment.tag.body == "note about things"
     assert comment.tag.position == "after"
+
+    config_token = tag_tokens[6]
+    assert isinstance(config_token.tag, ConfigTag)
+    assert config_token.tag.settings == {
+        "font": "TkDefaultFont",
+        "bgColor": "#ffffff",
+    }
 
 
 def test_uppercase_prefix_suffix_tags_are_hard_by_default():
@@ -184,6 +193,14 @@ def test_multifunction_tag_collects_stops_chops_and_post_actions():
 def test_unknown_function_raises():
     with pytest.raises(TagParseError):
         list(parse_triple_tokens("[[[1; unknown()]]]]"))
+
+
+def test_config_tag_requires_braces_and_quotes():
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[font:\"TkDefaultFont\"]]]"))
+
+    with pytest.raises(TagParseError):
+        list(parse_triple_tokens("[[[{font:TkDefaultFont}]]]"))
 
 
 def test_bang_after_fim_count_rejected():
