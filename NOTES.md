@@ -19,3 +19,9 @@ Icon=fimpad  # expects fimpad.png to be installed in the system icon theme
 Terminal=false
 Categories=Development;Utility;
 ```
+
+## Keyboard shortcuts
+
+- Tk text widgets already ship with platform-standard key bindings for cut/copy/paste, delete, and select-all. Binding these
+  shortcuts again in application code causes them to fire twice (for example, Ctrl+V pastes two copies). We intentionally rely on
+  Tk's defaults and avoid adding explicit `bind` calls for these shortcuts in `fimpad/app.py`.

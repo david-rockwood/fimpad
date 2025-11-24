@@ -115,11 +115,10 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-r>", lambda e: self._event_on_current_text("<<Redo>>"))
         self.bind_all("<Alt-slash>", lambda e: self._open_replace_dialog())
         self.bind_all("<Alt-period>", lambda e: self._open_regex_replace_dialog())
-        self.bind_all("<Delete>", lambda e: self._event_on_current_text("<<Clear>>"))
-        self.bind_all("<Control-a>", lambda e: self._select_all_current())
-        self.bind_all("<Control-x>", lambda e: self._event_on_current_text("<<Cut>>"))
-        self.bind_all("<Control-c>", lambda e: self._event_on_current_text("<<Copy>>"))
-        self.bind_all("<Control-v>", lambda e: self._event_on_current_text("<<Paste>>"))
+        # Tk text widgets already include standard bindings (Ctrl+C/X/V, Ctrl+A, Delete).
+        # Avoid re-binding them here because double bindings cause duplicated actions
+        # (for example, pasting twice). If you want to change those defaults, adjust
+        # the widget configuration rather than adding new global bindings.
         self.bind_all("<Control-Alt-w>", lambda e: self._toggle_wrap_current())  # wrap toggle
         self.bind_all("<Control-Alt-f>", lambda e: self._toggle_follow_stream())  # follow toggle
         self.bind_all("<Control-Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
