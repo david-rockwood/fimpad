@@ -23,6 +23,7 @@ import enchant
 
 from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
+from .icons import set_app_icon
 from .library_resources import iter_library
 from .parser import (
     ConfigTag,
@@ -56,6 +57,7 @@ class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("FIMpad")
+        set_app_icon(self)
         self.geometry("1100x750")
 
         self.cfg = load_config()

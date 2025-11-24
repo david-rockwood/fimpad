@@ -67,5 +67,7 @@ strict = false
 include = [
   "fimpad/library/**/*.md",
   "fimpad/library/**/*.txt",
+  "fimpad/resources/fimpad.png",
+  "fimpad/resources/fimpad.ico",
 ]
 

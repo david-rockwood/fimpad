@@ -23,6 +23,14 @@ a = Analysis(
             'fimpad/library',
             'fimpad/library',
         ),
+        (
+            'fimpad/resources/fimpad.png',
+            'fimpad/resources',
+        ),
+        (
+            'fimpad/resources/fimpad.ico',
+            'fimpad/resources',
+        ),
         *enchant_datas,
     ],
     # Ship enchant dictionaries with the bundle so spellcheck works without
@@ -51,6 +59,7 @@ exe = EXE(
     a.datas,
     [],
     name='fimpad',
+    icon='fimpad/resources/fimpad.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
