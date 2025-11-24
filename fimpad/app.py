@@ -802,7 +802,7 @@ class FIMPad(tk.Tk):
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
+            label="Select All", accelerator="Ctrl+/", command=self._select_all_current
         )
         editmenu.add_separator()
         editmenu.add_command(
