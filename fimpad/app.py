@@ -813,9 +813,15 @@ class FIMPad(tk.Tk):
             label="Regex & Replace…", accelerator="Alt+.", command=self._open_regex_replace_dialog
         )
         editmenu.add_separator()
+        editmenu.add_command(
+            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
+        )
+        menubar.add_cascade(label="Edit", menu=editmenu)
+
+        togglemenu = tk.Menu(menubar, tearoff=0)
         self._wrap_menu_var = tk.BooleanVar(value=True)
-        editmenu.add_checkbutton(
-            label="Toggle Wrap",
+        togglemenu.add_checkbutton(
+            label="Wrap",
             accelerator="Ctrl+Alt+W",
             variable=self._wrap_menu_var,
             command=self._on_wrap_menu_toggled,
@@ -823,8 +829,8 @@ class FIMPad(tk.Tk):
         self._follow_menu_var = tk.BooleanVar(
             value=self.cfg.get("follow_stream_enabled", True)
         )
-        editmenu.add_checkbutton(
-            label="Toggle Follow",
+        togglemenu.add_checkbutton(
+            label="Follow Stream",
             accelerator="Ctrl+Alt+F",
             variable=self._follow_menu_var,
             command=self._on_follow_menu_toggled,
@@ -832,49 +838,45 @@ class FIMPad(tk.Tk):
         self._line_numbers_menu_var = tk.BooleanVar(
             value=self.cfg.get("line_numbers_enabled", False)
         )
-        editmenu.add_checkbutton(
-            label="Toggle Line Numbers",
+        togglemenu.add_checkbutton(
+            label="Line Numbers",
             accelerator="Ctrl+Alt+N",
             variable=self._line_numbers_menu_var,
             command=self._toggle_line_numbers,
         )
         self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
-        editmenu.add_checkbutton(
-            label="Toggle Spellcheck",
+        togglemenu.add_checkbutton(
+            label="Spellcheck",
             accelerator="Ctrl+Alt+S",
             variable=self._spell_menu_var,
             command=self._toggle_spellcheck,
         )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Settings…", accelerator="Ctrl+T", command=self._open_settings
-        )
-        menubar.add_cascade(label="Edit", menu=editmenu)
+        menubar.add_cascade(label="Toggle", menu=togglemenu)
 
         aimenu = tk.Menu(menubar, tearoff=0)
         aimenu.add_command(
             label="Generate",
-            accelerator="Ctrl+Shift+G",
+            accelerator="Ctrl+Shift+g",
             command=self.generate,
         )
         aimenu.add_command(
             label="Repeat Last FIM",
-            accelerator="Ctrl+Shift+R",
+            accelerator="Ctrl+Shift+r",
             command=self.repeat_last_fim,
         )
         aimenu.add_command(
             label="Paste Last FIM Tag",
-            accelerator="Ctrl+Shift+P",
+            accelerator="Ctrl+Shift+p",
             command=self.paste_last_fim_tag,
         )
         aimenu.add_command(
             label="Interrupt Stream",
-            accelerator="Ctrl+Shift+I",
+            accelerator="Ctrl+Shift+i",
             command=self.interrupt_stream,
         )
         aimenu.add_command(
-            label="FIM Log",
-            accelerator="Ctrl+Shift+L",
+            label="Show Log",
+            accelerator="Ctrl+Shift+l",
             command=self.show_fim_log,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
