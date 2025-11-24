@@ -184,6 +184,33 @@ They’re ideal for instructions, reminders, metadata, or debugging notes embedd
 
 ---
 
+### **Config Tags: “Apply a saved theme or settings preset”**
+
+These start with a `{` and contain **camelCase** keys with quoted values that mirror the Settings window fields:
+
+```
+[[[{font:"Ubuntu Sans"; fontSize:"24"; bgColor:"#ffffff"; fgColor:"#101010"}]]]
+```
+
+Supported keys:
+
+* `endpoint`, `temperature`, `topP`
+* `fimPrefix`, `fimSuffix`, `fimMiddle`
+* `font`/`fontFamily`, `fontSize`
+* `editorPadding`, `lineNumberPadding`
+* `fgColor`, `bgColor`, `caretColor`, `selectionColor`
+* `scrollSpeed`
+* `spellLang`
+
+Notes:
+
+* Values must be quoted strings (what you’d type into the Settings window).
+* Fonts and spellcheck languages are validated; if unavailable, you’ll see an error and nothing changes.
+* The `Open maximized on startup` option cannot be changed by config tags.
+* Press **Ctrl+Enter** with the caret inside or next to the tag to apply it. Tags stay in the document after use.
+
+---
+
 ## How FIMpad Decides What Context to Send to the Model
 
 Whenever you execute a FIM tag:

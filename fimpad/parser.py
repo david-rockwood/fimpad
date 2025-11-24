@@ -40,6 +40,11 @@ class SequenceTag:
 
 
 @dataclass(frozen=True)
+class ConfigTag:
+    settings: dict[str, str]
+
+
+@dataclass(frozen=True)
 class PrefixSuffixTag:
     kind: str  # "prefix" or "suffix"
     hardness: str  # "soft" or "hard"
@@ -52,7 +57,7 @@ class CommentTag:
     position: str | None
 
 
-TagNode = FIMTag | SequenceTag | PrefixSuffixTag | CommentTag
+TagNode = FIMTag | SequenceTag | ConfigTag | PrefixSuffixTag | CommentTag
 
 
 @dataclass(frozen=True)
@@ -74,6 +79,8 @@ class TagToken:
             return "fim"
         if isinstance(self.tag, SequenceTag):
             return "sequence"
+        if isinstance(self.tag, ConfigTag):
+            return "config"
         if isinstance(self.tag, PrefixSuffixTag):
             return self.tag.kind
         if isinstance(self.tag, CommentTag):
@@ -249,6 +256,9 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
     if re.match(r"\d+!", stripped):
         raise TagParseError("Unexpected '!' after FIM token count")
 
+    if stripped.startswith("{"):
+        return _parse_config_tag(stripped)
+
     tokens = _scan_tokens(stripped)
     if not tokens:
         return None
@@ -299,6 +309,52 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
         return SequenceTag(names=tuple(names))
 
     raise TagParseError(f"Unrecognized tag: {body}")
+
+
+def _parse_config_tag(body: str) -> ConfigTag:
+    if not body.startswith("{") or not body.endswith("}"):
+        raise TagParseError("Config tags must start with '{' and end with '}'")
+
+    inner = body[1:-1].strip()
+    settings: dict[str, str] = {}
+
+    i = 0
+    while i < len(inner):
+        i = _consume_whitespace(inner, i)
+        if i >= len(inner):
+            break
+        if inner[i] == ";":
+            i += 1
+            continue
+
+        key_match = re.match(r"(?P<key>[A-Za-z][A-Za-z0-9_]*)", inner[i:])
+        if not key_match:
+            raise TagParseError("Config tags require identifiers before ':'")
+
+        key = key_match.group("key")
+        i += key_match.end()
+        i = _consume_whitespace(inner, i)
+        if i >= len(inner) or inner[i] != ":":
+            raise TagParseError("Config tag entries must use key:\"value\" syntax")
+
+        i += 1
+        i = _consume_whitespace(inner, i)
+        if i >= len(inner):
+            raise TagParseError("Config tag values must be quoted strings")
+
+        if inner[i] not in {'"', "'"}:
+            raise TagParseError("Config tag values must be quoted strings")
+
+        value, i = _parse_string_literal(inner, i)
+        settings[key] = value
+        i = _consume_whitespace(inner, i)
+        if i < len(inner) and inner[i] not in {";"}:
+            raise TagParseError("Config settings must be separated by semicolons")
+
+    if not settings:
+        raise TagParseError("Config tags require at least one setting")
+
+    return ConfigTag(settings=settings)
 
 
 def _validate_sequence_names(
@@ -677,6 +733,7 @@ __all__ = [
     "TagToken",
     "FIMTag",
     "SequenceTag",
+    "ConfigTag",
     "PrefixSuffixTag",
     "CommentTag",
     "FIMFunction",

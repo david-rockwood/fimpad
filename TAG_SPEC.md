@@ -7,6 +7,7 @@ All FIMpad tags start with `[[[` and end with `]]]`. The first character **after
 * **Digit** (`0–9`) → **FIM tag** (generation tag)
 * **Double quote** (`"`) → **Sequence tag**
 * **Left parenthesis** (`(`) → **Comment tag**
+* **Left brace** (`{`) → **Config tag** (settings preset)
 * **Letter** starting a recognized word → **Prefix/Suffix tag**
   (`prefix`, `PREFIX`, `suffix`, `SUFFIX`)
 
@@ -321,7 +322,51 @@ Thus: “if it’s in a comment tag, the model does not see it.”
 
 ---
 
-## 6. Error Handling (High-Level)
+## 6. Config Tags (Settings Presets)
+
+Config tags apply editor settings without running the model. They may be inline or multiline and are triggered when the caret is inside or adjacent to the tag and the user presses Ctrl+Enter.
+
+### 6.1 Syntax
+
+```
+ConfigTag ::= '[[' '[' '[' WS? '{' ConfigBody '}' WS? ']' ']' ']'
+
+ConfigBody ::= ConfigEntry (';' WS? ConfigEntry)* ';'?
+ConfigEntry ::= ConfigKey WS? ':' WS? STRING
+ConfigKey   ::= IDENT  (use camelCase for readability)
+```
+
+Example:
+
+```text
+[[[{font:"Ubuntu Sans"; fontSize:"24"; bgColor:"#141414"; fgColor:"#f5f5f5"}]]]
+```
+
+### 6.2 Supported Keys
+
+Each entry mirrors a Settings window field (values are the text you would type there). Recognized keys:
+
+* `endpoint`, `temperature`, `topP`
+* `fimPrefix`, `fimSuffix`, `fimMiddle`
+* `font`/`fontFamily`, `fontSize`
+* `editorPadding`, `lineNumberPadding`
+* `fgColor`, `bgColor`, `caretColor`, `selectionColor`
+* `scrollSpeed`
+* `spellLang`
+
+The `open_maximized` setting **cannot** be changed via config tags.
+
+### 6.3 Semantics
+
+* All values must be quoted strings.
+* Numeric fields are validated (floats for temperature/topP; integers with bounds for sizes and padding).
+* Colors must be valid Tk color strings; otherwise an error is shown and nothing changes.
+* Fonts and spellcheck languages are validated against what the system provides. Missing fonts/languages produce an error and no settings are applied.
+* On success, the settings are applied immediately (as if saved from the Settings window) and persisted to the config file. The config tag itself remains in the document.
+
+---
+
+## 7. Error Handling (High-Level)
 
 Given FIMpad’s “fail closed” philosophy:
 

@@ -25,6 +25,7 @@ from .client import stream_completion
 from .config import DEFAULTS, WORD_RE, load_config, save_config
 from .library_resources import iter_library
 from .parser import (
+    ConfigTag,
     FIMRequest,
     FIMTag,
     PrefixSuffixTag,
@@ -190,6 +191,19 @@ class FIMPad(tk.Tk):
             background=self.cfg["highlight2"],
             foreground=self.cfg["bg"],
         )
+
+    def _available_font_families(self) -> list[str]:
+        available_fonts_set = set(tkfont.families())
+        for font_name in CORE_TK_FONT_NAMES:
+            with contextlib.suppress(tk.TclError):
+                tkfont.nametofont(font_name)
+                available_fonts_set.add(font_name)
+
+        current_fontfam = (self.cfg.get("font_family") or DEFAULTS["font_family"]).strip()
+        if current_fontfam:
+            available_fonts_set.add(current_fontfam)
+
+        return sorted(available_fonts_set)
 
     # ---------- Notebook / Tabs ----------
 
@@ -1823,11 +1837,6 @@ class FIMPad(tk.Tk):
         available_spell_langs = self._available_spell_langs
         show_spell_lang = len(available_spell_langs) > 1
 
-        prev_pad = cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
-        prev_line_pad = cfg.get(
-            "line_number_padding_px", DEFAULTS["line_number_padding_px"]
-        )
-
         row = 0
         add_row(row, "Endpoint (base, no path):", endpoint_var)
         row += 1
@@ -1869,15 +1878,7 @@ class FIMPad(tk.Tk):
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
-        available_fonts_set = set(tkfont.families())
-        for font_name in CORE_TK_FONT_NAMES:
-            with contextlib.suppress(tk.TclError):
-                tkfont.nametofont(font_name)
-                available_fonts_set.add(font_name)
-        current_fontfam = fontfam_var.get().strip()
-        if current_fontfam:
-            available_fonts_set.add(current_fontfam)
-        available_fonts = sorted(available_fonts_set)
+        available_fonts = self._available_font_families()
         add_combobox_row(row, "Font family:", fontfam_var, available_fonts)
         row += 1
         add_row(row, "Font size:", fontsize_var)
@@ -1964,73 +1965,43 @@ class FIMPad(tk.Tk):
             row += 1
 
         def apply_and_close():
+            new_cfg = self.cfg.copy()
+            prev_pad = new_cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
+            prev_line_pad = new_cfg.get(
+                "line_number_padding_px", DEFAULTS["line_number_padding_px"]
+            )
             try:
-                self.cfg["endpoint"] = endpoint_var.get().strip().rstrip("/")
-                self.cfg["temperature"] = float(temp_var.get())
-                self.cfg["top_p"] = float(top_p_var.get())
-                self.cfg["fim_prefix"] = fim_pref_var.get()
-                self.cfg["fim_suffix"] = fim_suf_var.get()
-                self.cfg["fim_middle"] = fim_mid_var.get()
-                self.cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
-                self.cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
-                new_pad = max(0, int(pad_var.get()))
-                new_line_pad = max(0, int(line_pad_var.get()))
-                self.cfg["editor_padding_px"] = new_pad
-                self.cfg["line_number_padding_px"] = new_line_pad
-                self.cfg["fg"] = fg_var.get().strip()
-                self.cfg["bg"] = bg_var.get().strip()
-                self.cfg["highlight1"] = highlight1_var.get().strip()
-                self.cfg["highlight2"] = highlight2_var.get().strip()
-                self.cfg["open_maximized"] = bool(open_maximized_var.get())
-                self.cfg["scroll_speed_multiplier"] = max(
+                new_cfg["endpoint"] = endpoint_var.get().strip().rstrip("/")
+                new_cfg["temperature"] = float(temp_var.get())
+                new_cfg["top_p"] = float(top_p_var.get())
+                new_cfg["fim_prefix"] = fim_pref_var.get()
+                new_cfg["fim_suffix"] = fim_suf_var.get()
+                new_cfg["fim_middle"] = fim_mid_var.get()
+                new_cfg["font_family"] = fontfam_var.get().strip() or DEFAULTS["font_family"]
+                new_cfg["font_size"] = max(6, min(72, int(fontsize_var.get())))
+                new_cfg["editor_padding_px"] = max(0, int(pad_var.get()))
+                new_cfg["line_number_padding_px"] = max(0, int(line_pad_var.get()))
+                new_cfg["fg"] = fg_var.get().strip()
+                new_cfg["bg"] = bg_var.get().strip()
+                new_cfg["highlight1"] = highlight1_var.get().strip()
+                new_cfg["highlight2"] = highlight2_var.get().strip()
+                new_cfg["open_maximized"] = bool(open_maximized_var.get())
+                new_cfg["scroll_speed_multiplier"] = max(
                     1, min(10, int(scroll_speed_var.get()))
                 )
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
-                    self.cfg["spell_lang"] = self._spell_lang
+                    new_cfg["spell_lang"] = self._spell_lang
                 else:
                     self._spell_lang = DEFAULTS.get("spell_lang", "en_US")
-                    self.cfg.pop("spell_lang", None)
+                    new_cfg.pop("spell_lang", None)
             except Exception as e:
                 self._show_error("Settings", "Invalid settings value.", detail=str(e))
                 return
 
-            pad_changed = (new_pad != prev_pad) or (new_line_pad != prev_line_pad)
-            save_config(self.cfg)
-            self._apply_open_maximized(self.cfg["open_maximized"])
-            self._dictionary = self._load_dictionary(self._spell_lang)
-            self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
-            for frame, st in self.tabs.items():
-                t = st["text"]
-                t.configure(
-                    font=self.app_font,
-                    fg=self.cfg["fg"],
-                    bg=self.cfg["bg"],
-                    insertbackground=self.cfg["highlight1"],
-                    selectbackground=self.cfg["highlight2"],
-                    selectforeground=self.cfg["bg"],
-                )
-                self._configure_find_highlight(t)
-                t.tag_configure(
-                    "misspelled",
-                    underline=True,
-                    foreground=self.cfg["highlight1"],
-                )
-                content_frame = st.get("content_frame")
-                if content_frame is not None:
-                    content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
-                self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-                self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
-                if pad_changed:
-                    self._reflow_text_layout(st)
-                self._clear_line_spacing(t)
-                self._render_line_numbers(st)
-                self._schedule_line_number_update(frame, delay_ms=15)
-                # refresh spellcheck state
-                if not self.cfg["spellcheck_enabled"]:
-                    t.tag_remove("misspelled", "1.0", "end")
-                else:
-                    self._schedule_spellcheck_for_frame(frame, delay_ms=200)
+            self._apply_config_changes(
+                new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad
+            )
             w.destroy()
 
         tk.Button(w, text="Save", command=apply_and_close).grid(
@@ -2038,6 +2009,163 @@ class FIMPad(tk.Tk):
         )
 
         self._prepare_child_window(w)
+
+    def _apply_config_changes(
+        self, new_cfg: dict, *, prev_pad: int, prev_line_pad: int
+    ) -> None:
+        pad_changed = (
+            new_cfg.get("editor_padding_px", prev_pad) != prev_pad
+            or new_cfg.get("line_number_padding_px", prev_line_pad)
+            != prev_line_pad
+        )
+
+        self.cfg = new_cfg
+        save_config(self.cfg)
+        self._apply_open_maximized(self.cfg.get("open_maximized", False))
+        self._dictionary = self._load_dictionary(self._spell_lang)
+        self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
+
+        for frame, st in self.tabs.items():
+            t = st["text"]
+            t.configure(
+                font=self.app_font,
+                fg=self.cfg["fg"],
+                bg=self.cfg["bg"],
+                insertbackground=self.cfg["highlight1"],
+                selectbackground=self.cfg["highlight2"],
+                selectforeground=self.cfg["bg"],
+            )
+            self._configure_find_highlight(t)
+            t.tag_configure(
+                "misspelled",
+                underline=True,
+                foreground=self.cfg["highlight1"],
+            )
+            content_frame = st.get("content_frame")
+            if content_frame is not None:
+                content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
+            self._apply_editor_padding(st, self.cfg["editor_padding_px"])
+            self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
+            if pad_changed:
+                self._reflow_text_layout(st)
+            self._clear_line_spacing(t)
+            self._render_line_numbers(st)
+            self._schedule_line_number_update(frame, delay_ms=15)
+            if not self.cfg["spellcheck_enabled"]:
+                t.tag_remove("misspelled", "1.0", "end")
+            else:
+                self._schedule_spellcheck_for_frame(frame, delay_ms=200)
+
+    def _validate_color_string(self, value: str) -> str:
+        color = value.strip()
+        if not color:
+            raise ValueError("Color value cannot be empty")
+        try:
+            self.winfo_rgb(color)
+        except tk.TclError as exc:  # noqa: BLE001
+            raise ValueError(f"Unknown color: {color}") from exc
+        return color
+
+    def _font_available(self, font_name: str) -> bool:
+        return font_name in set(self._available_font_families())
+
+    def _normalize_config_tag_settings(self, settings: dict[str, str]) -> dict[str, object]:
+        supported_keys = {
+            "endpoint": "endpoint",
+            "temperature": "temperature",
+            "topP": "top_p",
+            "fimPrefix": "fim_prefix",
+            "fimSuffix": "fim_suffix",
+            "fimMiddle": "fim_middle",
+            "fontFamily": "font_family",
+            "fontSize": "font_size",
+            "editorPadding": "editor_padding_px",
+            "lineNumberPadding": "line_number_padding_px",
+            "fgColor": "fg",
+            "bgColor": "bg",
+            "caretColor": "highlight1",
+            "selectionColor": "highlight2",
+            "scrollSpeed": "scroll_speed_multiplier",
+            "spellLang": "spell_lang",
+        }
+
+        alias_map = {k.casefold(): k for k in supported_keys}
+        alias_map.update(
+            {
+                "font": "fontFamily",
+                "fontfamily": "fontFamily",
+                "fontsize": "fontSize",
+                "editorpaddingpx": "editorPadding",
+                "linenumberpaddingpx": "lineNumberPadding",
+                "topp": "topP",
+                "top_p": "topP",
+                "textcolor": "fgColor",
+                "tecolor": "fgColor",
+                "scrollspeedmultiplier": "scrollSpeed",
+                "spelllanguage": "spellLang",
+            }
+        )
+
+        updates: dict[str, object] = {}
+        for key, raw_value in settings.items():
+            key_cf = key.casefold()
+            if key_cf in {"openmaximized", "open_maximized"}:
+                raise ValueError("Config tags cannot change open_maximized")
+
+            canonical = alias_map.get(key_cf)
+            if canonical is None or canonical not in supported_keys:
+                raise ValueError(f"Unknown config key: {key}")
+
+            cfg_key = supported_keys[canonical]
+            if cfg_key in updates:
+                raise ValueError(f"Duplicate config key: {canonical}")
+
+            try:
+                if canonical == "endpoint":
+                    updates[cfg_key] = raw_value.strip().rstrip("/")
+                elif canonical in {"temperature", "topP"}:
+                    updates[cfg_key] = float(raw_value)
+                elif canonical in {"fimPrefix", "fimSuffix", "fimMiddle"}:
+                    updates[cfg_key] = raw_value
+                elif canonical == "fontFamily":
+                    font_val = raw_value.strip() or DEFAULTS["font_family"]
+                    if not self._font_available(font_val):
+                        raise ValueError(f"Font not available: {font_val}")
+                    updates[cfg_key] = font_val
+                elif canonical == "fontSize":
+                    updates[cfg_key] = max(6, min(72, int(raw_value)))
+                elif canonical in {"editorPadding", "lineNumberPadding"}:
+                    updates[cfg_key] = max(0, int(raw_value))
+                elif canonical in {"fgColor", "bgColor", "caretColor", "selectionColor"}:
+                    updates[cfg_key] = self._validate_color_string(raw_value)
+                elif canonical == "scrollSpeed":
+                    updates[cfg_key] = max(1, min(10, int(raw_value)))
+                elif canonical == "spellLang":
+                    lang_val = raw_value.strip() or DEFAULTS.get("spell_lang", "en_US")
+                    if lang_val not in self._available_spell_langs:
+                        raise ValueError(f"Spellcheck language not available: {lang_val}")
+                    updates[cfg_key] = lang_val
+            except ValueError as exc:
+                raise ValueError(str(exc)) from exc
+
+        return updates
+
+    def _apply_config_tag(self, tag: ConfigTag) -> None:
+        prev_pad = self.cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
+        prev_line_pad = self.cfg.get(
+            "line_number_padding_px", DEFAULTS["line_number_padding_px"]
+        )
+        try:
+            updates = self._normalize_config_tag_settings(tag.settings)
+        except ValueError as exc:
+            self._show_error("Config Tag", "Invalid config tag.", detail=str(exc))
+            return
+
+        new_cfg = self.cfg.copy()
+        new_cfg.update(updates)
+        self._spell_lang = new_cfg.get("spell_lang", self._spell_lang)
+        self._apply_config_changes(new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad)
+        messagebox.showinfo("Config Tag", "Settings applied from config tag.")
 
     # ---------- Generate (streaming) ----------
 
@@ -2295,6 +2423,9 @@ class FIMPad(tk.Tk):
             return
 
         name_registry = self._build_name_registry(tokens)
+        if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
+            self._apply_config_tag(marker_token.tag)
+            return
         if marker_token.kind == "sequence" and isinstance(marker_token.tag, SequenceTag):
             names = list(marker_token.tag.names)
             missing = [nm for nm in names if nm not in name_registry]
