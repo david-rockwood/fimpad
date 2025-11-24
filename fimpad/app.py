@@ -502,13 +502,16 @@ class FIMPad(tk.Tk):
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
         scrollbar.grid(row=0, column=1, sticky="ns")
         scrollbar.config(command=lambda *args, fr=frame: self._on_scrollbar_scroll(fr, *args))
+        selection_fg = (
+            self.cfg["bg"] if self.cfg.get("reverse_selection_fg", False) else self.cfg["fg"]
+        )
         text.configure(
             font=self.app_font,
             fg=self.cfg["fg"],
             bg=self.cfg["bg"],
             insertbackground=self.cfg["highlight1"],
             selectbackground=self.cfg["highlight2"],
-            selectforeground=self.cfg["bg"],
+            selectforeground=selection_fg,
         )
         self._configure_find_highlight(text)
         st = {
@@ -1833,6 +1836,9 @@ class FIMPad(tk.Tk):
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
         highlight2_var = tk.StringVar(value=cfg["highlight2"])
         open_maximized_var = tk.BooleanVar(value=cfg.get("open_maximized", False))
+        reverse_selection_fg_var = tk.BooleanVar(
+            value=cfg.get("reverse_selection_fg", DEFAULTS["reverse_selection_fg"])
+        )
         spell_lang_var = tk.StringVar(value=self._spell_lang)
         available_spell_langs = self._available_spell_langs
         show_spell_lang = len(available_spell_langs) > 1
@@ -1849,6 +1855,15 @@ class FIMPad(tk.Tk):
             w,
             text="Open maximized on startup",
             variable=open_maximized_var,
+            onvalue=True,
+            offvalue=False,
+        ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
+        row += 1
+
+        tk.Checkbutton(
+            w,
+            text="Reverse text color when selected",
+            variable=reverse_selection_fg_var,
             onvalue=True,
             offvalue=False,
         ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
@@ -1986,6 +2001,9 @@ class FIMPad(tk.Tk):
                 new_cfg["highlight1"] = highlight1_var.get().strip()
                 new_cfg["highlight2"] = highlight2_var.get().strip()
                 new_cfg["open_maximized"] = bool(open_maximized_var.get())
+                new_cfg["reverse_selection_fg"] = bool(
+                    reverse_selection_fg_var.get()
+                )
                 new_cfg["scroll_speed_multiplier"] = max(
                     1, min(10, int(scroll_speed_var.get()))
                 )
@@ -2027,13 +2045,18 @@ class FIMPad(tk.Tk):
 
         for frame, st in self.tabs.items():
             t = st["text"]
+            selection_fg = (
+                self.cfg["bg"]
+                if self.cfg.get("reverse_selection_fg", False)
+                else self.cfg["fg"]
+            )
             t.configure(
                 font=self.app_font,
                 fg=self.cfg["fg"],
                 bg=self.cfg["bg"],
                 insertbackground=self.cfg["highlight1"],
                 selectbackground=self.cfg["highlight2"],
-                selectforeground=self.cfg["bg"],
+                selectforeground=selection_fg,
             )
             self._configure_find_highlight(t)
             t.tag_configure(
@@ -2111,6 +2134,13 @@ class FIMPad(tk.Tk):
             key_cf = key.casefold()
             if key_cf in {"openmaximized", "open_maximized"}:
                 raise ValueError("Config tags cannot change open_maximized")
+
+            if key_cf in {
+                "reverseselectionfg",
+                "reverse_selection_fg",
+                "reversetextcolorwhenselected",
+            }:
+                raise ValueError("Config tags cannot change reverse_selection_fg")
 
             canonical = alias_map.get(key_cf)
             if canonical is None or canonical not in supported_keys:
