@@ -70,6 +70,8 @@ Ctrl+Shift+I - Interrupt Stream
 
 Ctrl+Shift+L - Show Log
 
+Ctrl+Shift+V - Validate Tags
+
 
 
 ### Tab switching shortcuts

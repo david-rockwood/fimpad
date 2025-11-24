@@ -860,32 +860,32 @@ class FIMPad(tk.Tk):
         aimenu = tk.Menu(menubar, tearoff=0)
         aimenu.add_command(
             label="Generate",
-            accelerator="Ctrl+Shift+g",
+            accelerator="Ctrl+Shift+G",
             command=self.generate,
         )
         aimenu.add_command(
             label="Repeat Last FIM",
-            accelerator="Ctrl+Shift+r",
+            accelerator="Ctrl+Shift+R",
             command=self.repeat_last_fim,
         )
         aimenu.add_command(
             label="Paste Last FIM Tag",
-            accelerator="Ctrl+Shift+p",
+            accelerator="Ctrl+Shift+P",
             command=self.paste_last_fim_tag,
         )
         aimenu.add_command(
             label="Interrupt Stream",
-            accelerator="Ctrl+Shift+i",
+            accelerator="Ctrl+Shift+I",
             command=self.interrupt_stream,
         )
         aimenu.add_command(
             label="Show Log",
-            accelerator="Ctrl+Shift+l",
+            accelerator="Ctrl+Shift+L",
             command=self.show_fim_log,
         )
         aimenu.add_command(
             label="Validate Tags",
-            accelerator="Ctrl+Shift+v",
+            accelerator="Ctrl+Shift+V",
             command=self.validate_tags_current,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
