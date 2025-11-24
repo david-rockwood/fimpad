@@ -34,11 +34,11 @@ from .parser import (
     SequenceTag,
     TagParseError,
     TagToken,
+    _parse_tag,
+    _validate_sequence_names,
     cursor_within_span,
     parse_fim_request,
     parse_triple_tokens,
-    _parse_tag,
-    _validate_sequence_names,
 )
 from .stream_utils import find_stream_match
 from .utils import offset_to_tkindex
