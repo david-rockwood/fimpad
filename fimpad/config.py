@@ -25,6 +25,7 @@ DEFAULTS = {
     "bg": "#d8d8d8",
     "highlight1": "#b40a0a",
     "highlight2": "#a4a4a4",
+    "reverse_selection_fg": False,
     "open_maximized": False,
     "scroll_speed_multiplier": 1,
     "line_numbers_enabled": False,
