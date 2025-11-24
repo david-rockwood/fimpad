@@ -307,7 +307,6 @@ class FIMPad(tk.Tk):
                 "text": title,
                 "compound": tk.RIGHT,
                 "padding": self._tab_close_compound_padding,
-                "anchor": "w",
             }
             if image is not None:
                 kwargs["image"] = image
