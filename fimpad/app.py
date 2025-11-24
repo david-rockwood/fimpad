@@ -124,11 +124,11 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Alt-f>", lambda e: self._toggle_follow_stream())  # follow toggle
         self.bind_all("<Control-Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
         self.bind_all("<Control-Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
-        self.bind_all("<Control-Shift-g>", self._on_generate_shortcut)
-        self.bind_all("<Control-Shift-r>", self._on_repeat_last_fim_shortcut)
-        self.bind_all("<Control-Shift-p>", self._on_paste_last_fim_tag_shortcut)
-        self.bind_all("<Control-Shift-i>", self._on_interrupt_stream)
-        self.bind_all("<Control-Shift-l>", self._on_show_fim_log_shortcut)
+        self.bind_all("<Control-Shift-G>", self._on_generate_shortcut)
+        self.bind_all("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
+        self.bind_all("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
+        self.bind_all("<Control-Shift-I>", self._on_interrupt_stream)
+        self.bind_all("<Control-Shift-L>", self._on_show_fim_log_shortcut)
         self.bind_all("<Control-w>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Control-t>", lambda e: self._open_settings())
 
@@ -566,11 +566,11 @@ class FIMPad(tk.Tk):
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
-        text.bind("<Control-Shift-g>", self._on_generate_shortcut)
-        text.bind("<Control-Shift-r>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Shift-p>", self._on_paste_last_fim_tag_shortcut)
-        text.bind("<Control-Shift-i>", self._on_interrupt_stream)
-        text.bind("<Control-Shift-l>", self._on_show_fim_log_shortcut)
+        text.bind("<Control-Shift-G>", self._on_generate_shortcut)
+        text.bind("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<Control-Shift-I>", self._on_interrupt_stream)
+        text.bind("<Control-Shift-L>", self._on_show_fim_log_shortcut)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
