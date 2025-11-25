@@ -97,6 +97,7 @@ class FIMPad(tk.Tk):
         self._spell_ignore = set()  # session-level ignores
 
         self._fim_log: list[dict[str, str]] = []
+        self._log_tab_frame: tk.Widget | None = None
 
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
@@ -685,21 +686,65 @@ class FIMPad(tk.Tk):
             {"time": timestamp, "prefix": prefix_text, "suffix": suffix_text}
         )
 
+        self._append_fim_log_lines(self._format_fim_log_entry(self._fim_log[-1]))
+
+    def _format_fim_log_entry(self, entry: dict[str, str]) -> list[str]:
+        return [
+            f"[{entry['time']}]",
+            "Prefix:",
+            entry["prefix"],
+            "Suffix:",
+            entry["suffix"],
+            "",
+        ]
+
+    def _append_fim_log_lines(self, new_lines: Iterable[str]) -> None:
+        frame = self._log_tab_frame
+        if frame is None:
+            return
+
+        st = self.tabs.get(frame)
+        if not st:
+            self._log_tab_frame = None
+            return
+
+        text: tk.Text | None = st.get("text")
+        if not text or not text.winfo_exists():
+            self._log_tab_frame = None
+            return
+
+        lines = list(new_lines)
+        if not lines:
+            return
+
+        follow_enabled = self.cfg.get("follow_stream_enabled", True)
+        should_follow = follow_enabled and self._should_follow(text)
+
+        content = "".join(f"{line}\n" for line in lines)
+        text.insert(tk.END, content)
+        if should_follow:
+            text.see(tk.END)
+
     def _open_fim_log_tab(self) -> None:
+        if self._log_tab_frame is not None:
+            tab_id = str(self._log_tab_frame)
+            if self._log_tab_frame.winfo_exists() and tab_id in self.nb.tabs():
+                with contextlib.suppress(tk.TclError):
+                    self.nb.select(tab_id)
+                    return
+            self._log_tab_frame = None
+
+        lines: list[str]
         if not self._fim_log:
-            log_body = "FIM Generation Log is empty.\n"
+            lines = ["FIM Generation Log is empty.", ""]
         else:
             lines = ["FIM Generation Log", ""]
             for entry in self._fim_log:
-                lines.append(f"[{entry['time']}]")
-                lines.append("Prefix:")
-                lines.append(entry["prefix"])
-                lines.append("Suffix:")
-                lines.append(entry["suffix"])
-                lines.append("")
-            log_body = "\n".join(lines).rstrip() + "\n"
+                lines.extend(self._format_fim_log_entry(entry))
 
-        self._new_tab(content=log_body, title="FIM Log")
+        log_body = "".join(f"{line}\n" for line in lines)
+        st = self._new_tab(content=log_body, title="FIMpad_log.jsonl")
+        self._log_tab_frame = st["frame"]
 
     def show_fim_log(self) -> None:
         self._open_fim_log_tab()
@@ -743,6 +788,8 @@ class FIMPad(tk.Tk):
         ):
             self._set_close_hover_tab(None)
         frame = self.nametowidget(cur)
+        if frame == self._log_tab_frame:
+            self._log_tab_frame = None
         self.nb.forget(cur)
         self.tabs.pop(frame, None)
         if not self.tabs:
