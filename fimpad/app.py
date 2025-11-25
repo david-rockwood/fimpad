@@ -1935,12 +1935,41 @@ class FIMPad(tk.Tk):
             if reset_status:
                 set_status("")
 
+        def find_previous():
+            patt = find_var.get()
+            if not patt:
+                clear_highlight()
+                return
+            ranges = text.tag_ranges(match_tag)
+            if ranges:
+                start = ranges[0]
+                start_search = start if text.compare(start, "==", "1.0") else f"{start}-1c"
+            else:
+                start_search = text.index(tk.INSERT)
+            pos = text.search(patt, start_search, stopindex="1.0", backwards=True)
+            if not pos:
+                pos = text.search(patt, tk.END, stopindex="1.0", backwards=True)
+                if not pos:
+                    clear_highlight()
+                    set_status("Not found.")
+                    return
+            end = f"{pos}+{len(patt)}c"
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.tag_add("sel", pos, end)
+            text.tag_add(match_tag, pos, end)
+            text.mark_set(tk.INSERT, end)
+            text.see(pos)
+            set_status("")
+            update_buttons()
+
         def find_next():
             patt = find_var.get()
             if not patt:
                 clear_highlight()
                 return
-            start = text.index(tk.INSERT)
+            ranges = text.tag_ranges(match_tag)
+            start = ranges[1] if ranges else text.index(tk.INSERT)
             pos = text.search(patt, start, stopindex=tk.END)
             if not pos:
                 pos = text.search(patt, "1.0", stopindex=tk.END)
@@ -2004,15 +2033,18 @@ class FIMPad(tk.Tk):
 
         btn_frame = ttk.Frame(w)
         btn_frame.grid(row=2, column=1, padx=8, pady=6, sticky="ew")
-        btn_frame.columnconfigure((0, 1, 2), weight=1)
+        btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
-        ttk.Button(btn_frame, text="Find", command=find_next).grid(
+        ttk.Button(btn_frame, text="Find Previous", command=find_previous).grid(
             row=0, column=0, padx=(0, 4), sticky="w"
         )
+        ttk.Button(btn_frame, text="Find", command=find_next).grid(
+            row=0, column=1, padx=(0, 4), sticky="w"
+        )
         replace_btn = ttk.Button(btn_frame, text="Replace", command=replace_current)
-        replace_btn.grid(row=0, column=1)
+        replace_btn.grid(row=0, column=2)
         replace_all_btn = ttk.Button(btn_frame, text="Replace All", command=replace_all)
-        replace_all_btn.grid(row=0, column=2, padx=(4, 0), sticky="e")
+        replace_all_btn.grid(row=0, column=3, padx=(4, 0), sticky="e")
         update_buttons()
 
         status = ttk.Label(w, textvariable=status_var, anchor="w")
@@ -2096,7 +2128,12 @@ class FIMPad(tk.Tk):
                 update_buttons()
                 return None
 
-        def highlight_match(content: str, match: re.Match[str], wrapped: bool) -> None:
+        def highlight_match(
+            content: str,
+            match: re.Match[str],
+            wrapped: bool,
+            status_msg: str | None = None,
+        ) -> None:
             start_idx = offset_to_tkindex(content, match.start())
             end_idx = offset_to_tkindex(content, match.end())
             text.tag_remove("sel", "1.0", tk.END)
@@ -2108,7 +2145,9 @@ class FIMPad(tk.Tk):
             else:
                 text.mark_set(tk.INSERT, end_idx)
             text.see(start_idx)
-            if wrapped:
+            if status_msg is not None:
+                set_status(status_msg)
+            elif wrapped:
                 set_status("Wrapped to the start; continuing search.")
             else:
                 set_status("")
@@ -2132,6 +2171,35 @@ class FIMPad(tk.Tk):
                 wrapped = start_offset != 0
 
             highlight_match(content, match, wrapped)
+
+        def find_previous():
+            pattern = get_pattern()
+            if not pattern:
+                return
+            content = text.get("1.0", tk.END)
+            ranges = text.tag_ranges(match_tag)
+            if ranges:
+                start_offset = len(text.get("1.0", ranges[0]))
+            else:
+                start_offset = len(text.get("1.0", tk.INSERT))
+
+            prev_match: re.Match[str] | None = None
+            if start_offset > 0:
+                for match in pattern.finditer(content, 0, start_offset):
+                    prev_match = match
+            wrapped = False
+            if prev_match is None:
+                for match in pattern.finditer(content):
+                    prev_match = match
+                if prev_match is None:
+                    clear_highlight(reset_status=False)
+                    set_status("No matches found.")
+                    update_buttons()
+                    return
+                wrapped = True
+
+            status_msg = "Wrapped to the end; continuing search." if wrapped else ""
+            highlight_match(content, prev_match, wrapped, status_msg=status_msg)
 
         def replace_current():
             pattern = get_pattern()
@@ -2196,15 +2264,18 @@ class FIMPad(tk.Tk):
 
         btn_frame = ttk.Frame(w)
         btn_frame.grid(row=3, column=1, padx=8, pady=6, sticky="ew")
-        btn_frame.columnconfigure((0, 1, 2), weight=1)
+        btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
-        ttk.Button(btn_frame, text="Find next", command=find_next).grid(
+        ttk.Button(btn_frame, text="Find previous", command=find_previous).grid(
             row=0, column=0, padx=(0, 4), sticky="w"
         )
+        ttk.Button(btn_frame, text="Find next", command=find_next).grid(
+            row=0, column=1, padx=(0, 4), sticky="w"
+        )
         replace_btn = ttk.Button(btn_frame, text="Replace", command=replace_current)
-        replace_btn.grid(row=0, column=1)
+        replace_btn.grid(row=0, column=2)
         replace_all_btn = ttk.Button(btn_frame, text="Replace all", command=replace_all)
-        replace_all_btn.grid(row=0, column=2)
+        replace_all_btn.grid(row=0, column=3)
         update_buttons()
 
         status = ttk.Label(w, textvariable=status_var, anchor="w")
