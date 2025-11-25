@@ -797,8 +797,6 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
-        if self._is_log_tab(st):
-            return
         if not self._maybe_save(st):
             return
         cur = self.nb.select()
