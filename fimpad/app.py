@@ -1938,6 +1938,12 @@ class FIMPad(tk.Tk):
             if reset_status:
                 set_status("")
 
+        def select_match(start: str, end: str) -> None:
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_remove(match_tag, "1.0", tk.END)
+            text.tag_add("sel", start, end)
+            text.tag_add(match_tag, start, end)
+
         def find_previous():
             patt = find_var.get()
             if not patt:
@@ -1957,10 +1963,7 @@ class FIMPad(tk.Tk):
                     set_status("Not found.")
                     return
             end = f"{pos}+{len(patt)}c"
-            text.tag_remove("sel", "1.0", tk.END)
-            text.tag_remove(match_tag, "1.0", tk.END)
-            text.tag_add("sel", pos, end)
-            text.tag_add(match_tag, pos, end)
+            select_match(pos, end)
             text.mark_set(tk.INSERT, end)
             text.see(pos)
             set_status("")
@@ -1981,10 +1984,7 @@ class FIMPad(tk.Tk):
                     set_status("Not found.")
                     return
             end = f"{pos}+{len(patt)}c"
-            text.tag_remove("sel", "1.0", tk.END)
-            text.tag_remove(match_tag, "1.0", tk.END)
-            text.tag_add("sel", pos, end)
-            text.tag_add(match_tag, pos, end)
+            select_match(pos, end)
             text.mark_set(tk.INSERT, end)
             text.see(pos)
             set_status("")
@@ -2057,7 +2057,12 @@ class FIMPad(tk.Tk):
             clear_highlight()
             w.destroy()
 
+        def on_destroy(event: tk.Event) -> None:
+            if event.widget is w:
+                clear_highlight()
+
         self._prepare_child_window(w)
+        w.bind("<Destroy>", on_destroy, add="+")
         w.protocol("WM_DELETE_WINDOW", close_dialog)
 
     def _open_regex_replace_dialog(self):
@@ -2293,7 +2298,12 @@ class FIMPad(tk.Tk):
             clear_highlight()
             w.destroy()
 
+        def on_destroy(event: tk.Event) -> None:
+            if event.widget is w:
+                clear_highlight()
+
         w.protocol("WM_DELETE_WINDOW", on_close)
+        w.bind("<Destroy>", on_destroy, add="+")
         self._prepare_child_window(w)
 
     # ---------- Settings ----------
