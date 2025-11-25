@@ -807,6 +807,8 @@ class FIMPad(tk.Tk):
         ):
             self._set_close_hover_tab(None)
         frame = self.nametowidget(cur)
+        if st.get("stream_stop_event") is not None:
+            self._interrupt_stream_for_tab(frame)
         if frame == self._log_tab_frame:
             self._log_tab_frame = None
         self.nb.forget(cur)
@@ -1376,10 +1378,15 @@ class FIMPad(tk.Tk):
         t.mark_set(tk.INSERT, "1.0")
         t.see("1.0")
 
-    def _show_error(self, title: str, message: str, detail: str | None = None) -> None:
+    def _show_error(
+        self,
+        title: str,
+        message: str,
+        detail: str | None = None,
+        parent: tk.Misc | None = None,
+    ) -> None:
         dialog = tk.Toplevel(self)
         dialog.title(title)
-        dialog.transient(self)
         dialog.resizable(False, False)
         dialog.grab_set()
 
@@ -1434,6 +1441,7 @@ class FIMPad(tk.Tk):
         ok_btn.focus_set()
 
         dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self._prepare_child_window(dialog, parent)
         self.wait_window(dialog)
 
     # ---------- Library ----------
@@ -2614,7 +2622,9 @@ class FIMPad(tk.Tk):
                     self._spell_lang = DEFAULTS.get("spell_lang", "en_US")
                     new_cfg.pop("spell_lang", None)
             except Exception as e:
-                self._show_error("Settings", "Invalid settings value.", detail=str(e))
+                self._show_error(
+                    "Settings", "Invalid settings value.", detail=str(e), parent=w
+                )
                 return
 
             self._apply_config_changes(
@@ -3253,28 +3263,41 @@ class FIMPad(tk.Tk):
         self.validate_tags_current()
         return "break"
 
-    def interrupt_stream(self):
-        if not self._fim_generation_active:
+    def _interrupt_stream_for_tab(self, frame: tk.Misc | None) -> None:
+        if frame is None:
             return
 
-        st = self._current_tab_state()
+        st = self.tabs.get(frame)
         if not st:
+            return
+
+        stop_event = st.get("stream_stop_event")
+        if stop_event is None:
             return
 
         st["stream_cancelled"] = True
         st["stream_patterns"] = []
         st["stream_accumulated"] = ""
+        st["post_actions"] = []
         self._sequence_queue = []
         self._sequence_tab = None
         self._sequence_names = None
 
-        stop_event = st.get("stream_stop_event")
-        if stop_event is not None:
-            stop_event.set()
+        stop_event.set()
 
-        self._result_queue.put(
-            {"ok": True, "kind": "stream_done", "tab": self.nb.select()}
-        )
+        tab_id = str(frame)
+        self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
+
+    def interrupt_stream(self):
+        if not self._fim_generation_active:
+            return
+
+        tab_id = self.nb.select()
+        if not tab_id:
+            return
+
+        frame = self.nametowidget(tab_id)
+        self._interrupt_stream_for_tab(frame)
 
     def paste_last_fim_tag(self):
         st = self._current_tab_state()
@@ -4060,6 +4083,9 @@ class FIMPad(tk.Tk):
                 self.nb.select(frame)
                 if not self._maybe_save(st):
                     return
+        for frame, st in list(self.tabs.items()):
+            if st.get("stream_stop_event") is not None:
+                self._interrupt_stream_for_tab(frame)
         save_config(self.cfg)
         self.destroy()
 
