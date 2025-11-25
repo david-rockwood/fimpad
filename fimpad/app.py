@@ -1456,7 +1456,7 @@ class FIMPad(tk.Tk):
             return self._save_file_as_current()
         try:
             with open(path, "w", encoding="utf-8") as f:
-                f.write(st["text"].get("1.0", tk.END))
+                f.write(st["text"].get("1.0", "end-1c"))
             st["text"].edit_modified(False)
             self._set_dirty(st, False)
         except Exception as e:
@@ -1471,7 +1471,7 @@ class FIMPad(tk.Tk):
             return
         try:
             with open(path, "w", encoding="utf-8") as f:
-                f.write(st["text"].get("1.0", tk.END))
+                f.write(st["text"].get("1.0", "end-1c"))
             st["path"] = path
             st["text"].edit_modified(False)
             self._set_dirty(st, False)
