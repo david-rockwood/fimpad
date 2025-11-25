@@ -308,7 +308,3 @@ selectionColor:"#d81010";
 EDIT HERE
 ```
 [[[200;temp("0.85");top_p("0.90");stop("}\]\]\]\n```\n")]]]
-
-
-
-

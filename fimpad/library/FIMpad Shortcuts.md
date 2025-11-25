@@ -205,4 +205,3 @@ Ctrl+O - “Open line”: insert a newline before the cursor without moving the 
 Ctrl+T - Transpose the character left of the carat with the character right of the carat.
 
 
-
