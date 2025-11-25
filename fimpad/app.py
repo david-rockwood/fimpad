@@ -1273,7 +1273,15 @@ class FIMPad(tk.Tk):
         if self._line_numbers_menu_var is not None:
             self._line_numbers_menu_var.set(enabled)
         for st in self.tabs.values():
+            text: tk.Text | None = st.get("text")
+            try:
+                yview = None if text is None else text.yview()[0]
+            except Exception:
+                yview = None
             self._apply_line_numbers_state(st, enabled)
+            if yview is not None and text is not None:
+                with contextlib.suppress(Exception):
+                    text.yview_moveto(yview)
             self._schedule_line_number_update(st["frame"], delay_ms=10)
 
     def _toggle_spellcheck(self):
