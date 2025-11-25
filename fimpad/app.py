@@ -1488,7 +1488,7 @@ class FIMPad(tk.Tk):
                     detail=str(exc),
                 )
                 return
-            refresh_dir(current_dir)
+            refresh_dir(new_path)
             try:
                 for item_id, path in item_paths.items():
                     if path == new_path:
@@ -1682,7 +1682,7 @@ class FIMPad(tk.Tk):
                     detail=str(exc),
                 )
                 return
-            refresh_dir(current_dir)
+            refresh_dir(new_path)
             try:
                 for item_id, path in item_paths.items():
                     if path == new_path:
