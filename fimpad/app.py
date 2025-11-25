@@ -1526,7 +1526,19 @@ class FIMPad(tk.Tk):
         list_frame.rowconfigure(0, weight=1)
         list_frame.columnconfigure(0, weight=1)
 
-        tree = ttk.Treeview(list_frame, columns=("kind",), show="tree", selectmode="browse")
+        tree_style = ttk.Style(dialog)
+        row_height = max(self.app_font.metrics("linespace") + 6, 22)
+        tree_style.configure(
+            "OpenDialog.Treeview", font=self.app_font, rowheight=row_height
+        )
+
+        tree = ttk.Treeview(
+            list_frame,
+            columns=("kind",),
+            show="tree",
+            selectmode="browse",
+            style="OpenDialog.Treeview",
+        )
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
         tree.grid(row=0, column=0, sticky="nsew")
