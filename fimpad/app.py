@@ -1280,9 +1280,13 @@ class FIMPad(tk.Tk):
                 yview = None
             self._apply_line_numbers_state(st, enabled)
             if yview is not None and text is not None:
-                with contextlib.suppress(Exception):
-                    text.yview_moveto(yview)
+                self.after_idle(lambda t=text, y=yview: self._restore_yview(t, y))
             self._schedule_line_number_update(st["frame"], delay_ms=10)
+
+    def _restore_yview(self, text: tk.Text, yview: float) -> None:
+        with contextlib.suppress(Exception):
+            text.update_idletasks()
+            text.yview_moveto(yview)
 
     def _toggle_spellcheck(self):
         enabled = not self.cfg.get("spellcheck_enabled", True)
