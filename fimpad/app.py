@@ -448,7 +448,7 @@ class FIMPad(tk.Tk):
                 continue
             self._apply_tab_title(target, title)
 
-    def _new_tab(self, content: str = "", title: str = "Untitled"):
+    def _new_tab(self, content: str = "", title: str = "Untitled", *, is_log: bool = False):
         frame = ttk.Frame(self.nb)
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
@@ -556,6 +556,7 @@ class FIMPad(tk.Tk):
             "last_yview": 0.0,
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
             "_line_number_job": None,
+            "is_log_tab": is_log,
         }
 
         self._apply_editor_padding(st, self.cfg["editor_padding_px"])
@@ -587,7 +588,7 @@ class FIMPad(tk.Tk):
         text.bind("<Control-End>", self._on_ctrl_end_key)
 
         def on_modified(event=None):
-            if st["suppress_modified"]:
+            if st["suppress_modified"] or st.get("is_log_tab"):
                 text.edit_modified(False)
             elif text.edit_modified():
                 self._set_dirty(st, True)
@@ -600,6 +601,10 @@ class FIMPad(tk.Tk):
         text.insert("1.0", content)
         text.edit_modified(False)
         st["suppress_modified"] = False
+
+        if is_log:
+            text.config(state=tk.DISABLED)
+            text.edit_modified(False)
 
         self.tabs[frame] = st
         self.nb.add(frame, text=title)
@@ -734,8 +739,13 @@ class FIMPad(tk.Tk):
         should_follow = follow_enabled and self._should_follow(text)
 
         log_body = self._render_fim_log_body()
+        st["suppress_modified"] = True
+        text.config(state=tk.NORMAL)
         text.delete("1.0", tk.END)
         text.insert("1.0", log_body)
+        text.edit_modified(False)
+        st["suppress_modified"] = False
+        text.config(state=tk.DISABLED)
         if should_follow:
             text.see(tk.END)
 
@@ -749,7 +759,7 @@ class FIMPad(tk.Tk):
             self._log_tab_frame = None
 
         log_body = self._render_fim_log_body()
-        st = self._new_tab(content=log_body, title="FIMpad_log.jsonl")
+        st = self._new_tab(content=log_body, title="FIMpad_log.jsonl", is_log=True)
         self._log_tab_frame = st["frame"]
 
     def show_fim_log(self) -> None:
@@ -761,6 +771,9 @@ class FIMPad(tk.Tk):
             return None
         frame = self.nametowidget(tab)
         return self.tabs.get(frame)
+
+    def _is_log_tab(self, st: dict | None) -> bool:
+        return bool(st and st.get("is_log_tab"))
 
     def _update_tab_title(self, st):
         tab = self.nb.select()
@@ -1445,14 +1458,15 @@ class FIMPad(tk.Tk):
 
     def _open_file_into_current(self):
         st = self._current_tab_state()
-        if not st:
-            return
-        if not self._maybe_save(st):
+        reuse_target = st if st and not self._is_log_tab(st) else None
+        if reuse_target and not self._maybe_save(reuse_target):
             return
         path = self._open_file_dialog()
         if not path:
             return
-        self._load_file_into_tab(st, path)
+        if reuse_target is None or not self._can_reuse_tab_for_open(reuse_target):
+            reuse_target = self._new_tab()
+        self._load_file_into_tab(reuse_target, path)
 
     def _open_file_dialog(self, initial_dir: str | None = None) -> str | None:
         dialog = tk.Toplevel(self)
@@ -1854,7 +1868,7 @@ class FIMPad(tk.Tk):
         return None
 
     def _can_reuse_tab_for_open(self, st: dict) -> bool:
-        if st.get("dirty") or st.get("path"):
+        if st.get("dirty") or st.get("path") or st.get("is_log_tab"):
             return False
         text: tk.Text | None = st.get("text")
         if not text:
@@ -2805,6 +2819,8 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
+        if self._is_log_tab(st):
+            return
 
         text_widget: tk.Text | None = st.get("text")
         if text_widget is None:
@@ -3141,6 +3157,8 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
+        if self._is_log_tab(st):
+            return
 
         text_widget = st["text"]
         cursor_index = text_widget.index(tk.INSERT)
@@ -3262,6 +3280,8 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
+        if self._is_log_tab(st):
+            return
 
         text_widget = st.get("text")
         if text_widget is None:
@@ -3297,6 +3317,8 @@ class FIMPad(tk.Tk):
 
         st = self._current_tab_state()
         if not st:
+            return
+        if self._is_log_tab(st):
             return
 
         text_widget = st.get("text")
