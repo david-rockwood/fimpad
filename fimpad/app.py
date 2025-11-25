@@ -1958,7 +1958,7 @@ class FIMPad(tk.Tk):
             text.tag_remove(match_tag, "1.0", tk.END)
             text.tag_add("sel", pos, end)
             text.tag_add(match_tag, pos, end)
-            text.mark_set(tk.INSERT, pos)
+            text.mark_set(tk.INSERT, end)
             text.see(pos)
             set_status("")
             update_buttons()
@@ -1968,7 +1968,8 @@ class FIMPad(tk.Tk):
             if not patt:
                 clear_highlight()
                 return
-            start = text.index(tk.INSERT)
+            ranges = text.tag_ranges(match_tag)
+            start = ranges[1] if ranges else text.index(tk.INSERT)
             pos = text.search(patt, start, stopindex=tk.END)
             if not pos:
                 pos = text.search(patt, "1.0", stopindex=tk.END)
