@@ -1505,7 +1505,9 @@ class FIMPad(tk.Tk):
         ttk.Label(header, text="Current directory:").grid(row=0, column=0, sticky="w")
         path_entry = ttk.Entry(header, textvariable=path_var, state="readonly")
         path_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-        ttk.Button(header, text="Parent", command=go_parent).grid(row=0, column=2, sticky="e")
+        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
+            row=0, column=2, sticky="e"
+        )
 
         controls = ttk.Frame(dialog, padding=(12, 0, 12, 6))
         controls.grid(row=1, column=0, sticky="ew")
@@ -1515,7 +1517,7 @@ class FIMPad(tk.Tk):
             controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
         )
         hidden_btn.grid(row=0, column=0, sticky="w")
-        ttk.Button(controls, text="New directory", command=create_directory).grid(
+        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
             row=0, column=1, sticky="e", padx=(8, 0)
         )
 
@@ -1527,9 +1529,10 @@ class FIMPad(tk.Tk):
         list_frame.columnconfigure(0, weight=1)
 
         tree_style = ttk.Style(dialog)
-        row_height = max(self.app_font.metrics("linespace") + 6, 22)
+        dialog_font = tkfont.nametofont("TkDefaultFont")
+        row_height = max(dialog_font.metrics("linespace") + 6, 22)
         tree_style.configure(
-            "OpenDialog.Treeview", font=self.app_font, rowheight=row_height
+            "OpenDialog.Treeview", font=dialog_font, rowheight=row_height
         )
 
         tree = ttk.Treeview(
