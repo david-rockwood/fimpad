@@ -1,59 +1,42 @@
 Type a question where it says "EDIT HERE" at the bottom of this file. Then execute the FIM tag below that by placing your carat within or adjacent to the tag and pressing Ctrl+Shift+G.
 
 [[[PREFIX]]]
-********************
-User:
+User: Does nostalgia have negative connotations?
 
-Does nostalgia have negative connotations?
-********************
 
-********************
-Assistant:
 
-While nostalgia can evoke positive emotions, it can also have negative connotations, such as longing for the past or feeling dissatisfied with the present.
+Assistant: While nostalgia can evoke positive emotions, it can also have negative connotations, such as longing for the past or feeling dissatisfied with the present.
 
 Nostalgia can also be associated with a sense of loss or regret, as people may miss the past and feel that they cannot return to it.
 
 In some cases, nostalgia can be used to manipulate or exploit people, as it can be used to evoke strong emotions and influence their behavior.
 
 Overall, nostalgia can have both positive and negative connotations, depending on the context and the individual's perspective.
-********************
 
-********************
-User:
 
-Define connotations.
-********************
 
-********************
-Assistant:
+User: Define connotations.
 
-Connotations are the emotional or cultural associations that a word or phrase carries, beyond its literal meaning.
+
+
+Assistant: Connotations are the emotional or cultural associations that a word or phrase carries, beyond its literal meaning.
 
 Connotations can be positive, negative, or neutral, and they can vary depending on the context and the individual's perspective.
-********************
 
-********************
-User:
 
-What is Thus Spake Zarathustra about?
-********************
 
-********************
-Assistant:
+User: What is Thus Spake Zarathustra about?
 
-Thus Spake Zarathustra is a philosophical novel by Friedrich Nietzsche that explores themes such as the nature of existence, the role of the individual in society, and the search for meaning and purpose.
+
+
+Assistant: Thus Spake Zarathustra is a philosophical novel by Friedrich Nietzsche that explores themes such as the nature of existence, the role of the individual in society, and the search for meaning and purpose.
 
 The novel is written in the form of a series of parables and aphorisms, and it is inspired by the teachings of the ancient Persian prophet Zarathustra.
-********************
 
-********************
-User:
 
-EDIT HERE
-********************
 
-********************
-Assistant:
+User: EDIT HERE
 
-[[[500;stop("User:\n\n")]]]
+
+
+Assistant: [[[500;stop("User: ","User:")]]]
