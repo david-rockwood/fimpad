@@ -2,7 +2,7 @@
 
 
 
-### 1. Newspaper Theme
+## Newspaper
 
 A serious theme with a calm light-gray background for long reading sessions and an assertive red caret to guide attention.
 
@@ -17,7 +17,22 @@ selectionColor:"#a4a4a4";
 
 
 
-### 2. Midnight Coding
+## The Beach
+
+A lively day at the beach.
+
+```
+[[[{
+fgColor:"#d8d8d8";
+bgColor:"#384868";
+caretColor:"#c800c8";
+selectionColor:"#dd9500";
+}]]]
+```
+
+
+
+## Midnight Coding
 
 A dark, focused theme with a near-black slate background and a cool blue caret for late-night concentration.
 
@@ -25,44 +40,44 @@ A dark, focused theme with a near-black slate background and a cool blue caret f
 [[[{
 fgColor:"#e0e0e0";
 bgColor:"#141820";
-caretColor:"#4aa0ff";
-selectionColor:"#334050";
+caretColor:"#3878f8";
+selectionColor:"#283868";
 }]]]
 ```
 
 
 
-### 3. Forest Terminal
+## Forest Terminal
 
 A deep green, low-brightness theme inspired by old phosphor terminals and woodland calm.
 
 ```
 [[[{
-fgColor:"#b7ffb7";
-bgColor:"#[[[20]]]002b00";
-caretColor:"#00ff66";
-selectionColor:"#004400";
+fgColor:"#88f888";
+bgColor:"#001800";
+caretColor:"#d8f8d8";
+selectionColor:"#005800";
 }]]]
 ```
 
 
 
-### 4. Desert Sunset
+## Desert Sunset
 
 A warm, inviting theme with soft sand tones and a glowing amber caret, tuned for creative writing.
 
 ```
 [[[{
-fgColor:"#402010";
-bgColor:"#f2e4c8";
-caretColor:"#e36e1a";
-selectionColor:"#cfb8a0";
+fgColor:"#580848";
+bgColor:"#d4b4b4";
+caretColor:"#e87818";
+selectionColor:"#d4c4b4";
 }]]]
 ```
 
 
 
-### 5. Glacial Breeze
+## Glacial Breeze
 
 A cool, bright theme with icy blue shadows and crisp high-contrast text.
 
@@ -77,7 +92,7 @@ selectionColor:"#c0d8f4";
 
 
 
-### 6. Cyber Neon
+## Cyber Neon
 
 A high-energy neon look with black void background, electric pink highlights, and a laser-cyan selection.
 
@@ -92,67 +107,67 @@ selectionColor:"#00ffff";
 
 
 
-### 7. Coffee Shop
+## Coffee Shop
 
 A cozy, warm, brown-tinted theme for relaxed writing and gentle focus.
 
 ```
 [[[{
-fgColor:"#2a1a10";
-bgColor:"#e4d3b3";
+fgColor:"#3a2a20";
+bgColor:"#d0c0b4";
 caretColor:"#a0522d";
-selectionColor:"#cbb89a";
+selectionColor:"#f0f0e0";
 }]]]
 ```
 
 
 
-### 8. Overcast Minimal
+## Overcast Minimal
 
 A low-saturation, gentle grayscale theme with super-soft contrast and a muted gray caret for distraction-free reading.
 
 ```
 [[[{
 fgColor:"#303030";
-bgColor:"#f0f0f0";
-caretColor:"#808080";
+bgColor:"#e0e0e0";
+caretColor:"#606060";
 selectionColor:"#d0d0d0";
 }]]]
 ```
 
 
 
-## 9. Dusk Scholar
+## Dusk Scholar
 
-A muted dusk-toned reading theme, with dim bluish-gray surroundings and a soft, parchment-like text color.
+A dusk-toned reading theme, with dim bluish-gray surroundings and a soft, parchment-like text color.
 
 ```
 [[[{
-fgColor:"#f2e9dc";
+fgColor:"#f8e8d8";
 bgColor:"#1e2530";
-caretColor:"#d38a5c";
-selectionColor:"#334050";
+caretColor:"#d88858";
+selectionColor:"#404868";
 }]]]
 ```
 
 
 
-## 10. Teal Lantern
+## Caribbean Ocean
 
 A cool teal theme with equal parts green and blue, low red, and a gentle oceanic glow.
 
 ```
 [[[{
-fgColor:"#b4ffff";
-bgColor:"#003a3f";
-caretColor:"#00c8c8";
-selectionColor:"#206a70";
+fgColor:"#ccffff";
+bgColor:"#004050";
+caretColor:"#00d8d8";
+selectionColor:"#286f78";
 }]]]
 ```
 
 
 
-## 11. Shadow Atelier
+## Shadow Studio
 
 A subtle, art-studio-inspired theme with charcoal walls and faint warm accents that lift the text away from the darkness.
 
@@ -160,74 +175,59 @@ A subtle, art-studio-inspired theme with charcoal walls and faint warm accents t
 [[[{
 fgColor:"#f7ece3";
 bgColor:"#121416";
-caretColor:"#c06a4a";
-selectionColor:"#2a2d32";
+caretColor:"#c86840";
+selectionColor:"#3f3f48";
 }]]]
 ```
 
 
 
-## 12. Antique Brass
+## Antique Brass
 
 A warm brass-and-cream theme with vintage magazine vibes and a mellow, tarnished-copper caret.
 
 ```
 [[[{
 fgColor:"#3c2a1a";
-bgColor:"#f4ecd8";
-caretColor:"#cc8a44";
-selectionColor:"#e0d0b4";
+bgColor:"#f8f0e0";
+caretColor:"#d08040";
+selectionColor:"#d8c0b0";
 }]]]
 ```
 
 
 
-## 13. Icy Fjord
+## Icy Fjord
 
 A clean high-latitude theme with bright icy blues, near-black fjord depths, and a cold silver glint at the caret.
 
 ```
 [[[{
-fgColor:"#e7f4ff";
-bgColor:"#0f1922";
-caretColor:"#a0c8e8";
-selectionColor:"#2d3e4f";
+fgColor:"#d8d8f0";
+bgColor:"#000828";
+caretColor:"#a0c8f8";
+selectionColor:"#142454";
 }]]]
 ```
 
 
 
-## 14. Sunset Terminal
+## Sunset Terminal
 
 A warm, saturated theme inspired by sunset terminals from the 1980s, with orange-gold highlights and deep-violet shadows.
 
 ```
 [[[{
 fgColor:"#ffdcb8";
-bgColor:"#1e122a";
+bgColor:"#281028";
 caretColor:"#ff9040";
-selectionColor:"#633d8c";
+selectionColor:"#502080";
 }]]]
 ```
 
 
 
-## 15. Moss & Stone
-
-A naturalistic theme with mossy greens, stone-gray base tones, and softly glowing pale-text illumination.
-
-```
-[[[{
-fgColor:"#f0f7e0";
-bgColor:"#1b231a";
-caretColor:"#7cab5c";
-selectionColor:"#344534";
-}]]]
-```
-
-
-
-## 16. Retro Cyan Console
+## Retro Cyan Console
 
 A bright, old-school cyan-on-black console theme with gentle neon edges and strong contrast.
 
@@ -242,7 +242,7 @@ selectionColor:"#004040";
 
 
 
-## 17. Pumpkin Study
+## Pumpkin Study
 
 A cozy autumn palette with pumpkin-orange undertones, warm muted browns, and a buttery parchment backdrop.
 
@@ -257,7 +257,7 @@ selectionColor:"#e5c9a4";
 
 
 
-## 18. Violet Library
+## Violet Library
 
 A quiet, meditative theme with deep violet shelving, lavender cast text, and a pale moonlight caret.
 
@@ -272,14 +272,14 @@ selectionColor:"#42345c";
 
 
 
-## 19. Industrial Graphite
+## Industrial Graphite
 
 A steel-and-slate industrial theme with cold-gray surfaces and a subtle red warning-light caret.
 
 ```
 [[[{
 fgColor:"#e0e0e0";
-bgColor:"#1a1b1e";
+bgColor:"#131312";
 caretColor:"#d24848";
 selectionColor:"#3a3b40";
 }]]]
@@ -287,38 +287,25 @@ selectionColor:"#3a3b40";
 
 
 
-## 20. Warm Study Nook
+## Vampire
 
-A gentle warm reading corner, dim brown background, cream-light text, and a soft amber caret.
-
+A stark , dark,  and bloody theme.
 ```
 [[[{
-fgColor:"#fff5e6";
-bgColor:"#302216";
-caretColor:"#dca364";
-selectionColor:"#5a4436";
+fgColor:"#e8e8e8";
+bgColor:"#090909";
+caretColor:"#444444";
+selectionColor:"#d81010";
 }]]]
 ```
 
 
 
-## 21. Bram Stoker
-
-A stark and dark theme matching the mood of Bram Stoker's Dracula.
-```
-[[[{
-fgColor:"#fff5f5";
-bgColor:"#141820";
-caretColor:"#ff6c6c";
-selectionColor:"#3f3f3f";
-}]]]
-```
-
-
-
-## 22. EDIT HERE
+## EDIT HERE
 
 EDIT HERE
 ```
-[[[200;temp("0.85");top_p([[[20]]]"0.90");stop("}\]\]\]\n```\n")]]]
+[[[200;temp("0.85");top_p("0.90");stop("}\]\]\]\n```\n")]]]
+
+
 

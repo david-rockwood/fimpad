@@ -879,14 +879,14 @@ class FIMPad(tk.Tk):
             command=self.interrupt_stream,
         )
         aimenu.add_command(
-            label="Show Log",
-            accelerator="Ctrl+Shift+L",
-            command=self.show_fim_log,
-        )
-        aimenu.add_command(
             label="Validate Tags",
             accelerator="Ctrl+Shift+V",
             command=self.validate_tags_current,
+        )
+        aimenu.add_command(
+            label="Show Log",
+            accelerator="Ctrl+Shift+L",
+            command=self.show_fim_log,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
 

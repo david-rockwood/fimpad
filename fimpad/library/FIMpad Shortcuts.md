@@ -68,9 +68,9 @@ Ctrl+Shift+P - Paste Last FIM Tag
 
 Ctrl+Shift+I - Interrupt Stream
 
-Ctrl+Shift+L - Show Log
-
 Ctrl+Shift+V - Validate Tags
+
+Ctrl+Shift+L - Show Log
 
 
 
@@ -203,4 +203,6 @@ Ctrl+X - Cut whatever is selected in the text document.
 Ctrl+O - “Open line”: insert a newline before the cursor without moving the cursor.
 
 Ctrl+T - Transpose the character left of the carat with the character right of the carat.
+
+
 
