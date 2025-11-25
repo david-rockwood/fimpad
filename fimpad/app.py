@@ -195,10 +195,13 @@ class FIMPad(tk.Tk):
         self._center_window(window, parent_widget)
 
     def _configure_find_highlight(self, text: tk.Text, tag: str = "find_replace_match") -> None:
+        selection_fg = (
+            self.cfg["bg"] if self.cfg.get("reverse_selection_fg", False) else self.cfg["fg"]
+        )
         text.tag_configure(
             tag,
             background=self.cfg["highlight2"],
-            foreground=self.cfg["bg"],
+            foreground=selection_fg,
         )
 
     def _available_font_families(self) -> list[str]:
@@ -2050,7 +2053,12 @@ class FIMPad(tk.Tk):
         status = ttk.Label(w, textvariable=status_var, anchor="w")
         status.grid(row=3, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
 
+        def close_dialog() -> None:
+            clear_highlight()
+            w.destroy()
+
         self._prepare_child_window(w)
+        w.protocol("WM_DELETE_WINDOW", close_dialog)
 
     def _open_regex_replace_dialog(self):
         st = self._current_tab_state()
