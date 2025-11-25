@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
-from tkinter import colorchooser, filedialog, messagebox, simpledialog, ttk
+from tkinter import colorchooser, messagebox, simpledialog, ttk
 
 import enchant
 
@@ -1488,7 +1488,7 @@ class FIMPad(tk.Tk):
                     detail=str(exc),
                 )
                 return
-            refresh_dir(current_dir)
+            refresh_dir(new_path)
             try:
                 for item_id, path in item_paths.items():
                     if path == new_path:
@@ -1586,6 +1586,217 @@ class FIMPad(tk.Tk):
             return selected_path
         return None
 
+    def _save_file_dialog(
+        self, initial_dir: str | None = None, default_name: str | None = None
+    ) -> str | None:
+        dialog = tk.Toplevel(self)
+        dialog.title("Save File")
+        dialog.geometry("900x760")
+        self._prepare_child_window(dialog)
+        dialog.grab_set()
+
+        current_dir = os.path.abspath(initial_dir or os.getcwd())
+        show_hidden = tk.BooleanVar(value=False)
+        filename_var = tk.StringVar(value=default_name or "")
+        save_btn: ttk.Button | None = None
+
+        path_var = tk.StringVar(value=current_dir)
+
+        item_paths: dict[str, str] = {}
+
+        def update_save_state(*_args: object) -> None:
+            if not save_btn:
+                return
+            name = filename_var.get().strip()
+            save_btn_state = tk.NORMAL if name else tk.DISABLED
+            save_btn.config(state=save_btn_state)
+
+        def refresh_dir(path: str) -> None:
+            nonlocal current_dir
+            try:
+                entries = list(os.scandir(path))
+            except OSError as exc:
+                self._show_error("Save Error", "Could not list directory.", detail=str(exc))
+                return
+
+            current_dir = os.path.abspath(path)
+            path_var.set(current_dir)
+            tree.delete(*tree.get_children())
+            item_paths.clear()
+            update_save_state()
+
+            visible_entries: list[os.DirEntry[str]] = []
+            for entry in entries:
+                if not show_hidden.get() and entry.name.startswith("."):
+                    continue
+                visible_entries.append(entry)
+
+            def sort_key(ent: os.DirEntry[str]) -> tuple[int, str]:
+                return (0 if ent.is_dir(follow_symlinks=False) else 1, ent.name.lower())
+
+            for entry in sorted(visible_entries, key=sort_key):
+                item_id = tree.insert("", tk.END, text=entry.name)
+                item_paths[item_id] = entry.path
+                if entry.is_dir(follow_symlinks=False):
+                    tree.item(item_id, values=("dir",))
+
+            tree.yview_moveto(0)
+
+        def on_select(_event=None) -> None:
+            selection = tree.selection()
+            item = selection[0] if selection else tree.focus()
+            chosen = item_paths.get(item)
+            if chosen and os.path.isfile(chosen):
+                filename_var.set(os.path.basename(chosen))
+            update_save_state()
+
+        def open_selection(_event=None) -> None:
+            selection = tree.selection()
+            item = selection[0] if selection else tree.focus()
+            chosen = item_paths.get(item)
+            if not chosen:
+                return
+            if os.path.isdir(chosen):
+                refresh_dir(chosen)
+                return
+            filename_var.set(os.path.basename(chosen))
+            save_selection()
+
+        def go_parent() -> None:
+            refresh_dir(os.path.dirname(current_dir) or current_dir)
+
+        def toggle_hidden() -> None:
+            refresh_dir(current_dir)
+
+        def create_directory() -> None:
+            name = simpledialog.askstring("Create Directory", "Directory name:", parent=dialog)
+            if not name:
+                return
+            new_path = os.path.join(current_dir, name)
+            try:
+                os.makedirs(new_path, exist_ok=False)
+            except OSError as exc:
+                self._show_error(
+                    "Create Directory Error",
+                    "Could not create directory.",
+                    detail=str(exc),
+                )
+                return
+            refresh_dir(new_path)
+            try:
+                for item_id, path in item_paths.items():
+                    if path == new_path:
+                        tree.focus(item_id)
+                        tree.selection_set(item_id)
+                        break
+            except tk.TclError:
+                pass
+
+        def save_selection(_event=None) -> None:
+            name = filename_var.get().strip()
+            if not name:
+                return
+            dialog.selected_path = os.path.join(current_dir, name)  # type: ignore[attr-defined]
+            dialog.destroy()
+
+        header = ttk.Frame(dialog, padding=(12, 12, 12, 6))
+        header.grid(row=0, column=0, sticky="ew")
+        header.columnconfigure(1, weight=1)
+
+        ttk.Label(header, text="Current directory:").grid(row=0, column=0, sticky="w")
+        path_entry = ttk.Entry(header, textvariable=path_var, state="readonly")
+        path_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
+        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
+            row=0, column=2, sticky="e"
+        )
+
+        controls = ttk.Frame(dialog, padding=(12, 0, 12, 6))
+        controls.grid(row=1, column=0, sticky="ew")
+        controls.columnconfigure(0, weight=1)
+
+        hidden_btn = ttk.Checkbutton(
+            controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
+        )
+        hidden_btn.grid(row=0, column=0, sticky="w")
+        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
+            row=0, column=1, sticky="e", padx=(8, 0)
+        )
+
+        name_frame = ttk.Frame(dialog, padding=(12, 0, 12, 6))
+        name_frame.grid(row=2, column=0, sticky="ew")
+        name_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(name_frame, text="File name:").grid(row=0, column=0, sticky="w")
+        name_entry = ttk.Entry(name_frame, textvariable=filename_var)
+        name_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+        name_entry.bind("<Return>", save_selection)
+
+        list_frame = ttk.Frame(dialog, padding=(12, 0, 12, 12))
+        list_frame.grid(row=3, column=0, sticky="nsew")
+        dialog.rowconfigure(3, weight=1)
+        dialog.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+        list_frame.columnconfigure(0, weight=1)
+
+        tree_style = ttk.Style(dialog)
+        dialog_font = tkfont.nametofont("TkDefaultFont")
+        row_height = max(dialog_font.metrics("linespace") + 6, 22)
+        tree_style.configure(
+            "SaveDialog.Treeview", font=dialog_font, rowheight=row_height
+        )
+
+        tree = ttk.Treeview(
+            list_frame,
+            columns=("kind",),
+            show="tree",
+            selectmode="browse",
+            style="SaveDialog.Treeview",
+        )
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        def on_mousewheel(event: tk.Event) -> None:
+            delta = 0
+            if hasattr(event, "delta") and event.delta:
+                delta = int(-event.delta / 120)
+            elif event.num == 4:
+                delta = -1
+            elif event.num == 5:
+                delta = 1
+            if delta:
+                tree.yview_scroll(delta, "units")
+                return "break"
+
+        tree.bind("<MouseWheel>", on_mousewheel)
+        tree.bind("<Button-4>", on_mousewheel)
+        tree.bind("<Button-5>", on_mousewheel)
+        tree.bind("<Double-1>", open_selection)
+        tree.bind("<Return>", open_selection)
+        tree.bind("<<TreeviewSelect>>", on_select)
+
+        buttons = ttk.Frame(dialog, padding=(12, 0, 12, 12))
+        buttons.grid(row=4, column=0, sticky="e")
+        buttons.columnconfigure(0, weight=1)
+
+        save_btn = ttk.Button(buttons, text="Save", command=save_selection, state=tk.DISABLED)
+        save_btn.grid(row=0, column=0, padx=(0, 8))
+        cancel_btn = ttk.Button(buttons, text="Cancel", command=dialog.destroy)
+        cancel_btn.grid(row=0, column=1)
+
+        filename_var.trace_add("write", update_save_state)
+        refresh_dir(current_dir)
+        update_save_state()
+        name_entry.focus_set()
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self.wait_window(dialog)
+
+        selected_path: str | None = getattr(dialog, "selected_path", None)
+        if selected_path:
+            return os.path.abspath(selected_path)
+        return None
+
     def _can_reuse_tab_for_open(self, st: dict) -> bool:
         if st.get("dirty") or st.get("path"):
             return False
@@ -1654,7 +1865,10 @@ class FIMPad(tk.Tk):
         st = self._current_tab_state()
         if not st:
             return
-        path = filedialog.asksaveasfilename(defaultextension=".txt")
+        current_path = st.get("path")
+        initial_dir = os.path.dirname(current_path) if current_path else None
+        default_name = os.path.basename(current_path) if current_path else "Untitled.txt"
+        path = self._save_file_dialog(initial_dir=initial_dir, default_name=default_name)
         if not path:
             return
         try:
