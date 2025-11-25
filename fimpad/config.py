@@ -36,6 +36,7 @@ DEFAULTS = {
     "spellcheck_full_document_line_threshold": 100,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
     "follow_stream_enabled": True,
+    "log_entries_kept": 200,
 }
 
 WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)

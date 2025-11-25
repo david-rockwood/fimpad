@@ -5,6 +5,7 @@ with FIM streaming, dirty tracking, and enchant-based spellcheck.
 """
 
 import contextlib
+import json
 import os
 import queue
 import re
@@ -96,7 +97,7 @@ class FIMPad(tk.Tk):
         self._dictionary = self._load_dictionary(self._spell_lang)
         self._spell_ignore = set()  # session-level ignores
 
-        self._fim_log: list[dict[str, str]] = []
+        self._fim_log: list[str] = []
         self._log_tab_frame: tk.Widget | None = None
 
         self._last_fim_marker: str | None = None
@@ -682,23 +683,39 @@ class FIMPad(tk.Tk):
                 f"{self.cfg['fim_suffix']}{fim_request.safe_suffix}{self.cfg['fim_middle']}"
             )
 
-        self._fim_log.append(
-            {"time": timestamp, "prefix": prefix_text, "suffix": suffix_text}
-        )
+        entry = {
+            "time": timestamp,
+            "prefix": prefix_text,
+            "suffix": suffix_text,
+        }
+        json_line = json.dumps(entry, ensure_ascii=False)
+        previous_len = len(self._fim_log)
+        self._fim_log.append(json_line)
 
-        self._append_fim_log_lines(self._format_fim_log_entry(self._fim_log[-1]))
+        changed = self._apply_log_retention()
+        if changed or len(self._fim_log) != previous_len:
+            self._refresh_log_tab_contents()
 
-    def _format_fim_log_entry(self, entry: dict[str, str]) -> list[str]:
-        return [
-            f"[{entry['time']}]",
-            "Prefix:",
-            entry["prefix"],
-            "Suffix:",
-            entry["suffix"],
-            "",
-        ]
+    def _apply_log_retention(self) -> bool:
+        limit = int(self.cfg.get("log_entries_kept", DEFAULTS["log_entries_kept"]))
+        limit = max(0, min(9999, limit))
+        if limit == 0:
+            if self._fim_log:
+                self._fim_log.clear()
+                return True
+            return False
 
-    def _append_fim_log_lines(self, new_lines: Iterable[str]) -> None:
+        if len(self._fim_log) > limit:
+            del self._fim_log[: len(self._fim_log) - limit]
+            return True
+        return False
+
+    def _render_fim_log_body(self) -> str:
+        if not self._fim_log:
+            return "FIM Generation Log is empty.\n"
+        return "".join(f"{line}\n" for line in self._fim_log)
+
+    def _refresh_log_tab_contents(self) -> None:
         frame = self._log_tab_frame
         if frame is None:
             return
@@ -713,15 +730,12 @@ class FIMPad(tk.Tk):
             self._log_tab_frame = None
             return
 
-        lines = list(new_lines)
-        if not lines:
-            return
-
         follow_enabled = self.cfg.get("follow_stream_enabled", True)
         should_follow = follow_enabled and self._should_follow(text)
 
-        content = "".join(f"{line}\n" for line in lines)
-        text.insert(tk.END, content)
+        log_body = self._render_fim_log_body()
+        text.delete("1.0", tk.END)
+        text.insert("1.0", log_body)
         if should_follow:
             text.see(tk.END)
 
@@ -734,15 +748,7 @@ class FIMPad(tk.Tk):
                     return
             self._log_tab_frame = None
 
-        lines: list[str]
-        if not self._fim_log:
-            lines = ["FIM Generation Log is empty.", ""]
-        else:
-            lines = ["FIM Generation Log", ""]
-            for entry in self._fim_log:
-                lines.extend(self._format_fim_log_entry(entry))
-
-        log_body = "".join(f"{line}\n" for line in lines)
+        log_body = self._render_fim_log_body()
         st = self._new_tab(content=log_body, title="FIMpad_log.jsonl")
         self._log_tab_frame = st["frame"]
 
@@ -2401,6 +2407,9 @@ class FIMPad(tk.Tk):
                 cfg.get("scroll_speed_multiplier", DEFAULTS["scroll_speed_multiplier"])
             )
         )
+        log_entries_var = tk.StringVar(
+            value=str(cfg.get("log_entries_kept", DEFAULTS["log_entries_kept"]))
+        )
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
@@ -2446,6 +2455,9 @@ class FIMPad(tk.Tk):
             [str(v) for v in range(1, 11)],
             width=5,
         )
+        row += 1
+
+        add_row(row, "FIM log entries to keep:", log_entries_var, width=8)
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -2577,6 +2589,10 @@ class FIMPad(tk.Tk):
                 new_cfg["scroll_speed_multiplier"] = max(
                     1, min(10, int(scroll_speed_var.get()))
                 )
+                log_entries_val = int(log_entries_var.get())
+                if not 0 <= log_entries_val <= 9999:
+                    raise ValueError("log_entries_kept must be between 0 and 9999")
+                new_cfg["log_entries_kept"] = log_entries_val
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
                     new_cfg["spell_lang"] = self._spell_lang
@@ -2608,10 +2624,14 @@ class FIMPad(tk.Tk):
         )
 
         self.cfg = new_cfg
+        log_changed = self._apply_log_retention()
         save_config(self.cfg)
         self._apply_open_maximized(self.cfg.get("open_maximized", False))
         self._dictionary = self._load_dictionary(self._spell_lang)
         self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
+
+        if log_changed:
+            self._refresh_log_tab_contents()
 
         for frame, st in self.tabs.items():
             t = st["text"]
