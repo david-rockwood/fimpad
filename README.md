@@ -84,7 +84,7 @@ The **first character after `[[[`** tells FIMpad what *kind* of tag it is.
 
 ---
 
-## The Four Tag Types
+## The Five Tag Types
 
 ### **FIM Tags: “Generate something here”**
 
@@ -200,7 +200,6 @@ Notes:
 
 * Values must be quoted strings (what you’d type into the Settings window).
 * Fonts and spellcheck languages are validated; if unavailable, you’ll see an error and nothing changes.
-* The `Open maximized on startup` option cannot be changed by config tags.
 * Press **Ctrl+Shift+R** with the caret inside or next to the tag to apply it. Config tags stay in the document after use.
 
 ---
@@ -256,7 +255,7 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 
 ## Using FIM tags
 
-All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
+All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the five classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
 
 > Four score and seven [[[50]]]
 
