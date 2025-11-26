@@ -7,7 +7,6 @@ from collections.abc import Iterable
 
 import requests
 
-
 CONNECT_TIMEOUT = 10
 READ_TIMEOUT = 300
 
