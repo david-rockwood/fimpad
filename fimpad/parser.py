@@ -676,9 +676,7 @@ def _extract_regions_clean(
 
 
 def cursor_within_span(start: int, end: int, cursor_offset: int) -> bool:
-    return (start <= cursor_offset <= end) or (
-        cursor_offset > 0 and start <= cursor_offset - 1 < end
-    )
+    return start < cursor_offset <= end
 
 
 __all__ = [
