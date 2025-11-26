@@ -11,14 +11,6 @@ The following is a list of the 3 most liked Miles Davis songs (song title only):
 
 
 [[[PREFIX]]]
-The following is a two paragraph description of Stoic principles that, if applied, will lead to a more serene existence:
-```
-[[[400;stop("```\n");temp("0.9");top_p("0.95")]]]
-[[[SUFFIX]]]
-
-
-
-[[[PREFIX]]]
 #!/usr/bin/env bash
 set -euo pipefail
 
