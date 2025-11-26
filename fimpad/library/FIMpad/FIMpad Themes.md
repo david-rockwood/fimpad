@@ -4,21 +4,6 @@ Place your caret within in a config tag below and press Ctrl+Shift+G to change t
 
 
 
-## Newspaper
-
-A serious theme with a calm light-gray background for long reading sessions and an assertive red caret to guide attention.
-
-```
-[[[{
-fgColor:"#141414";
-bgColor:"#d8d8d8";
-caretColor:"#b40a0a";
-selectionColor:"#a4a4a4";
-}]]]
-```
-
-
-
 ## The Beach
 
 A lively day at the beach.
@@ -34,21 +19,6 @@ selectionColor:"#dd9500";
 
 
 
-## Midnight Coding
-
-A dark, focused theme with a near-black slate background and a cool blue caret for late-night concentration.
-
-```
-[[[{
-fgColor:"#e0e0e0";
-bgColor:"#141820";
-caretColor:"#3878f8";
-selectionColor:"#283868";
-}]]]
-```
-
-
-
 ## Forest Terminal
 
 A deep green, low-brightness theme inspired by old phosphor terminals and woodland calm.
@@ -59,6 +29,21 @@ fgColor:"#88f888";
 bgColor:"#001800";
 caretColor:"#d8f8d8";
 selectionColor:"#005800";
+}]]]
+```
+
+
+
+## Newspaper
+
+A serious theme with a calm light-gray background for long reading sessions and an assertive red caret to guide attention.
+
+```
+[[[{
+fgColor:"#141414";
+bgColor:"#d8d8d8";
+caretColor:"#b40a0a";
+selectionColor:"#a4a4a4";
 }]]]
 ```
 
@@ -119,6 +104,21 @@ fgColor:"#3a2a20";
 bgColor:"#d0c0b4";
 caretColor:"#a0522d";
 selectionColor:"#f0f0e0";
+}]]]
+```
+
+
+
+## Midnight Coding
+
+A dark, focused theme with a near-black slate background and a cool blue caret for late-night concentration.
+
+```
+[[[{
+fgColor:"#e0e0e0";
+bgColor:"#141820";
+caretColor:"#3878f8";
+selectionColor:"#283868";
 }]]]
 ```
 
