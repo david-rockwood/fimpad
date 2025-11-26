@@ -23,7 +23,7 @@ from tkinter import colorchooser, messagebox, simpledialog, ttk
 import enchant
 
 from .client import stream_completion
-from .config import CONFIG_PATH, ConfigSaveError, DEFAULTS, WORD_RE, load_config, save_config
+from .config import CONFIG_PATH, DEFAULTS, WORD_RE, ConfigSaveError, load_config, save_config
 from .icons import set_app_icon
 from .library_resources import iter_library
 from .parser import (
