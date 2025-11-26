@@ -33,7 +33,7 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 FIMpad requires a connection to an LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
-Currently FIMpad is likely to only work with llama.cpp llama-server serving the LLM. In the future, compatibility layers may be added to work with other servers, if there is demand for that.
+Currently FIMpad is likely to only work with llama.cpp's llama-server serving the LLM. In the future, compatibility layers may be added to work with other servers, if there is demand for that.
 
 A recent build of llama.cpp’s llama-server is recommended, available at:
 ```
