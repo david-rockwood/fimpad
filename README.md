@@ -281,7 +281,7 @@ The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum
 
 Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file and the location of the now-deleted FIM tag is considered prefix text. All of the text between the now-deleted FIM tag and the end of the file is considered suffix text. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 (or fewer) tokens that the LLM deems most likely to appear between the prefix and the suffix.
 
-In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is just a completion of the prefix. And if there are new line characters in the suffix but nothing else, FIMpad treats this as a completion.
+In the above example, the document was empty past the FIM tag, other than a newline character. In cases like this the streamed response is just a completion of the prefix. If there are newline characters in the suffix but nothing else, FIMpad treats this as a completion. Completion is not true FIM because it lacks a suffix. Nonetheless you can do completion with FIM tags by simply not providing suffix text after the tag.
 
 ---
 
@@ -465,7 +465,7 @@ after generation:
 
 The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph.
 
-The `stop()` function can take multiple arguments that represent multiple stop sequences for a single FIM generation. The first of these stop sequences that is encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops cleanly at the end of a paragraph, by stopping at any point where there is a new line following a period, a question mark, or an exclamation point.
+The `stop()` function can take multiple arguments that represent multiple stop sequences for a single FIM generation. The first of these stop sequences that is encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops cleanly at the end of a paragraph, by stopping at any point where there is a newline following a period, a question mark, or an exclamation point.
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
