@@ -322,7 +322,7 @@ Thus: “if it’s in a comment tag, the model does not see it.”
 
 ## 6. Config Tags (Settings Presets)
 
-Config tags apply editor settings without running the model. They may be inline or multiline and are triggered when the caret is inside or adjacent to the tag and the user presses Ctrl+Enter.
+Config tags apply editor settings without running the model. They may be inline or multiline and are triggered when the caret is inside or adjacent to the tag and the user generates.
 
 ### 6.1 Syntax
 
