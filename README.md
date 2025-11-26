@@ -4,12 +4,12 @@ A text editor that can do Fill-In-the-Middle (FIM) text generation within a text
 
 FIMpad is currently only tested on Linux, using llama.cpp llama-server, serving IBM Granite 4.0 H models.
 
-If you have success or failure with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that allows this.
+If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that allows this.
 
 0.0.7 – First public release
 - Introduces the FIMpad Tag DSL v0.0.7
 - Supports prefix-completion and FIM completions for models served through llama.cpp's llama-server
-- Adds streaming, multi-tab editing, undo/redo, spellcheck, themes, config persistence
+- Adds streaming, multi-tab editing, undo/redo, spellcheck, themes, and config persistence
 
 ---
 
@@ -31,21 +31,21 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 ## The server
 
-FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
+FIMpad requires a connection to an LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
 Currently FIMpad is likely to only work with llama.cpp llama-server serving the LLM. In the future, compatibility layers may be added to work with other servers, if there is demand for that.
 
-A recent build of llama.cpp llama-server is recommended, available at:
+A recent build of llama.cpp’s llama-server is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
-When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster, larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
+When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
 
 ---
 
 ## The LLMs
 
-The LLM served should be IBM Granite 4.0 H Base. FIMpad requires that FIM tokens be in the model's tokenizer. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. In one brief test, CWC-Mistral-Nemo worked for FIM without adjusting any FIMpad settings.
+The recommended model is IBM Granite 4.0 H Base. FIMpad requires that FIM tokens be in the model's tokenizer. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. In one brief test, CWC-Mistral-Nemo worked for FIM without adjusting any FIMpad settings.
 
 Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters on every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
@@ -153,7 +153,7 @@ These use a word:
 [[[suffix]]]
 ```
 
-Prefix/suffix tags carve out the **context window** that a nearby FIM tag will use. Whatever is between the nearest prefix and suffix tags is what the model sees. If no prefix or suffix tags are used, the model sees everything in the file that isn't a tag.'
+Prefix/suffix tags carve out the **context window** that a nearby FIM tag will use. Whatever is between the nearest prefix and suffix tags is what the model sees. If no prefix or suffix tags are used, the model sees everything in the file that isn't a tag.
 
 There are *soft* tags (`prefix`/`suffix`) and *hard* tags (`PREFIX`/`SUFFIX`):
 
@@ -259,17 +259,18 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 | **Sequence Tag**  | `[[["step1"; "step2"]]]`        | Run named FIM tags in order.              |
 | **Prefix/Suffix** | `[[[prefix]]]` / `[[[suffix]]]` | Define what text the model sees.          |
 | **Comment Tag**   | `[[[(note)]]]`                  | Annotation; invisible to model.           |
+| **Config Tag**    | `[[[{...}]]]`                   | Apply settings/themes from inside text.   |
 
 ---
 
 ## Using FIM tags
 
-All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the the five classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
+All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the five classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
 
 > Four score and seven [[[50]]]
 
 
-The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly after the FIM tag. Then press Ctrl+Shift+G (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
+The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the caret is within or directly after the FIM tag. Then press Ctrl+Shift+G (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
 
 > Four score and seven years ago, our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so
 
@@ -282,7 +283,7 @@ Any valid tag that has an integer as the fourth character after the three openin
 
 ---
 
-## The FIM tag stop() function
+## The FIM tag `stop()` function
 
 Within FIM tags you can list functions that will modify what the FIM tag does. Below we have an example of an FIM tag without a function.
 
@@ -318,7 +319,7 @@ and, after execution:
 >
 > John: Yeah, that's the spirit.
 
-The LLM generated multiple comments for John and Jane. In a situation where you want to chat, as John, with Jane, you want the generation to stop after Jane's comment, not John's, so that you can respond as John. And you want only one comment from Jane. And ideally the text inserted from the LLM will end exactly after "John: ", so that you can just start typing your response. You can set this up with the stop() function. The argument given to stop() is a stop sequence, which is a sequence of characters that tell FIMpad where to cut off the generation. If the stop sequence is generated by the LLM, the stop sequence characters are the last characters that will be inserted into the document for that FIM tag generation. See the example below, before generation.
+The LLM generated multiple comments for John and Jane. In a situation where you want to chat, as John, with Jane, you want the generation to stop after Jane's comment, not John's, so that you can respond as John. And you want only one comment from Jane. And ideally the text inserted from the LLM will end exactly after "John: ", so that you can just start typing your response. You can set this up with the `stop()` function. The argument given to `stop()` is a stop sequence, which is a sequence of characters that tell FIMpad where to cut off the generation. If the stop sequence is generated by the LLM, the stop sequence characters are the last characters that will be inserted into the document for that FIM tag generation. See the example below, before generation.
 
 > John: Hello Jane.
 >
@@ -350,15 +351,15 @@ and after generation:
 
 It is not guaranteed that the LLM will generate a specific stop sequence, but it becomes likely when there is a well-established pattern of consistent repetition of that sequence in the prefix and/or the suffix.
 
-In order to avoid retyping the FIM tag, you can press Ctrl+Shift+R (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Shift+P (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
+In order to avoid retyping the FIM tag, you can press Ctrl+Shift+R (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current caret position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Shift+P (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the caret.
 
-So we now have a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+R to generate the last executed FIM tag.
+So we now have a single comment from Jane, followed by a new line with the caret after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+R to generate the last executed FIM tag.
 
 Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
 
 ---
 
-## The FIM tag append() function
+## The FIM tag `append()` function
 
 The append function simply adds some text onto the end of a streamed FIM insertion. See the example below, before generation.
 
@@ -400,7 +401,7 @@ and after generation:
 > 
 > Jane: 
 
-Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the carat, then press Ctrl+Shift+R (assuming that you used an FIM tag prior and you want to repeat it.)
+Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the caret, then press Ctrl+Shift+R (assuming that you used an FIM tag prior and you want to repeat it.)
 
 ---
 
@@ -460,7 +461,7 @@ after generation:
 
 The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph.
 
-The stop() function can take multiple arguments that represent multiple stop sequences for a single FIM generation. The first of these stop sequences that is encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops clean at the end of a paragraph, by stopping at any point where there is a new line following a period, a question mark, or an exclamation point.
+The `stop()` function can take multiple arguments that represent multiple stop sequences for a single FIM generation. The first of these stop sequences that is encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops cleanly at the end of a paragraph, by stopping at any point where there is a new line following a period, a question mark, or an exclamation point.
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
@@ -484,7 +485,7 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writers block.
+Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writer's block.
 
 When writing fiction with FIM, the three concepts described above (completion, replacement, and interpolation) are very useful.
 
@@ -494,6 +495,6 @@ When writing fiction with FIM, the three concepts described above (completion, r
 
 FIMpad has a menu called "Library". Within that menu you will find examples of things you can do with AI in FIMpad, FIMpad documentation, and some public domain books.
 
-Everything you click on in the Library represents a txt or md file that is bundled with the FIMpad release. When you click on a menu entry in the Library menu, that document will open in a new tab, and some of those documents have tags that you can execute.
+Everything you click on in the Library represents a .txt or .md file that is bundled with the FIMpad release. When you click on a menu entry in the Library menu, that document will open in a new tab, and some of those documents have tags that you can execute.
 
 Once you get FIMpad up and running with a connection to a local LLM server, try some of the example tags in Library -> Examples. Then try changing your text editor color scheme by looking at Library -> FIMpad -> FIMpad Themes.

@@ -1,6 +1,6 @@
 # FIMpad Themes
 
-Place your carat within in a config tag below and press Ctrl+Shift+G to change the colors in your text editor.
+Place your caret within in a config tag below and press Ctrl+Shift+G to change the colors in your text editor.
 
 
 

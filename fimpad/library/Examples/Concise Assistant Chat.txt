@@ -1,4 +1,4 @@
-Type a question where it says "EDIT HERE" at the bottom of this file. Then execute the FIM tag below that by placing your carat within or adjacent to the tag and pressing Ctrl+Shift+G.
+Type a question where it says "EDIT HERE" at the bottom of this file. Then execute the FIM tag below that by placing your caret within or adjacent to the tag and pressing Ctrl+Shift+G.
 
 [[[PREFIX]]]
 User: Does nostalgia have negative connotations?
