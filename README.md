@@ -2,7 +2,7 @@
 
 A text editor that can do Fill-In-the-Middle (FIM) text generation within a text file.
 
-The first release will likely be in December 2025.
+Currently only tested on Linux, using llama.cpp llama-server, serving IBM Granite 4.0 H models.
 
 ---
 
@@ -53,7 +53,7 @@ Base models are better than instruct models for FIM, though both can work.
 
 ---
 
-## Understanding FIMpad’s tag tystem
+## Understanding FIMpad’s tag system
 
 FIMpad adds a small, lightweight “language” on top of plain text so you can run FIM completions directly inside your documents.
 Everything happens through **tags**, which are little blocks of text surrounded by:
@@ -201,7 +201,7 @@ Notes:
 * Values must be quoted strings (what you’d type into the Settings window).
 * Fonts and spellcheck languages are validated; if unavailable, you’ll see an error and nothing changes.
 * The `Open maximized on startup` option cannot be changed by config tags.
-* Press **Ctrl+Enter** with the caret inside or next to the tag to apply it. Tags stay in the document after use.
+* Press **Ctrl+Shift+R** with the caret inside or next to the tag to apply it. Config tags stay in the document after use.
 
 ---
 
@@ -478,7 +478,7 @@ after generation:
 
 Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writers block.
 
-When writing fiction with FIM the three concepts above (completion, replacement, and interpolation) are very useful.
+When writing fiction with FIM, the three concepts described above (completion, replacement, and interpolation) are very useful.
 
 ---
 
@@ -486,6 +486,6 @@ When writing fiction with FIM the three concepts above (completion, replacement,
 
 FIMpad has a menu called "Library". Within that menu you will find examples of things you can do with AI in FIMpad, FIMpad documentation, and some public domain books.
 
-Everything you click on in the Library represents a txt or md file that is bundled with the FIMpad release. When you click on a menu entry in Library, that document will open in a new tab, and some of those documents have tags that you can execute.
+Everything you click on in the Library represents a txt or md file that is bundled with the FIMpad release. When you click on a menu entry in the Library menu, that document will open in a new tab, and some of those documents have tags that you can execute.
 
 Once you get FIMpad up and running with a connection to a local LLM server, try some of the example tags in Library -> Examples. Then try changing your text editor color scheme by looking at Library -> FIMpad -> FIMpad Themes.
