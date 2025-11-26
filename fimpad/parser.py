@@ -196,7 +196,7 @@ def parse_fim_request(
         content, tokens, marker_token, prefix_token, suffix_token
     )
     safe_suffix = _strip_triple_tags(after_region)
-    use_completion = after_region.strip() == ""
+    use_completion = safe_suffix.strip() == ""
 
     max_tokens = _clamp_tokens(fim_tag.max_tokens or default_n, default_n)
     keep_tags = any(fn.name in {"keep", "keep_tags"} for fn in fim_tag.functions)
