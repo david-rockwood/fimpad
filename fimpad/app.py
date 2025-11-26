@@ -30,13 +30,10 @@ from .parser import (
     TRIPLE_RE,
     ConfigTag,
     FIMRequest,
-    FIMTag,
     PrefixSuffixTag,
-    SequenceTag,
     TagParseError,
     TagToken,
     _parse_tag,
-    _validate_sequence_names,
     cursor_within_span,
     parse_fim_request,
     parse_triple_tokens,
@@ -103,9 +100,6 @@ class FIMPad(tk.Tk):
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
         self._fim_generation_active: bool = False
-        self._sequence_queue: list[str] = []
-        self._sequence_tab: str | None = None
-        self._sequence_names: tuple[str, ...] | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -2872,35 +2866,6 @@ class FIMPad(tk.Tk):
                 )
             )
 
-        try:
-            _validate_sequence_names(tokens)
-        except TagParseError as exc:
-            registry: set[str] = set()
-            offending: TagToken | None = None
-            for token in tokens:
-                if isinstance(token.tag, FIMTag):
-                    for fn in token.tag.functions:
-                        if fn.name == "name" and fn.args:
-                            registry.add(fn.args[0])
-                elif isinstance(token.tag, SequenceTag):
-                    missing = [nm for nm in token.tag.names if nm not in registry]
-                    if missing:
-                        offending = token
-                        break
-
-            if offending is not None:
-                self._highlight_tag_span(
-                    st,
-                    start=offending.start,
-                    end=offending.end,
-                    content=content,
-                )
-
-            self._show_error(
-                "Validate Tags", "Sequence references are missing tags.", detail=str(exc)
-            )
-            return
-
         messagebox.showinfo("Validate Tags", "All tags are valid.")
 
     # ---------- Generate (streaming) ----------
@@ -3013,98 +2978,6 @@ class FIMPad(tk.Tk):
                     st, start=match.start(), end=match.end(), content=content
                 )
                 break
-
-    def _build_name_registry(self, tokens) -> dict[str, TagToken]:
-        registry: dict[str, TagToken] = {}
-        for token in tokens:
-            if not isinstance(token, TagToken):
-                continue
-            if token.kind != "fim" or not isinstance(token.tag, FIMTag):
-                continue
-            for fn in token.tag.functions:
-                if fn.name == "name" and fn.args:
-                    registry[fn.args[0]] = token
-        return registry
-
-    def _run_sequence_step(self, st, *, tokens=None, registry=None):
-        if not self._sequence_queue:
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-
-        if self._fim_generation_active:
-            return
-
-        tab_id = self.nb.select()
-        if self._sequence_tab is not None and tab_id != self._sequence_tab:
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-
-        name = self._sequence_queue.pop(0)
-        text_widget = st["text"]
-        content = text_widget.get("1.0", tk.END)
-
-        completed = set(self._sequence_names or ()) - set(self._sequence_queue)
-        completed.discard(name)
-
-        try:
-            tokens = tokens or list(
-                parse_triple_tokens(
-                    content, allow_missing_sequence_names=completed
-                )
-            )
-        except TagParseError as exc:
-            self._show_unsupported_fim_error(exc)
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-
-        registry = registry or self._build_name_registry(tokens)
-        marker_token = registry.get(name)
-        if marker_token is None or not isinstance(marker_token.tag, FIMTag):
-            self._show_error(
-                "Generate", "Sequence tag is missing a reference.", detail=name
-            )
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-
-        try:
-            fim_request = parse_fim_request(
-                content, marker_token.start, tokens=tokens, marker_token=marker_token
-            )
-        except TagParseError as exc:
-            self._highlight_tag_span(
-                st,
-                start=marker_token.start,
-                end=marker_token.end,
-                content=content,
-            )
-            self._show_unsupported_fim_error(exc)
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-        if fim_request is None:
-            self._highlight_tag_span(
-                st,
-                start=marker_token.start,
-                end=marker_token.end,
-                content=content,
-            )
-            self._show_error(
-                "Generate", "FIM tag reference is invalid.", detail=name
-            )
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
-            return
-
-        self._launch_fim_or_completion_stream(st, content, fim_request)
 
     def _schedule_stream_flush(self, frame, mark):
         st = self.tabs.get(frame)
@@ -3221,7 +3094,6 @@ class FIMPad(tk.Tk):
             )
             return
 
-        name_registry = self._build_name_registry(tokens)
         if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
             self._apply_config_tag(
                 st,
@@ -3229,21 +3101,6 @@ class FIMPad(tk.Tk):
                 marker_token=marker_token,
                 content=content,
             )
-            return
-        if marker_token.kind == "sequence" and isinstance(marker_token.tag, SequenceTag):
-            names = list(marker_token.tag.names)
-            missing = [nm for nm in names if nm not in name_registry]
-            if missing:
-                self._show_error(
-                    "Generate",
-                    "Sequence references are missing tags.",
-                    detail=", ".join(missing),
-                )
-                return
-            self._sequence_queue = names
-            self._sequence_tab = self.nb.select()
-            self._sequence_names = tuple(names)
-            self._run_sequence_step(st, tokens=tokens, registry=name_registry)
             return
 
         try:
@@ -3260,9 +3117,6 @@ class FIMPad(tk.Tk):
             self._show_unsupported_fim_error(exc)
             return
         if fim_request is not None:
-            self._sequence_queue = []
-            self._sequence_tab = None
-            self._sequence_names = None
             self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
@@ -3303,9 +3157,6 @@ class FIMPad(tk.Tk):
         st["stream_patterns"] = []
         st["stream_accumulated"] = ""
         st["post_actions"] = []
-        self._sequence_queue = []
-        self._sequence_tab = None
-        self._sequence_names = None
 
         stop_event.set()
 
@@ -3590,9 +3441,6 @@ class FIMPad(tk.Tk):
                             self._end_stream_undo_group(st_err)
                         self._fim_generation_active = False
                         self._set_busy(False)
-                        self._sequence_queue = []
-                        self._sequence_tab = None
-                        self._sequence_names = None
                         self._show_error(
                             "Generation Error",
                             "Generation failed during streaming.",
@@ -3699,8 +3547,6 @@ class FIMPad(tk.Tk):
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._set_dirty(st, True)
-                        if self._sequence_queue and self._sequence_tab == tab_id:
-                            self.after_idle(lambda st=st: self._run_sequence_step(st))
 
                     elif kind == "spellcheck_now":
                         self._schedule_spellcheck_for_frame(frame, delay_ms=150)
@@ -3719,9 +3565,6 @@ class FIMPad(tk.Tk):
                 except Exception as exc:  # noqa: BLE001
                     self._fim_generation_active = False
                     self._set_busy(False)
-                    self._sequence_queue = []
-                    self._sequence_tab = None
-                    self._sequence_names = None
                     with contextlib.suppress(Exception):
                         self._end_stream_undo_group(st)
                     self._show_error(

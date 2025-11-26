@@ -7,7 +7,6 @@ from fimpad.parser import (
     FIMRequest,
     FIMTag,
     PrefixSuffixTag,
-    SequenceTag,
     TagParseError,
     TagToken,
     TextToken,
@@ -34,7 +33,7 @@ def stitch_tokens(tokens):
 def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
         "A [[[5; stop(\"alpha\"); name(one)]]] "
-        "B [[[2; name(two)]]] [[[\"one\" 'two']]] "
+        "B [[[2; name(two)]]] "
         "C [[[prefix]]] D [[[suffix hard]]] E [[[(note about things) after]]]" """ F"""
         " [[[ {font:'TkDefaultFont'; bgColor:'#ffffff'} ]]]"
     )
@@ -44,22 +43,22 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
 
     tag_tokens = _collect_tags(content)
     kinds = [t.kind for t in tag_tokens]
-    assert kinds == ["fim", "fim", "sequence", "prefix", "suffix", "comment", "config"]
+    assert kinds == ["fim", "fim", "prefix", "suffix", "comment", "config"]
 
-    prefix = tag_tokens[3]
+    prefix = tag_tokens[2]
     assert isinstance(prefix.tag, PrefixSuffixTag)
     assert prefix.tag.hardness == "soft" and not prefix.tag.is_close
 
-    suffix = tag_tokens[4]
+    suffix = tag_tokens[3]
     assert isinstance(suffix.tag, PrefixSuffixTag)
     assert suffix.tag.hardness == "hard"
 
-    comment = tag_tokens[5]
+    comment = tag_tokens[4]
     assert isinstance(comment.tag, CommentTag)
     assert comment.tag.body == "note about things"
     assert comment.tag.position == "after"
 
-    config_token = tag_tokens[6]
+    config_token = tag_tokens[5]
     assert isinstance(config_token.tag, ConfigTag)
     assert config_token.tag.settings == {
         "font": "TkDefaultFont",
@@ -118,41 +117,9 @@ def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multilin
     assert functions[6].args == ("foo",)
 
 
-def test_sequence_tag_parses_strings_with_escapes():
-    content = (
-        "[[[1; name(first)]]]\n[[[2; name('line\\n2')]]]\n[[[\"first\" \"line\\n2\"]]]"
-    )
-    tokens = _collect_tags(content)
-    token = tokens[-1]
-    assert token.kind == "sequence"
-    assert isinstance(token.tag, SequenceTag)
-    assert token.tag.names == ("first", "line\n2")
-
-
-def test_sequence_tag_validates_named_targets_and_duplicates():
-    content = """
-    [[[2; name(first)]]]
-    [[[3; name(second)]]]
-    [[["first" "second"]]]
-    """
-    tokens = list(parse_triple_tokens(content))
-    names = [
-        fn.args[0]
-        for t in tokens
-        if isinstance(t, TagToken)
-        and isinstance(t.tag, FIMTag)
-        for fn in t.tag.functions
-        if fn.name == "name"
-    ]
-    assert names == ["first", "second"]
-
-
-def test_sequence_tag_missing_name_raises():
-    content = """
-    [[[1; name(alpha)]]]
-    [[["alpha" "beta"]]]
-    """
-    with pytest.raises(TagParseError):
+def test_sequence_tags_are_rejected():
+    content = "[[[\"first\" \"second\"]]]"
+    with pytest.raises(TagParseError, match="Sequence tags are no longer supported"):
         list(parse_triple_tokens(content))
 
 
@@ -306,17 +273,17 @@ def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness()
     assert suffix_token.tag.hardness == "hard"
 
 
-def test_prefix_suffix_comment_and_sequence_tags_still_parse():
+def test_prefix_suffix_and_comment_tags_still_parse():
     content = (
         "[[[prefix hard]]] [[[1; name(foo)]]] Body [[[suffix soft]]]\n"
-        "[[[(note) before]]] [[[\"foo\"]]]"
+        "[[[(note) before]]]"
     )
     tokens = list(parse_triple_tokens(content))
 
     kinds = [t.kind for t in tokens if isinstance(t, TagToken)]
-    assert kinds == ["prefix", "fim", "suffix", "comment", "sequence"]
+    assert kinds == ["prefix", "fim", "suffix", "comment"]
 
-    prefix_token, fim_token, suffix_token, comment_token, sequence_token = [
+    prefix_token, fim_token, suffix_token, comment_token = [
         t for t in tokens if isinstance(t, TagToken)
     ]
 
@@ -328,20 +295,6 @@ def test_prefix_suffix_comment_and_sequence_tags_still_parse():
     assert isinstance(comment_token.tag, CommentTag)
     assert comment_token.tag.body == "note"
     assert comment_token.tag.position == "before"
-
-    assert isinstance(sequence_token.tag, SequenceTag)
-    assert sequence_token.tag.names == ("foo",)
-
-
-def test_sequence_allows_missing_names_when_explicitly_permitted():
-    content = "[[[\"foo\"; \"bar\"]]] [[[3; name(\"bar\")]]]"
-
-    tokens = list(
-        parse_triple_tokens(content, allow_missing_sequence_names={"foo"})
-    )
-
-    kinds = [t.kind for t in tokens if isinstance(t, TagToken)]
-    assert kinds == ["sequence", "fim"]
 
 
 def test_parse_fim_request_strips_comments_and_collects_overrides():
