@@ -45,7 +45,7 @@ When you start llama-server, set a higher context size than the default 4096. Tr
 
 ## The LLMs
 
-The recommended model is IBM Granite 4.0 H Base. FIMpad requires that FIM tokens be in the model's tokenizer. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. In one brief test, CWC-Mistral-Nemo worked for FIM without adjusting any FIMpad settings.
+The recommended model is IBM Granite 4.0 H Base. FIMpad requires that FIM tokens be in the model's tokenizer. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. Other models will run in completion mode, in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM.
 
 Granite Small is 32B parameters. Granite Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters on every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
