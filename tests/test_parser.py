@@ -174,7 +174,7 @@ def test_bare_fim_tag_without_functions():
 
 def test_multifunction_tag_collects_stops_chops_and_post_actions():
     content = (
-        "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append_nl('more'); "
+        "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append('more\\n'); "
         "after:stop('tail')]]] BBB"
     )
     marker = _collect_tags(content)[0]
@@ -184,10 +184,7 @@ def test_multifunction_tag_collects_stops_chops_and_post_actions():
     assert fim_request.max_tokens == 4
     assert fim_request.stop_patterns == ["one"]
     assert fim_request.chop_patterns == ["two", "tail"]
-    assert [fn.name for fn in fim_request.post_functions] == [
-        "append",
-        "append_nl",
-    ]
+    assert [fn.name for fn in fim_request.post_functions] == ["append", "append"]
 
 
 def test_unknown_function_raises():
@@ -233,7 +230,7 @@ def test_implicit_string_stop_rejected():
 def test_new_dsl_accepts_supported_functions_and_phases():
     content = (
         "[[[42; keep(); keep_tags(); stop(\"alpha\"); after:tail('done'); "
-        "post:append(\"tail\"); append_nl('more'); temperature(0.4); top_p(0.9); "
+        "post:append(\"tail\"); append('more'); temperature(0.4); top_p(0.9); "
         "name(sample)]]]"
     )
     fim_token = _collect_tags(content)[0]
@@ -248,7 +245,7 @@ def test_new_dsl_accepts_supported_functions_and_phases():
         "stop",
         "tail",
         "append",
-        "append_nl",
+        "append",
         "temperature",
         "top_p",
         "name",

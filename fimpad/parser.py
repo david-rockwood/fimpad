@@ -128,7 +128,6 @@ FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
     "top_p": {"args": 1, "default_phase": "init", "allow_any": True},
     "append": {"args": 1, "default_phase": "post", "require_string": True},
-    "append_nl": {"args": 1, "default_phase": "post", "require_string": True},
 }
 
 
@@ -220,7 +219,7 @@ def parse_fim_request(
                 config_overrides["top_p"] = float(fn.args[0])
             except Exception:
                 continue
-        elif fn.name in {"append", "append_nl"}:
+        elif fn.name == "append":
             post_functions.append(fn)
         elif fn.name in {"chop", "tail"} and fn.args:
             chop_patterns.extend(fn.args)

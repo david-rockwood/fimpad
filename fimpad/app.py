@@ -3437,8 +3437,6 @@ class FIMPad(tk.Tk):
 
             for fn in fim_request.post_functions:
                 val = fn.args[0] if fn.args else ""
-                if fn.name == "append_nl" and not val.endswith("\n"):
-                    val = f"{val}\n"
                 st["post_actions"].append(val)
 
             self._set_busy(True)
