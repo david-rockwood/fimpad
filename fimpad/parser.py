@@ -116,7 +116,6 @@ FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "stop": {"min_args": 1, "default_phase": "init", "require_string": True},
     "chop": {"min_args": 1, "default_phase": "init", "require_string": True},
     "tail": {"args": 1, "default_phase": "after", "require_string": True},
-    "name": {"args": 1, "default_phase": "meta", "allow_any": True},
     "temp": {"args": 1, "default_phase": "init", "allow_any": True},
     "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
     "top_p": {"args": 1, "default_phase": "init", "allow_any": True},
@@ -133,7 +132,6 @@ def parse_triple_tokens(content: str) -> Iterator[Token]:
     """Yield tokens for ``content`` splitting around ``[[[...]]]`` regions."""
 
     last_index = 0
-    seen_names: set[str] = set()
     tokens: list[Token] = []
     for match in TRIPLE_RE.finditer(content):
         start, end = match.span()
@@ -144,7 +142,7 @@ def parse_triple_tokens(content: str) -> Iterator[Token]:
 
         raw = match.group(0)
         inner = match.group("body") or ""
-        tag = _parse_tag(inner, seen_names)
+        tag = _parse_tag(inner)
         tokens.append(TagToken(start=start, end=end, raw=raw, body=inner, tag=tag))
         last_index = end
 
@@ -196,7 +194,7 @@ def parse_fim_request(
     config_overrides: dict[str, object] = {}
 
     for fn in fim_tag.functions:
-        if fn.name in {"keep", "keep_tags", "name"}:
+        if fn.name in {"keep", "keep_tags"}:
             continue
         if fn.name in {"temperature", "temp"} and fn.args:
             try:
@@ -236,7 +234,7 @@ def parse_fim_request(
     )
 
 
-def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
+def _parse_tag(body: str) -> TagNode | None:
     stripped = body.strip()
     if not stripped:
         return None
@@ -285,7 +283,7 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
                 )
 
             n_val = int(fim_match.group("num"))
-            functions = [_token_to_function(tok, seen_names) for tok in tokens[1:]]
+            functions = [_token_to_function(tok) for tok in tokens[1:]]
             return FIMTag(max_tokens=n_val, functions=tuple(functions))
 
     if first.kind == "string":
@@ -340,15 +338,15 @@ def _parse_config_tag(body: str) -> ConfigTag:
     return ConfigTag(settings=settings)
 
 
-def _token_to_function(token: _TokenPiece, seen_names: set[str]) -> FIMFunction:
+def _token_to_function(token: _TokenPiece) -> FIMFunction:
     if token.kind == "string":
         raise TagParseError("String literals must appear inside function calls")
     if token.kind != "word":
         raise TagParseError(f"Invalid token in FIM tag: {token.value}")
-    return _parse_function(token.value, seen_names)
+    return _parse_function(token.value)
 
 
-def _parse_function(func_text: str, seen_names: set[str]) -> FIMFunction:
+def _parse_function(func_text: str) -> FIMFunction:
     match = FUNCTION_RE.fullmatch(func_text)
     if not match:
         raise TagParseError(f"Malformed function: {func_text}")
@@ -385,12 +383,6 @@ def _parse_function(func_text: str, seen_names: set[str]) -> FIMFunction:
 
     if spec.get("require_string") and any(not isinstance(arg, str) for arg in args):
         raise TagParseError(f"{name}() requires string argument(s)")
-
-    if name == "name":
-        ident = str(args[0])
-        if ident in seen_names:
-            raise TagParseError(f"Duplicate name() id: {ident}")
-        seen_names.add(ident)
 
     phase_value = phase or spec.get("default_phase")
     return FIMFunction(name=name, args=tuple(str(a) for a in args), phase=phase_value)  # type: ignore[arg-type]
