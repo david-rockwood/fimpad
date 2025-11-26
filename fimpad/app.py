@@ -1653,14 +1653,19 @@ class FIMPad(tk.Tk):
         buttons.grid(row=3, column=0, sticky="e")
         buttons.columnconfigure(0, weight=1)
 
+        def cancel_dialog() -> None:
+            nonlocal selected_path
+            selected_path = None
+            dialog.destroy()
+
         open_btn = ttk.Button(buttons, text="Open", command=open_selection, state=tk.DISABLED)
         open_btn.grid(row=0, column=0, padx=(0, 8))
-        cancel_btn = ttk.Button(buttons, text="Cancel", command=dialog.destroy)
+        cancel_btn = ttk.Button(buttons, text="Cancel", command=cancel_dialog)
         cancel_btn.grid(row=0, column=1)
 
         refresh_dir(current_dir)
         tree.focus_set()
-        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        dialog.protocol("WM_DELETE_WINDOW", cancel_dialog)
         self.wait_window(dialog)
 
         if selected_path and os.path.isfile(selected_path):
