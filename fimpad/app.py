@@ -3086,8 +3086,8 @@ class FIMPad(tk.Tk):
             return
 
         guidance = (
-            "Place the caret inside a [[[N]]] marker or immediately after one to "
-            "generate, or inside/immediately after a config tag to apply settings."
+            "Place the caret inside or immediately after a FIM tag "
+            "to generate."
         )
 
         marker_token = self._find_active_tag(tokens, cursor_offset)
@@ -3212,7 +3212,7 @@ class FIMPad(tk.Tk):
         if self._caret_within_tag(content, cursor_offset):
             self._show_error(
                 "Repeat Last FIM",
-                "Cannot repeat the last FIM tag when the caret is within a tag.",
+                "You paste the last FIM tag when the caret is within a tag.",
             )
             return
 
@@ -3268,7 +3268,7 @@ class FIMPad(tk.Tk):
         if self._caret_within_tag(content, cursor_offset):
             self._show_error(
                 "Repeat Last FIM",
-                "Cannot repeat the last FIM tag when the caret is within a tag.",
+                "You cannot repeat the last FIM tag when the caret is within a tag.",
             )
             return
 
