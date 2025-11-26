@@ -22,12 +22,6 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 ---
 
-## Spellcheck behavior
-
-FIMpad spellchecks the visible portion of a document and a buffer of nearby lines so that large files do not constantly reprocess the full text while you scroll. By default, files under roughly 300 lines are checked in full. Larger files check about 30 lines above and below the viewport, and scrolling debounces for around four seconds before re-running the check. The buffer size, debounce interval, and full-document threshold can be customized in the config file via the keys `spellcheck_view_buffer_lines`, `spellcheck_scroll_debounce_ms`, and `spellcheck_full_document_line_threshold`.
-
----
-
 ## The server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
@@ -54,6 +48,8 @@ Granite Tiny is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF/tree/main
 ```
+
+Base models are better than instruct models for FIM, though both can work.
 
 ---
 
@@ -265,7 +261,7 @@ All tags in FIMpad are enclosed in triple brackets, in order to strongly differe
 > Four score and seven [[[50]]]
 
 
-The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly after the FIM tag. Then press Ctrl+Enter (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
+The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the carat is within or directly after the FIM tag. Then press Ctrl+Shift+G (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
 
 > Four score and seven years ago, our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so
 
@@ -346,9 +342,9 @@ and after generation:
 
 It is not guaranteed that the LLM will generate a specific stop sequence, but it becomes likely when there is a well-established pattern of consistent repetition of that sequence in the prefix and/or the suffix.
 
-In order to avoid retyping the FIM tag, you can press Ctrl+Shift+Enter (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Alt+Enter (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
+In order to avoid retyping the FIM tag, you can press Ctrl+Shift+R (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current carat position. And if you want to look at or modify the last executed FIM tag before you execute it, press Ctrl+Shift+P (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the carat.
 
-So we now have a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+Enter to generate the last executed FIM tag.
+So we now have a single comment from Jane, followed by a new line with the carat after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Ctrl+Shift+R to generate the last executed FIM tag.
 
 Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
 
@@ -396,7 +392,7 @@ and after generation:
 > 
 > Jane: 
 
-Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the carat, then press Ctrl+Shift+Enter.
+Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the carat, then press Ctrl+Shift+R (assuming that you used an FIM tag prior and you want to repeat it.)
 
 ---
 
@@ -480,34 +476,16 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z twice to step back through undo states until you are where you were before you generated the tag. Then press Ctrl+Enter to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like.
+Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writers block.
+
+When writing fiction with FIM the three concepts above (completion, replacement, and interpolation) are very useful.
 
 ---
 
+## The FIMpad Library
 
+FIMpad has a menu called "Library". Within that menu you will find examples of things you can do with AI in FIMpad, FIMpad documentation, and some public domain books.
 
+Everything you click on in the Library represents a txt or md file that is bundled with the FIMpad release. When you click on a menu entry in Library, that document will open in a new tab, and some of those documents have tags that you can execute.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Once you get FIMpad up and running with a connection to a local LLM server, try some of the example tags in Library -> Examples. Then try changing your text editor color scheme by looking at Library -> FIMpad -> FIMpad Themes.
