@@ -2,7 +2,7 @@
 
 A text editor that can do Fill-In-the-Middle (FIM) text generation within a text file.
 
-Currently only tested on Linux, using llama.cpp llama-server, serving IBM Granite 4.0 H models.
+FIMpad is currently only tested on Linux, using llama.cpp llama-server, serving IBM Granite 4.0 H models.
 
 ---
 
