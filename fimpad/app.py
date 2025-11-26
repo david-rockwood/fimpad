@@ -3632,6 +3632,25 @@ class FIMPad(tk.Tk):
                                         if match.action == "chop"
                                         else candidate[: match.end_index]
                                     )
+
+                                    removed_count = 0
+                                    if (
+                                        match.action == "chop"
+                                        and len(target_text) < len(accumulated)
+                                    ):
+                                        removed_count = len(accumulated) - len(target_text)
+
+                                        flush_mark = st.get("stream_mark") or mark or "stream_here"
+
+                                        try:
+                                            end_idx = text.index(flush_mark)
+                                            start_idx = text.index(f"{end_idx}-{removed_count}c")
+                                            text.delete(start_idx, end_idx)
+                                        except tk.TclError:
+                                            pass
+
+                                        accumulated = target_text
+
                                     pending_insert = target_text[len(accumulated) :]
                                     if pending_insert:
                                         st["stream_buffer"] = [pending_insert]
