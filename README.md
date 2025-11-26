@@ -367,7 +367,7 @@ The append function simply adds some text onto the end of a streamed FIM inserti
 >
 > John: That's an interesting angle.
 >
-> Jane: [[[75;stop("John: ");append("\nJane: ")]]]
+> Jane: [[[75;stop("John: ");append("\n\nJane: ")]]]
 
 and after generation:
 
