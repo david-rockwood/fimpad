@@ -3322,6 +3322,38 @@ class FIMPad(tk.Tk):
         marker = self._last_fim_marker or "[[[20]]]"
 
         try:
+            cursor_index = text_widget.index(tk.INSERT)
+            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
+        except Exception:
+            cursor_offset = None
+
+        content = text_widget.get("1.0", tk.END)
+        if cursor_offset is None:
+            cursor_offset = len(content)
+        cursor_offset = max(0, min(len(content), cursor_offset))
+
+        try:
+            tokens = list(parse_triple_tokens(content))
+        except TagParseError:
+            tokens = None
+
+        inside_tag = False
+        if tokens is not None:
+            inside_tag = self._find_active_tag(tokens, cursor_offset) is not None
+        else:
+            for match in TRIPLE_RE.finditer(content):
+                if cursor_within_span(match.start(), match.end(), cursor_offset):
+                    inside_tag = True
+                    break
+
+        if inside_tag:
+            self._show_error(
+                "Repeat Last FIM",
+                "Cannot repeat the last FIM tag when the caret is within a tag.",
+            )
+            return
+
+        try:
             start_index = text_widget.index(tk.INSERT)
         except tk.TclError:
             return
