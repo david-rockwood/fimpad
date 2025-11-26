@@ -1,4 +1,4 @@
-This example started as an attempt to make a pessimistic assistant prefill. But the responses kept ending with "[End of Conversation 2]". It seems that LLMs are trained on material where Conversation 1 is the "good" response, and Conversation 2 is the "bad" response. Below is the original attempt  in a fenced code block, and then below that is an example where you can get "bad" responses.
+This example started as an attempt to make a pessimistic assistant prefill. But the responses kept ending with "[End of Conversation 2]". It seems that LLMs are trained on material where Conversation 1 is the "good" response, and Conversation 2 is the "bad" response. Below is the original attempt  in a fenced code block, and then below that is an example where you can execute a FIM tag to get "bad" responses.
 
 
 
