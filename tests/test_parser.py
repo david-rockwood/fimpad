@@ -337,7 +337,7 @@ def test_use_completion_when_only_non_comment_tags_follow():
     content = "[[[5]]] [[[{font:'TkDefaultFont'}]]]"
     marker = _collect_tags(content)[0]
 
-    fim_request = parse_fim_request(content, marker.start)
+    fim_request = parse_fim_request(content, marker.start + 1)
 
     assert fim_request is not None
     assert fim_request.use_completion is True

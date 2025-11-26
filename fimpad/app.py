@@ -3086,8 +3086,8 @@ class FIMPad(tk.Tk):
             return
 
         guidance = (
-            "Place the caret inside a [[[N]]] marker to generate or on a config tag "
-            "to apply settings."
+            "Place the caret inside a [[[N]]] marker or immediately after one to "
+            "generate, or inside/immediately after a config tag to apply settings."
         )
 
         marker_token = self._find_active_tag(tokens, cursor_offset)
