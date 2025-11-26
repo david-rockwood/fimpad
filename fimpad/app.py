@@ -3073,6 +3073,21 @@ class FIMPad(tk.Tk):
             self._sequence_names = None
             return
 
+        # Position the insert mark inside the referenced tag to mirror manual execution
+        try:
+            if marker_token.end > marker_token.start:
+                caret_offset = min(marker_token.end - 1, marker_token.start + 3)
+            else:
+                caret_offset = marker_token.start
+            caret_index = offset_to_tkindex(content, caret_offset)
+            with contextlib.suppress(tk.TclError):
+                text_widget.tag_remove("sel", "1.0", tk.END)
+            text_widget.mark_set(tk.INSERT, caret_index)
+            text_widget.see(tk.INSERT)
+            text_widget.focus_set()
+        except Exception:
+            pass
+
         try:
             fim_request = parse_fim_request(
                 content, marker_token.start, tokens=tokens, marker_token=marker_token
