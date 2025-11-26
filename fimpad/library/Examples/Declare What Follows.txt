@@ -1,0 +1,33 @@
+One way to get what you want with FIM generation is to simply declare what follows. Try out some examples below:
+
+[[[PREFIX]]]
+The following is a list of the 3 most liked Miles Davis songs (song title only):
+```
+1. [[[100;stop("```\n");temp("0.5");top_p("0.8")]]]
+[[[SUFFIX]]]
+
+
+
+[[[PREFIX]]]
+The following is a two paragraph description of Stoic principles that, if applied, will lead to a more serene existence:
+```
+[[[400;stop("```\n");temp("0.9");top_p("0.95")]]]
+[[[SUFFIX]]]
+
+
+
+[[[PREFIX]]]
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This script takes a path to a video file ($1) and uses FFMPEG,
+# which is in the PATH, to downscale the video to 480p and
+# render it as a MP4 with AAC audio, with compression for
+# both video and audio that targets small file size with not
+# too much loss of quality. The file name of the rendered video
+# will be the base name of the input file with "_compressed"
+# appended before the extension.
+[[[400;temp("0.7");top_p("0.95")]]]
+echo "The file has been rendered successfully."
+
+[[[SUFFIX]]]
