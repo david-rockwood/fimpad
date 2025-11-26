@@ -281,9 +281,7 @@ The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum
 
 Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file and the location of the now-deleted FIM tag is considered prefix text. All of the text between the now-deleted FIM tag and the end of the file is considered suffix text. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 (or fewer) tokens that the LLM deems most likely to appear between the prefix and the suffix.
 
-In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is essentially a completion of the prefix.
-
-Any valid tag that has an integer as the fourth character after the three opening bracket characters is a FIM tag.
+In the above example, the document was empty past the FIM tag, so the LLM received an empty string for the suffix. In cases like this the streamed response is just a completion of the prefix. And if there are new line characters in the suffix but nothing else, FIMpad treats this as a completion.
 
 ---
 
