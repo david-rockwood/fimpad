@@ -4,6 +4,13 @@ A text editor that can do Fill-In-the-Middle (FIM) text generation within a text
 
 FIMpad is currently only tested on Linux, using llama.cpp llama-server, serving IBM Granite 4.0 H models.
 
+If you have success or failure with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that allows this.
+
+0.0.7 – First public release
+- Introduces the FIMpad Tag DSL v0.0.7
+- Supports prefix-completion and FIM completions for models served through llama.cpp's llama-server
+- Adds streaming, multi-tab editing, undo/redo, spellcheck, themes, config persistence
+
 ---
 
 ## Quick start
@@ -25,6 +32,8 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 ## The server
 
 FIMpad requires a connection to a LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
+
+Currently FIMpad is likely to only work with llama.cpp llama-server serving the LLM. In the future, compatibility layers may be added to work with other servers, if there is demand for that.
 
 A recent build of llama.cpp llama-server is recommended, available at:
 ```
