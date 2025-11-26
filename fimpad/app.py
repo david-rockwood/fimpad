@@ -144,9 +144,10 @@ class FIMPad(tk.Tk):
         try:
             save_config(self.cfg)
         except ConfigSaveError as exc:
-            messagebox.showerror(
+            self._show_error(
                 "Config Save Failed",
-                f"Could not save settings to {CONFIG_PATH}:\n{exc}",
+                f"Could not save settings to {CONFIG_PATH}.",
+                detail=str(exc),
             )
 
     def _center_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
@@ -2220,7 +2221,9 @@ class FIMPad(tk.Tk):
             except re.error as exc:
                 clear_highlight(reset_status=False)
                 set_status(f"Invalid regex: {exc}")
-                messagebox.showerror("Regex Error", f"Invalid regex: {exc}")
+                self._show_error(
+                    "Regex Error", "Invalid regex.", detail=str(exc), parent=w
+                )
                 update_buttons()
                 return None
 
@@ -2310,7 +2313,9 @@ class FIMPad(tk.Tk):
             try:
                 replacement = pattern.sub(repl_var.get(), match_text, count=1)
             except re.error as exc:
-                messagebox.showerror("Regex Error", f"Replacement failed: {exc}")
+                self._show_error(
+                    "Regex Error", "Replacement failed.", detail=str(exc), parent=w
+                )
                 set_status(f"Replacement error: {exc}")
                 return
             text.delete(start, end)
@@ -2332,7 +2337,9 @@ class FIMPad(tk.Tk):
             try:
                 replaced_text, count = pattern.subn(repl_var.get(), content)
             except re.error as exc:
-                messagebox.showerror("Regex Error", f"Replacement failed: {exc}")
+                self._show_error(
+                    "Regex Error", "Replacement failed.", detail=str(exc), parent=w
+                )
                 set_status(f"Replacement error: {exc}")
                 return
             if count == 0:
