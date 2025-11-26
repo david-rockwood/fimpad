@@ -19,8 +19,7 @@ def _simulate_stream(chunks, patterns):
     return output
 
 
-def _simulate_buffered_stream(chunks, patterns):
-    accumulated = ""
+def _simulate_buffered_stream(chunks, patterns, accumulated=""):
     buffered = ""
 
     for piece in chunks:
@@ -32,6 +31,10 @@ def _simulate_buffered_stream(chunks, patterns):
                 if match.action == "chop"
                 else candidate[: match.end_index]
             )
+
+            if match.action == "chop" and len(target_text) < len(accumulated):
+                accumulated = target_text
+
             pending_insert = target_text[len(accumulated) :]
             buffered = pending_insert
             accumulated += buffered
@@ -102,3 +105,10 @@ def test_stop_keeps_buffered_trailing_newlines():
     chunks = ["Alpha END\n", "\nOmega"]
 
     assert _simulate_buffered_stream(chunks, patterns) == "Alpha END\n\n"
+
+
+def test_chop_removes_already_inserted_pattern():
+    patterns = [{"text": "HALT", "action": "chop"}]
+    chunks = ["T trailing"]
+
+    assert _simulate_buffered_stream(chunks, patterns, accumulated="before HAL") == "before "
