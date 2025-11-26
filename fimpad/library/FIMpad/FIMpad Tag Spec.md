@@ -64,7 +64,7 @@ Arg      ::= STRING | INT | IDENT
 * All other statements are function calls, e.g.:
 
   ```text
-  [[[100;stop("User: ");chop("END");append_nl(2);append("Done.\n")]]]
+  [[[100;stop("User: ");chop("END");append("Done.\n")]]]
   ```
 
 A FIM tag can be formatted across multiple lines for readability:
@@ -75,7 +75,6 @@ A FIM tag can be formatted across multiple lines for readability:
   name("step1");
   stop("User: ");
   chop("END_OF_SECTION");
-  append_nl(2);
   append("That is my final answer.\n");
 ]]]
 ```
@@ -102,7 +101,6 @@ Each function belongs to **one** of two conceptual phases:
   Evaluated in order on the final generated text.
 
   * `append(string)`
-  * `append_nl(int)`  (append `int` newline characters, default 1 if omitted)
 
 #### Execution Order
 
