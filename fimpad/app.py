@@ -3212,7 +3212,7 @@ class FIMPad(tk.Tk):
         if self._caret_within_tag(content, cursor_offset):
             self._show_error(
                 "Repeat Last FIM",
-                "You paste the last FIM tag when the caret is within a tag.",
+                "You cannot paste the last FIM tag when the caret is within a tag.",
             )
             return
 
