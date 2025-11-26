@@ -32,8 +32,8 @@ def stitch_tokens(tokens):
 
 def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     content = (
-        "A [[[5; stop(\"alpha\"); name(one)]]] "
-        "B [[[2; name(two)]]] "
+        "A [[[5; stop(\"alpha\")]]] "
+        "B [[[2; chop('tail')]]] "
         "C [[[prefix]]] D [[[suffix hard]]] E [[[(note about things) after]]]" """ F"""
         " [[[ {font:'TkDefaultFont'; bgColor:'#ffffff'} ]]]"
     )
@@ -88,7 +88,7 @@ def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multilin
         "[[[12; keep_tags();\n"
         '    before:stop("alpha"); after:stop(\'omega\');\n'
         '    stop("beta"); after:stop(\'ga\\\'mma\');\n'
-        '    chop("line\\n3"); name(foo)\n'
+        '    chop("line\\n3")\n'
         "]]]\n"
     )
     fim_token = _collect_tags(content)[0]
@@ -106,7 +106,6 @@ def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multilin
         "stop",
         "stop",
         "chop",
-        "name",
     ]
 
     assert functions[1].phase == "before" and functions[1].args == ("alpha",)
@@ -114,7 +113,6 @@ def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multilin
     assert functions[3].phase == "init" and functions[3].args == ("beta",)
     assert functions[4].phase == "after" and functions[4].args == ("ga'mma",)
     assert functions[5].phase == "init" and functions[5].args == ("line\n3",)
-    assert functions[6].args == ("foo",)
 
 
 def test_sequence_tags_are_rejected():
@@ -123,10 +121,9 @@ def test_sequence_tags_are_rejected():
         list(parse_triple_tokens(content))
 
 
-def test_duplicate_names_raise():
-    content = "[[[1; name(foo)]]] [[[2; name(foo)]]]"
-    with pytest.raises(TagParseError):
-        list(parse_triple_tokens(content))
+def test_name_function_is_rejected():
+    with pytest.raises(TagParseError, match="Unknown function: name"):
+        list(parse_triple_tokens("[[[1; name(foo)]]]"))
 
 
 def test_bare_fim_tag_without_functions():
@@ -217,8 +214,7 @@ def test_implicit_string_stop_rejected():
 def test_new_dsl_accepts_supported_functions_and_phases():
     content = (
         "[[[42; keep(); keep_tags(); stop(\"alpha\"); after:tail('done'); "
-        "post:append(\"tail\"); append('more'); temperature(0.4); top_p(0.9); "
-        "name(sample)]]]"
+        "post:append(\"tail\"); append('more'); temperature(0.4); top_p(0.9)]]]"
     )
     fim_token = _collect_tags(content)[0]
 
@@ -235,7 +231,6 @@ def test_new_dsl_accepts_supported_functions_and_phases():
         "append",
         "temperature",
         "top_p",
-        "name",
     ]
 
     functions = fim_token.tag.functions
@@ -247,7 +242,6 @@ def test_new_dsl_accepts_supported_functions_and_phases():
     assert functions[5].args == ("more",) and functions[5].phase == "post"
     assert functions[6].args == ("0.4",) and functions[6].phase == "init"
     assert functions[7].args == ("0.9",) and functions[7].phase == "init"
-    assert functions[8].args == ("sample",) and functions[8].phase == "meta"
 
 
 def test_parse_fim_request_uses_new_ast(monkeypatch):
@@ -295,7 +289,7 @@ def test_parse_fim_request_excludes_comments_and_honors_prefix_suffix_hardness()
 
 def test_prefix_suffix_and_comment_tags_still_parse():
     content = (
-        "[[[prefix hard]]] [[[1; name(foo)]]] Body [[[suffix soft]]]\n"
+        "[[[prefix hard]]] [[[1; stop('cut')]]] Body [[[suffix soft]]]\n"
         "[[[(note) before]]]"
     )
     tokens = list(parse_triple_tokens(content))
