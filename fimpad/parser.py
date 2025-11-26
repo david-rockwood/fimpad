@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 DEFAULT_MARKER_MAX_TOKENS = 100
@@ -35,11 +35,6 @@ class FIMTag:
 
 
 @dataclass(frozen=True)
-class SequenceTag:
-    names: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class ConfigTag:
     settings: dict[str, str]
 
@@ -57,7 +52,7 @@ class CommentTag:
     position: str | None
 
 
-TagNode = FIMTag | SequenceTag | ConfigTag | PrefixSuffixTag | CommentTag
+TagNode = FIMTag | ConfigTag | PrefixSuffixTag | CommentTag
 
 
 @dataclass(frozen=True)
@@ -77,8 +72,6 @@ class TagToken:
             return "unknown"
         if isinstance(self.tag, FIMTag):
             return "fim"
-        if isinstance(self.tag, SequenceTag):
-            return "sequence"
         if isinstance(self.tag, ConfigTag):
             return "config"
         if isinstance(self.tag, PrefixSuffixTag):
@@ -136,12 +129,9 @@ FUNCTION_RE = re.compile(
 )
 
 
-def parse_triple_tokens(
-    content: str, *, allow_missing_sequence_names: Iterable[str] | None = None
-) -> Iterator[Token]:
+def parse_triple_tokens(content: str) -> Iterator[Token]:
     """Yield tokens for ``content`` splitting around ``[[[...]]]`` regions."""
 
-    allowed_missing = set(allow_missing_sequence_names or [])
     last_index = 0
     seen_names: set[str] = set()
     tokens: list[Token] = []
@@ -163,7 +153,6 @@ def parse_triple_tokens(
             TextToken(start=last_index, end=len(content), text=content[last_index:])
         )
 
-    _validate_sequence_names(tokens, allow_missing=allowed_missing)
     yield from tokens
 
 
@@ -300,12 +289,7 @@ def _parse_tag(body: str, seen_names: set[str]) -> TagNode | None:
             return FIMTag(max_tokens=n_val, functions=tuple(functions))
 
     if first.kind == "string":
-        names: list[str] = []
-        for tok in tokens:
-            if tok.kind != "string":
-                raise TagParseError("Sequence tags must contain only string literals")
-            names.append(tok.value)
-        return SequenceTag(names=tuple(names))
+        raise TagParseError("Sequence tags are no longer supported")
 
     raise TagParseError(f"Unrecognized tag: {body}")
 
@@ -354,30 +338,6 @@ def _parse_config_tag(body: str) -> ConfigTag:
         raise TagParseError("Config tags require at least one setting")
 
     return ConfigTag(settings=settings)
-
-
-def _validate_sequence_names(
-    tokens: list[Token], *, allow_missing: set[str] | None = None
-):
-    registry: set[str] = set()
-    sequence_names: list[tuple[int, tuple[str, ...]]] = []
-
-    allow_missing = allow_missing or set()
-    for token in tokens:
-        if not isinstance(token, TagToken):
-            continue
-        if isinstance(token.tag, FIMTag):
-            for fn in token.tag.functions:
-                if fn.name == "name" and fn.args:
-                    registry.add(fn.args[0])
-        elif isinstance(token.tag, SequenceTag):
-            sequence_names.append((token.start, token.tag.names))
-
-    for _, names in sequence_names:
-        missing = [nm for nm in names if nm not in registry and nm not in allow_missing]
-        if missing:
-            missing_list = ", ".join(missing)
-            raise TagParseError(f"Sequence references missing tags: {missing_list}")
 
 
 def _token_to_function(token: _TokenPiece, seen_names: set[str]) -> FIMFunction:
@@ -731,7 +691,6 @@ __all__ = [
     "TextToken",
     "TagToken",
     "FIMTag",
-    "SequenceTag",
     "ConfigTag",
     "PrefixSuffixTag",
     "CommentTag",
