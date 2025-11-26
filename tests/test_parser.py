@@ -154,6 +154,26 @@ def test_multifunction_tag_collects_stops_chops_and_post_actions():
     assert [fn.name for fn in fim_request.post_functions] == ["append", "append"]
 
 
+def test_parse_fim_request_returns_none_for_non_fim_marker():
+    content = "[[[prefix]]] Body [[[7]]]"
+    tokens = list(parse_triple_tokens(content))
+
+    prefix_token = next(t for t in tokens if isinstance(t, TagToken) and t.kind == "prefix")
+    cursor_offset = prefix_token.start + 1
+
+    assert parse_fim_request(content, cursor_offset, tokens=tokens) is None
+
+
+def test_parse_fim_request_ignores_config_marker_under_cursor():
+    content = "[[[{font:'TkDefaultFont'}]]] Middle [[[3]]]"
+    tokens = list(parse_triple_tokens(content))
+
+    config_token = next(t for t in tokens if isinstance(t, TagToken) and t.kind == "config")
+    cursor_offset = config_token.start + 5
+
+    assert parse_fim_request(content, cursor_offset, tokens=tokens) is None
+
+
 def test_unknown_function_raises():
     with pytest.raises(TagParseError):
         list(parse_triple_tokens("[[[1; unknown()]]]]"))
