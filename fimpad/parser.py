@@ -261,18 +261,6 @@ def _parse_tag(body: str) -> TagNode | None:
         is_close = base_word.startswith("/")
         normalized = base_word[1:] if is_close else base_word
         normalized_no_bang = normalized.rstrip("!")
-        hardness = "hard" if normalized.endswith("!") else "soft"
-        if hardness == "soft" and normalized_no_bang.isupper():
-            hardness = "hard"
-        name_key = normalized_no_bang.casefold()
-        if name_key in {"prefix", "suffix"}:
-            if len(tokens) > 1 and tokens[1].kind == "word":
-                nxt = tokens[1].value.casefold()
-                if nxt in {"hard", "soft"}:
-                    hardness = nxt
-            return PrefixSuffixTag(
-                kind=name_key, hardness=hardness, is_close=is_close
-            )
 
         fim_match = re.fullmatch(r"(?P<num>\d+)", base_word)
         if fim_match:
@@ -285,6 +273,21 @@ def _parse_tag(body: str) -> TagNode | None:
             n_val = int(fim_match.group("num"))
             functions = [_token_to_function(tok) for tok in tokens[1:]]
             return FIMTag(max_tokens=n_val, functions=tuple(functions))
+
+        name_key = normalized_no_bang.casefold()
+        if name_key in {"prefix", "suffix"}:
+            if normalized_no_bang not in {"prefix", "PREFIX", "suffix", "SUFFIX"}:
+                raise TagParseError(f"Unrecognized tag: {body}")
+            hardness = "hard" if normalized.endswith("!") else "soft"
+            if hardness == "soft" and normalized_no_bang.isupper():
+                hardness = "hard"
+            if len(tokens) > 1 and tokens[1].kind == "word":
+                nxt = tokens[1].value.casefold()
+                if nxt in {"hard", "soft"}:
+                    hardness = nxt
+            return PrefixSuffixTag(
+                kind=name_key, hardness=hardness, is_close=is_close
+            )
 
     if first.kind == "string":
         raise TagParseError("Sequence tags are no longer supported")
