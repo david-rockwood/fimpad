@@ -2840,13 +2840,12 @@ class FIMPad(tk.Tk):
             return
 
         content = text_widget.get("1.0", tk.END)
-        seen_names: set[str] = set()
         tokens: list[TagToken] = []
 
         for match in TRIPLE_RE.finditer(content):
             body = match.group("body") or ""
             try:
-                tag = _parse_tag(body, seen_names)
+                tag = _parse_tag(body)
             except TagParseError as exc:
                 self._highlight_tag_span(
                     st, start=match.start(), end=match.end(), content=content

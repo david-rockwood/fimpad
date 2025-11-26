@@ -83,6 +83,11 @@ def test_uppercase_prefix_suffix_tags_are_hard_by_default():
     assert suffix_token.tag.hardness == "hard"
 
 
+def test_mixed_case_prefix_suffix_tags_are_rejected():
+    with pytest.raises(TagParseError, match="Unrecognized tag"):
+        list(parse_triple_tokens("[[[Prefix]]]"))
+
+
 def test_fim_tag_functions_capture_phases_and_order_with_semicolons_and_multiline():
     content = (
         "[[[12; keep_tags();\n"
