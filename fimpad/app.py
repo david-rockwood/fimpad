@@ -1388,6 +1388,7 @@ class FIMPad(tk.Tk):
         message: str,
         detail: str | None = None,
         parent: tk.Misc | None = None,
+        copy_label: str = "Copy error message",
     ) -> None:
         dialog = tk.Toplevel(self)
         dialog.title(title)
@@ -1437,7 +1438,7 @@ class FIMPad(tk.Tk):
         buttons = ttk.Frame(frame)
         buttons.grid(row=row, column=0, columnspan=2, pady=(12, 0), sticky="e")
 
-        copy_btn = ttk.Button(buttons, text="Copy error message", command=_copy_error_message)
+        copy_btn = ttk.Button(buttons, text=copy_label, command=_copy_error_message)
         copy_btn.grid(row=0, column=0, padx=(0, 8))
 
         ok_btn = ttk.Button(buttons, text="OK", command=dialog.destroy)
@@ -1447,6 +1448,21 @@ class FIMPad(tk.Tk):
         dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
         self._prepare_child_window(dialog, parent)
         self.wait_window(dialog)
+
+    def _show_message(
+        self,
+        title: str,
+        message: str,
+        detail: str | None = None,
+        parent: tk.Misc | None = None,
+    ) -> None:
+        self._show_error(
+            title,
+            message,
+            detail=detail,
+            parent=parent,
+            copy_label="Copy message",
+        )
 
     # ---------- Library ----------
 
@@ -2838,7 +2854,7 @@ class FIMPad(tk.Tk):
         new_cfg.update(updates)
         self._spell_lang = new_cfg.get("spell_lang", self._spell_lang)
         self._apply_config_changes(new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad)
-        messagebox.showinfo("Config Tag", "Settings applied from config tag.")
+        self._show_message("Config Tag", "Settings applied from config tag.", parent=st.get("text"))
 
     def validate_tags_current(self) -> None:
         st = self._current_tab_state()
@@ -2877,7 +2893,7 @@ class FIMPad(tk.Tk):
                 )
             )
 
-        messagebox.showinfo("Validate Tags", "All tags are valid.")
+        self._show_message("Validate Tags", "All tags are valid.", parent=text_widget)
 
     # ---------- Generate (streaming) ----------
 
@@ -3104,7 +3120,7 @@ class FIMPad(tk.Tk):
 
         marker_token = self._find_active_tag(tokens, cursor_offset)
         if marker_token is None:
-            messagebox.showinfo("Generate", guidance)
+            self._show_message("Generate", guidance, parent=text_widget)
             return
 
         if marker_token.kind not in {"fim", "config"}:
@@ -3114,7 +3130,7 @@ class FIMPad(tk.Tk):
                 end=marker_token.end,
                 content=content,
             )
-            messagebox.showinfo("Generate", guidance)
+            self._show_message("Generate", guidance, parent=text_widget)
             return
 
         if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
@@ -3143,9 +3159,10 @@ class FIMPad(tk.Tk):
             self._launch_fim_or_completion_stream(st, content, fim_request)
             return
 
-        messagebox.showinfo(
+        self._show_message(
             "Generate",
             guidance,
+            parent=text_widget,
         )
 
     def _on_generate_shortcut(self, event):
@@ -3677,7 +3694,7 @@ class FIMPad(tk.Tk):
         if self._spell_notice_msg == self._spell_notice_last:
             return
         with contextlib.suppress(Exception):
-            messagebox.showwarning("Spellcheck", self._spell_notice_msg)
+            self._show_message("Spellcheck", self._spell_notice_msg)
         self._spell_notice_last = self._spell_notice_msg
 
     def _schedule_spellcheck_for_frame(self, frame, delay_ms: int = 350):
