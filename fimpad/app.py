@@ -3086,12 +3086,24 @@ class FIMPad(tk.Tk):
             self._show_unsupported_fim_error(exc)
             return
 
+        guidance = (
+            "Place the caret inside a [[[N]]] marker to generate or on a config tag "
+            "to apply settings."
+        )
+
         marker_token = self._find_active_tag(tokens, cursor_offset)
         if marker_token is None:
-            messagebox.showinfo(
-                "Generate",
-                "Place the caret inside a [[[N]]] marker to generate.",
+            messagebox.showinfo("Generate", guidance)
+            return
+
+        if marker_token.kind not in {"fim", "config"}:
+            self._highlight_tag_span(
+                st,
+                start=marker_token.start,
+                end=marker_token.end,
+                content=content,
             )
+            messagebox.showinfo("Generate", guidance)
             return
 
         if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
@@ -3122,7 +3134,7 @@ class FIMPad(tk.Tk):
 
         messagebox.showinfo(
             "Generate",
-            "Place the caret inside a [[[N]]] marker to generate.",
+            guidance,
         )
 
     def _on_generate_shortcut(self, event):
