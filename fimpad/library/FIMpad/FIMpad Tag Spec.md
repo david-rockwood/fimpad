@@ -5,7 +5,6 @@
 All FIMpad tags start with `[[[` and end with `]]]`. The first character **after** `[[[` determines the kind of tag:
 
 * **Digit** (`0–9`) → **FIM tag** (generation tag)
-* **Double quote** (`"`) → **Sequence tag**
 * **Left parenthesis** (`(`) → **Comment tag**
 * **Left brace** (`{`) → **Config tag** (settings preset)
 * **Letter** starting a recognized word → **Prefix/Suffix tag**
@@ -22,7 +21,7 @@ Any other pattern is treated as plain text or a syntax error.
   `IDENT ::= [A-Za-z_][A-Za-z0-9_]*`
 * Numbers (for `N` and numeric args):
   `INT ::= [0-9]+`
-* String literals (used inside functions and sequence tags):
+* String literals (used inside functions):
 
   ```ebnf
   STRING ::= '"' { CHAR } '"'
@@ -163,67 +162,17 @@ Newlines in patterns:
   id → FIMTag
   ```
 
-* If two or more FIM tags use the same `id`, this is an error:
+* If two or more FIM tags use the same `id`, this is an error and makes those tags invalid for execution.
 
-  * Those tags are considered invalid for execution.
-  * Any sequence tag referring to that `id` will also error.
-
----
-
-## 3. Sequence Tags
-
-Sequence tags orchestrate multiple **named FIM tags**. They do not call the model themselves.
-
-### 3.1 Syntax
-
-A sequence tag is a list of string literals inside `[[[` `]]]` that **does not** start with a digit:
-
-```ebnf
-SequenceTag ::= '[[' '[' '[' WS? SeqBody WS? ']' ']' ']'
-
-SeqBody ::= STRING (';' WS? STRING)* ';'?
-```
-
-Example:
-
-```text
-[[[
-  "step1";
-  "step2";
-  "step3";
-]]]
-```
-
-Rules:
-
-* No `N` number at the beginning.
-* No functions; only string literals separated by semicolons.
-* Sequence tags **cannot** be named (no `name()`).
-
-### 3.2 Semantics
-
-On executing a sequence tag:
-
-1. Build or refresh the `id → FIMTag` registry using all `name("id")` calls in the document.
-2. For each `"id"` in the sequence, in order:
-
-   * If `id` is not found in the registry → **error** (e.g. “Unknown FIM tag 'step2' in sequence”) and **abort the entire sequence**.
-   * If `id` is found → execute that FIM tag as if the user had executed it directly.
-
-Restrictions:
-
-* Sequence tags may reference **only** named FIM tags.
-* Sequence tags do **not** reference other sequence tags (no nesting/recursion in v1).
-
-Each FIM tag runs against the current document content, so earlier steps can mutate the text for later steps.
+> Multi-step workflows should be orchestrated by running FIM tags individually or via tooling outside the tag DSL.
 
 ---
 
-## 4. Prefix / Suffix Tags
+## 3. Prefix / Suffix Tags
 
 Prefix/suffix tags define context windows for FIM tags. There are **soft** (lowercase) and **hard** (uppercase) variants.
 
-### 4.1 Syntax
+### 3.1 Syntax
 
 ```ebnf
 PrefixTag ::= '[[[' ('prefix' | 'PREFIX') ']' ']' ']'
@@ -237,7 +186,7 @@ Accepted forms:
 * Soft suffix: `[[[suffix]]]`
 * Hard suffix: `[[[SUFFIX]]]`
 
-### 4.2 Soft vs Hard Semantics
+### 3.2 Soft vs Hard Semantics
 
 * **Soft** tags (`prefix`, `suffix`):
 
@@ -246,7 +195,7 @@ Accepted forms:
 
   * Are **never** auto-deleted.
 
-### 4.3 How FIM Tags Use Prefix/Suffix
+### 3.3 How FIM Tags Use Prefix/Suffix
 
 For a given FIM tag at position `P` in the document:
 
@@ -264,7 +213,7 @@ For a given FIM tag at position `P` in the document:
    * The specific tag instance is remembered as “used.”
    * If none is found, the right boundary defaults to the end of the document (or another default rule).
 
-3. The context slice sent to the model is everything between the left and right boundaries, **excluding comment tags** (see §5).
+3. The context slice sent to the model is everything between the left and right boundaries, **excluding comment tags** (see §4).
 
 After generation:
 
@@ -277,11 +226,11 @@ After generation:
 
 ---
 
-## 5. Comment Tags
+## 4. Comment Tags
 
 Comment tags are annotations for humans. They are never sent to the model as context and are never auto-deleted.
 
-### 5.1 Syntax
+### 4.1 Syntax
 
 A comment tag is:
 
@@ -307,7 +256,7 @@ Notes:
 * `CommentBody` may contain newlines and arbitrary text.
 * The editor treats malformed attempts (no closing `)]]]`) as plain text, not as a comment tag.
 
-### 5.2 Semantics
+### 4.2 Semantics
 
 When building the context slice for a FIM tag:
 
@@ -320,11 +269,11 @@ Thus: “if it’s in a comment tag, the model does not see it.”
 
 ---
 
-## 6. Config Tags (Settings Presets)
+## 5. Config Tags (Settings Presets)
 
 Config tags apply editor settings without running the model. They may be inline or multiline and are triggered when the caret is inside or adjacent to the tag and the user generates.
 
-### 6.1 Syntax
+### 5.1 Syntax
 
 ```
 ConfigTag ::= '[[' '[' '[' WS? '{' ConfigBody '}' WS? ']' ']' ']'
@@ -340,7 +289,7 @@ Example:
 [[[{font:"Ubuntu Sans"; fontSize:"24"; bgColor:"#141414"; fgColor:"#f5f5f5"}]]]
 ```
 
-### 6.2 Supported Keys
+### 5.2 Supported Keys
 
 Each entry mirrors a Settings window field (values are the text you would type there). Recognized keys:
 
@@ -354,7 +303,7 @@ Each entry mirrors a Settings window field (values are the text you would type t
 
 The `open_maximized` setting **cannot** be changed via config tags.
 
-### 6.3 Semantics
+### 5.3 Semantics
 
 * All values must be quoted strings.
 * Numeric fields are validated (floats for temperature/topP; integers with bounds for sizes and padding).
@@ -364,11 +313,11 @@ The `open_maximized` setting **cannot** be changed via config tags.
 
 ---
 
-## 7. Error Handling (High-Level)
+## 6. Error Handling (High-Level)
 
 Given FIMpad’s “fail closed” philosophy:
 
-* **Malformed FIM tag or sequence tag** (parse error):
+* **Malformed FIM tag** (parse error):
 
   * Do not call the model.
   * Show an error dialog describing the problem.
@@ -381,10 +330,6 @@ Given FIMpad’s “fail closed” philosophy:
 * **Duplicate `name("id")`**:
 
   * Mark affected FIM tags as invalid.
-  * Any attempt to execute those tags or sequences referring to them results in an error.
-* **Sequence uses unknown name**:
-
-  * Error and abort the entire sequence.
 * **Malformed comment** (no closing `)]]]`):
 
   * Treated as plain text; no special semantics.

@@ -82,7 +82,6 @@ Everything happens through **tags**, which are little blocks of text surrounded 
 A tag is a short instruction you place inside your document that tells FIMpad to do something:
 
 * Generate text
-* Run a multi-step workflow
 * Mark where the “prefix” or “suffix” of a context should be
 * Add invisible annotations
 * Or just store notes that the model should not see
@@ -95,9 +94,11 @@ Tags look like this:
 
 The **first character after `[[[`** tells FIMpad what *kind* of tag it is.
 
+Multi-step workflows are still possible, but they require orchestrating multiple FIM tags through other mechanisms.
+
 ---
 
-## The Five Tag Types
+## The Tag Types
 
 ### **FIM Tags: “Generate something here”**
 
@@ -123,29 +124,6 @@ Think of a FIM tag as:
 > “Take the surrounding text (between prefix and suffix tags), call the model, generate up to N tokens, then apply these rules to the result.”
 
 A FIM tag runs **right where it sits** in the document, and the generated text appears there.
-
----
-
-### **Sequence Tags: “Run several named steps in order”**
-
-These begin with a double quote:
-
-```
-[[[
-  "step1";
-  "step2";
-  "step3";
-]]]
-```
-
-A sequence tag doesn’t contact the model itself.
-Instead, it tells FIMpad:
-
-> “Look up the FIM tags named `step1`, then `step2`, then `step3`, and run them in that order.”
-
-This is how you build **multi-step workflows** — like a pipeline where each FIM tag mutates the document for the next step.
-
----
 
 ### **Prefix/Suffix Tags: “Define what text the model will see”**
 
