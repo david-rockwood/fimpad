@@ -475,7 +475,7 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writers block.
+Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Ctrl+Shift+G to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writers block.
 
 When writing fiction with FIM, the three concepts described above (completion, replacement, and interpolation) are very useful.
 
