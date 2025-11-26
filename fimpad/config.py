@@ -1,9 +1,11 @@
 # fimpad/config.py
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
+import tempfile
 
 APP_DIR = os.path.expanduser("~/.fimpad")
 CONFIG_PATH = os.path.join(APP_DIR, "config.json")
@@ -42,6 +44,10 @@ DEFAULTS = {
 WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
 
 
+class ConfigSaveError(Exception):
+    """Raised when the configuration cannot be written to disk."""
+
+
 def load_config() -> dict:
     deprecated_keys = {"model", "default_n"}
     try:
@@ -69,5 +75,14 @@ def load_config() -> dict:
 
 def save_config(cfg: dict) -> None:
     os.makedirs(APP_DIR, exist_ok=True)
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2)
+    fd, tmp_path = tempfile.mkstemp(prefix="config.", suffix=".tmp", dir=APP_DIR)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, CONFIG_PATH)
+    except Exception as exc:
+        with contextlib.suppress(Exception):
+            os.unlink(tmp_path)
+        raise ConfigSaveError(f"Failed to save config to {CONFIG_PATH}: {exc}") from exc

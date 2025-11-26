@@ -8,6 +8,10 @@ from collections.abc import Iterable
 import requests
 
 
+CONNECT_TIMEOUT = 10
+READ_TIMEOUT = 300
+
+
 def _sse_chunks(resp, stop_event: threading.Event | None = None) -> Iterable[str]:
     # decode lines as UTF-8, accept "data:" with/without a space
     try:
@@ -52,7 +56,12 @@ def stream_completion(
     endpoint: str, payload: dict, stop_event: threading.Event | None = None
 ) -> Iterable[str]:
     url = f"{endpoint}/v1/completions"
-    resp = requests.post(url, json=payload, stream=True, timeout=5000)
+    resp = requests.post(
+        url,
+        json=payload,
+        stream=True,
+        timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
+    )
     closer_thread = None
     try:
         resp.raise_for_status()
