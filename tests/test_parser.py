@@ -361,6 +361,16 @@ def test_parse_fim_request_strips_comments_and_collects_overrides():
     assert [fn.name for fn in fim_request.post_functions] == ["append"]
 
 
+def test_use_completion_when_only_non_comment_tags_follow():
+    content = "[[[5]]] [[[{font:'TkDefaultFont'}]]]"
+    marker = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(content, marker.start)
+
+    assert fim_request is not None
+    assert fim_request.use_completion is True
+
+
 def test_temp_and_top_p_overrides_accept_string_numbers():
     content = '[[[4; temp(".5"); top_p("0.8")]]]'
     token = _collect_tags(content)[0]

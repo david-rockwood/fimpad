@@ -23,7 +23,7 @@ from tkinter import colorchooser, messagebox, simpledialog, ttk
 import enchant
 
 from .client import stream_completion
-from .config import DEFAULTS, WORD_RE, load_config, save_config
+from .config import CONFIG_PATH, ConfigSaveError, DEFAULTS, WORD_RE, load_config, save_config
 from .icons import set_app_icon
 from .library_resources import iter_library
 from .parser import (
@@ -145,6 +145,15 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-Key-0>", lambda e: self._select_tab_by_index(9))
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _persist_config(self) -> None:
+        try:
+            save_config(self.cfg)
+        except ConfigSaveError as exc:
+            messagebox.showerror(
+                "Config Save Failed",
+                f"Could not save settings to {CONFIG_PATH}:\n{exc}",
+            )
 
     def _center_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
@@ -1329,7 +1338,7 @@ class FIMPad(tk.Tk):
 
     def _set_follow_stream_enabled(self, enabled: bool) -> None:
         self.cfg["follow_stream_enabled"] = enabled
-        save_config(self.cfg)
+        self._persist_config()
         if self._follow_menu_var is not None:
             self._follow_menu_var.set(enabled)
         if not enabled:
@@ -1340,7 +1349,7 @@ class FIMPad(tk.Tk):
     def _toggle_line_numbers(self):
         enabled = not self.cfg.get("line_numbers_enabled", False)
         self.cfg["line_numbers_enabled"] = enabled
-        save_config(self.cfg)
+        self._persist_config()
         if self._line_numbers_menu_var is not None:
             self._line_numbers_menu_var.set(enabled)
         for st in self.tabs.values():
@@ -1350,7 +1359,7 @@ class FIMPad(tk.Tk):
     def _toggle_spellcheck(self):
         enabled = not self.cfg.get("spellcheck_enabled", True)
         self.cfg["spellcheck_enabled"] = enabled
-        save_config(self.cfg)
+        self._persist_config()
         if self._spell_menu_var is not None:
             self._spell_menu_var.set(enabled)
 
@@ -2649,7 +2658,7 @@ class FIMPad(tk.Tk):
 
         self.cfg = new_cfg
         log_changed = self._apply_log_retention()
-        save_config(self.cfg)
+        self._persist_config()
         self._apply_open_maximized(self.cfg.get("open_maximized", False))
         self._dictionary = self._load_dictionary(self._spell_lang)
         self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
@@ -3689,7 +3698,7 @@ class FIMPad(tk.Tk):
         if len(self._available_spell_langs) <= 1:
             if "spell_lang" in self.cfg:
                 self.cfg.pop("spell_lang", None)
-                save_config(self.cfg)
+                self._persist_config()
             return default_lang
 
         lang = preferred or default_lang
@@ -3701,7 +3710,7 @@ class FIMPad(tk.Tk):
 
         if self.cfg.get("spell_lang") != lang:
             self.cfg["spell_lang"] = lang
-            save_config(self.cfg)
+            self._persist_config()
         return lang
 
     def _load_dictionary(self, lang: str):
@@ -4084,7 +4093,7 @@ class FIMPad(tk.Tk):
         for frame, st in list(self.tabs.items()):
             if st.get("stream_stop_event") is not None:
                 self._interrupt_stream_for_tab(frame)
-        save_config(self.cfg)
+        self._persist_config()
         self.destroy()
 
 
