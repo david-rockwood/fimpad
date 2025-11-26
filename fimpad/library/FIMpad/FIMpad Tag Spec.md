@@ -71,7 +71,6 @@ A FIM tag can be formatted across multiple lines for readability:
 ```text
 [[[
   100;
-  name("step1");
   stop("User: ");
   chop("END_OF_SECTION");
   append("That is my final answer.\n");
@@ -87,7 +86,6 @@ Each function belongs to **one** of two conceptual phases:
 * **Init-time (before streaming / request configuration)**
   Evaluated in order before calling the model.
 
-  * `name("id")`
   * `stop(pattern1, pattern2, ...)`
   * `chop(pattern1, pattern2, ...)`
   * `temp(float)`
@@ -143,28 +141,6 @@ Newlines in patterns:
 
 * `stop("User:\n")` → stops when actual newline follows `User:`.
 * `stop("User:\\n")` → stops on literal `User:\n` (backslash + `n`).
-
-### 2.4 `name("id")` and Named FIM Tags
-
-`name("id")` is an init-time function that gives a FIM tag a **unique identifier** within a document:
-
-```text
-[[[
-  100;
-  name("expand_intro");
-  stop("SECTION 2\n");
-]]]
-```
-
-* On parsing the document, FIMpad builds a registry:
-
-  ```text
-  id → FIMTag
-  ```
-
-* If two or more FIM tags use the same `id`, this is an error and makes those tags invalid for execution.
-
-> Multi-step workflows should be orchestrated by running FIM tags individually or via tooling outside the tag DSL.
 
 ---
 
@@ -325,9 +301,6 @@ Given FIMpad’s “fail closed” philosophy:
 
   * Treat as a fatal error for that tag.
 * **Invalid arguments** (wrong types or arity):
-
-  * Fatal error for that tag.
-* **Duplicate `name("id")`**:
 
   * Mark affected FIM tags as invalid.
 * **Malformed comment** (no closing `)]]]`):

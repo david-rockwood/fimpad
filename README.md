@@ -6,11 +6,6 @@ FIMpad is currently only tested on Linux, using llama.cpp's llama-server, servin
 
 If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that allows this.
 
-0.0.7 – First public release
-- Introduces the FIMpad Tag DSL v0.0.7
-- Supports prefix-completion and FIM completions for models served through llama.cpp's llama-server
-- Adds streaming, multi-tab editing, undo/redo, spellcheck, themes, and config persistence
-
 ---
 
 ## Quick start
@@ -25,7 +20,7 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI workflows live in regular text files, and sessions can be saved to and resumed from a text file. You can do Fill-In-the-Middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do Fill-In-the-Middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
 
 ---
 
@@ -83,7 +78,6 @@ A tag is a short instruction you place inside your document that tells FIMpad to
 
 * Generate text
 * Mark where the “prefix” or “suffix” of a context should be
-* Add invisible annotations
 * Or just store notes that the model should not see
 
 Tags look like this:
@@ -93,8 +87,6 @@ Tags look like this:
 ```
 
 The **first character after `[[[`** tells FIMpad what *kind* of tag it is.
-
-Multi-step workflows are still possible, but they require orchestrating multiple FIM tags through other mechanisms.
 
 ---
 
@@ -142,11 +134,9 @@ There are *soft* tags (`prefix`/`suffix`) and *hard* tags (`PREFIX`/`SUFFIX`):
 * **Soft** ones auto-delete after use
 * **Hard** ones stay permanently
 
-Soft tags make it easy to design workflows that progressively consume boundaries.
+Soft tags make it easy to generate text for a narrow range of context, without cluttering the file with tags.
 
-Hard tags are good for long-lived structure, like chapter markers.
-
-You do *not* need prefix/suffix tags for simple completions — but once you start doing multi-step processing, they become very powerful.
+Hard tags are good for long-lasting structure.
 
 ---
 
@@ -212,24 +202,8 @@ Simple mental model:
 
 > FIM tags generate.
 > Prefix/suffix tags define what they see.
-> Sequence tags run several named FIM tags in a row.
 > Comment tags are invisible to the model.
-
----
-
-## Why This Tag System Exists
-
-FIMpad is built around **Fill-In-the-Middle (FIM)**: generation that happens *between* a prefix and a suffix, rather than only after a prefix (like chat).
-
-FIM is uniquely powerful when:
-
-* You want the model to *rewrite* or *extend* a region of a document.
-* You want multi-step pipelines (parse → analyze → rewrite → format).
-* You want simple orchestration without writing Python code.
-* You want deterministic stop conditions (`stop()`, `chop()`).
-* You want natural-language reasoning steps in between.
-
-The tag system gives you a structured way to use FIM inside a text editor, but without feeling like you’re writing a real programming language.
+> Config tags apply application settings.
 
 ---
 
@@ -238,7 +212,6 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 | Tag Type          | Looks Like                      | Purpose                                   |
 | ----------------- | ------------------------------- | ----------------------------------------- |
 | **FIM Tag**       | `[[[100; stop("END")]]]`        | Generate text here using FIM, with rules. |
-| **Sequence Tag**  | `[[["step1"; "step2"]]]`        | Run named FIM tags in order.              |
 | **Prefix/Suffix** | `[[[prefix]]]` / `[[[suffix]]]` | Define what text the model sees.          |
 | **Comment Tag**   | `[[[(note)]]]`                  | Annotation; invisible to model.           |
 | **Config Tag**    | `[[[{fgColor:"#141414"}]]]`                   | Apply settings/themes from inside text.   |
@@ -247,7 +220,7 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 
 ## Using FIM tags
 
-All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the five classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
+All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
 
 > Four score and seven [[[50]]]
 
