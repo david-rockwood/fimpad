@@ -263,7 +263,7 @@ The tag system gives you a structured way to use FIM inside a text editor, but w
 | **Sequence Tag**  | `[[["step1"; "step2"]]]`        | Run named FIM tags in order.              |
 | **Prefix/Suffix** | `[[[prefix]]]` / `[[[suffix]]]` | Define what text the model sees.          |
 | **Comment Tag**   | `[[[(note)]]]`                  | Annotation; invisible to model.           |
-| **Config Tag**    | `[[[{...}]]]`                   | Apply settings/themes from inside text.   |
+| **Config Tag**    | `[[[{fgColor:"#141414"}]]]`                   | Apply settings/themes from inside text.   |
 
 ---
 
