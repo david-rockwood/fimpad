@@ -727,7 +727,7 @@ class FIMPad(tk.Tk):
     def _render_fim_log_body(self) -> str:
         if not self._fim_log:
             return "FIM Generation Log is empty.\n"
-        return "".join(f"{line}\n" for line in self._fim_log)
+        return "\n\n".join(self._fim_log) + "\n"
 
     def _refresh_log_tab_contents(self) -> None:
         frame = self._log_tab_frame
