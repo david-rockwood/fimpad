@@ -105,6 +105,7 @@ class FIMRequest:
     stop_patterns: list[str]
     chop_patterns: list[str]
     post_functions: tuple[FIMFunction, ...]
+    prepend_actions: tuple[str, ...]
     config_overrides: dict[str, object]
     use_completion: bool
 
@@ -126,6 +127,7 @@ FUNCTION_SPECS: dict[str, dict[str, object]] = {
     "temperature": {"args": 1, "default_phase": "init", "allow_any": True},
     "top_p": {"args": 1, "default_phase": "init", "allow_any": True},
     "append": {"args": 1, "default_phase": "post", "require_string": True},
+    "prepend": {"args": 1, "default_phase": "post", "require_string": True},
 }
 
 
@@ -201,6 +203,7 @@ def parse_fim_request(
     stop_patterns: list[str] = []
     chop_patterns: list[str] = []
     post_functions: list[FIMFunction] = []
+    prepend_actions: list[str] = []
     config_overrides: dict[str, object] = {}
 
     for fn in fim_tag.functions:
@@ -218,11 +221,16 @@ def parse_fim_request(
                 continue
         elif fn.name == "append":
             post_functions.append(fn)
+        elif fn.name == "prepend":
+            prepend_actions.append(fn.args[0] if fn.args else "")
         elif fn.name in {"chop", "tail"} and fn.args:
             chop_patterns.extend(fn.args)
         elif fn.name == "stop" and fn.args:
             target = stop_patterns if (fn.phase or "init") != "after" else chop_patterns
             target.extend(fn.args)
+
+    if prepend_actions:
+        before_region = f"{before_region}{''.join(prepend_actions)}"
 
     chop_patterns = _dedupe_preserve(chop_patterns)
     stop_patterns = _dedupe_preserve([p for p in stop_patterns if p not in chop_patterns])
@@ -239,6 +247,7 @@ def parse_fim_request(
         stop_patterns=stop_patterns,
         chop_patterns=chop_patterns,
         post_functions=tuple(post_functions),
+        prepend_actions=tuple(prepend_actions),
         config_overrides=config_overrides,
         use_completion=use_completion,
     )

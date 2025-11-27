@@ -156,6 +156,18 @@ def test_multifunction_tag_collects_stops_chops_and_post_actions():
     assert [fn.name for fn in fim_request.post_functions] == ["append", "append"]
 
 
+def test_prepend_extends_before_region_and_is_tracked():
+    content = "AAA [[[3; prepend('User: '); prepend('Line\\nTwo')]]] BBB"
+    marker = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(content, marker.start + 1)
+    assert fim_request is not None
+
+    assert fim_request.before_region == "AAA User: Line\nTwo"
+    assert fim_request.safe_suffix.strip() == "BBB"
+    assert fim_request.prepend_actions == ("User: ", "Line\nTwo")
+
+
 def test_parse_fim_request_returns_none_for_non_fim_marker():
     content = "[[[prefix]]] Body [[[7]]]"
     tokens = list(parse_triple_tokens(content))

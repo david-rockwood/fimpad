@@ -98,6 +98,7 @@ Each function belongs to **one** of two conceptual phases:
   Evaluated in order on the final generated text.
 
   * `append(string)`
+  * `prepend(string)`
 
 #### Execution Order
 
