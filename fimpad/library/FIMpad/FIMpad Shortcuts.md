@@ -48,31 +48,31 @@ Alt+; - Open Settings Window
 
 ### Toggle menu shortcuts
 
-Ctrl+Alt+W - Toggle Word Wrap
+Alt+W - Toggle Word Wrap
 
-Ctrl+Alt+F - Toggle Follow Stream
+Alt+M - Toggle Follow Stream
 
-Ctrl+Alt+N - Toggle Line Numbering
+Alt+L - Toggle Line Numbering
 
-Ctrl+Alt+S - Toggle Spellchecking
+Alt+P - Toggle Spellchecking
 
 
 
 ### AI menu shortcuts
 
-Ctrl+Shift+G - Generate
+Alt+[ - Generate
 
-Ctrl+Shift+R - Repeat Last FIM
+Alt+] - Repeat Last FIM
 
-Ctrl+Shift+P - Paste Last FIM Tag
+Alt+' - Paste Last FIM Tag
 
-Ctrl+Shift+C - Apply Config Tag
+Alt+= - Apply Config Tag
 
-Ctrl+Shift+I - Interrupt Stream
+Alt+Esc - Interrupt Stream
 
-Ctrl+Shift+V - Validate Tags
+Alt+` - Validate Tags
 
-Ctrl+Shift+L - Show Log
+Alt+, - Show Log
 
 
 
