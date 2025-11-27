@@ -62,11 +62,11 @@ Ctrl+Alt+S - Toggle Spellchecking
 
 Ctrl+Shift+G - Generate
 
-Ctrl+Shift+C - Apply Config Tag
-
 Ctrl+Shift+R - Repeat Last FIM
 
 Ctrl+Shift+P - Paste Last FIM Tag
+
+Ctrl+Shift+C - Apply Config Tag
 
 Ctrl+Shift+I - Interrupt Stream
 

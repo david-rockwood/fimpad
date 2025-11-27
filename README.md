@@ -181,7 +181,7 @@ Notes:
 
 * Values must be quoted strings (what you’d type into the Settings window).
 * Fonts and spellcheck languages are validated; if unavailable, you’ll see an error and nothing changes.
-* Press **Ctrl+Shift+G** with the caret inside or next to the tag to apply it. Config tags stay in the document after use.
+* Press **Ctrl+Shift+C** with the caret inside or next to the tag to apply it. Config tags stay in the document after use.
 
 ---
 
