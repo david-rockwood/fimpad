@@ -271,17 +271,17 @@ Example:
 
 ### 5.2 Supported Keys
 
-Each entry mirrors a Settings window field (values are the text you would type there). Recognized keys:
+Each entry mirrors a Settings window field or a `config.json` value (values are the text you would type there). Recognized keys:
 
 * `endpoint`, `temperature`, `top_p`
 * `fim_prefix`, `fim_suffix`, `fim_middle`
 * `font_family`, `font_size`
 * `editor_padding_px`, `line_number_padding_px`
-* `fg`, `bg`, `highlight1`, `highlight2`
-* `scroll_speed_multiplier`
-* `spell_lang`
-
-The `open_maximized` setting **cannot** be changed via config tags.
+* `fg`, `bg`, `highlight1`, `highlight2`, `reverse_selection_fg`
+* `open_maximized`
+* `scroll_speed_multiplier`, `log_entries_kept`
+* `line_numbers_enabled`, `follow_stream_enabled`
+* `spellcheck_enabled`, `spellcheck_view_buffer_lines`, `spellcheck_scroll_debounce_ms`, `spellcheck_full_document_line_threshold`, `spell_lang`
 
 ### 5.3 Semantics
 

@@ -2703,6 +2703,15 @@ class FIMPad(tk.Tk):
         log_changed = self._apply_log_retention()
         self._persist_config()
         self._apply_open_maximized(self.cfg.get("open_maximized", False))
+        line_numbers_enabled = self.cfg.get("line_numbers_enabled", False)
+        follow_enabled = self.cfg.get("follow_stream_enabled", True)
+        spell_enabled = self.cfg.get("spellcheck_enabled", True)
+        if self._line_numbers_menu_var is not None:
+            self._line_numbers_menu_var.set(line_numbers_enabled)
+        if self._follow_menu_var is not None:
+            self._follow_menu_var.set(follow_enabled)
+        if self._spell_menu_var is not None:
+            self._spell_menu_var.set(spell_enabled)
         self._dictionary = self._load_dictionary(self._spell_lang)
         self.app_font.config(family=self.cfg["font_family"], size=self.cfg["font_size"])
 
@@ -2711,6 +2720,10 @@ class FIMPad(tk.Tk):
 
         for frame, st in self.tabs.items():
             t = st["text"]
+            st["line_numbers_enabled"] = line_numbers_enabled
+            if not follow_enabled:
+                st["stream_following"] = False
+                st["_stream_follow_primed"] = False
             selection_fg = (
                 self.cfg["bg"]
                 if self.cfg.get("reverse_selection_fg", False)
@@ -2740,7 +2753,12 @@ class FIMPad(tk.Tk):
             self._clear_line_spacing(t)
             self._render_line_numbers(st)
             self._schedule_line_number_update(frame, delay_ms=15)
-            if not self.cfg["spellcheck_enabled"]:
+            if not spell_enabled:
+                timer_id = st.get("_spell_timer")
+                if timer_id is not None:
+                    with contextlib.suppress(Exception):
+                        self.after_cancel(timer_id)
+                    st["_spell_timer"] = None
                 t.tag_remove("misspelled", "1.0", "end")
             else:
                 self._schedule_spellcheck_for_frame(frame, delay_ms=200)
@@ -2780,28 +2798,34 @@ class FIMPad(tk.Tk):
             "bg": "bg",
             "highlight1": "highlight1",
             "highlight2": "highlight2",
+            "reverse_selection_fg": "reverse_selection_fg",
+            "open_maximized": "open_maximized",
             "scroll_speed_multiplier": "scroll_speed_multiplier",
+            "line_numbers_enabled": "line_numbers_enabled",
+            "spellcheck_enabled": "spellcheck_enabled",
+            "spellcheck_view_buffer_lines": "spellcheck_view_buffer_lines",
+            "spellcheck_scroll_debounce_ms": "spellcheck_scroll_debounce_ms",
+            "spellcheck_full_document_line_threshold": "spellcheck_full_document_line_threshold",
             "spell_lang": "spell_lang",
+            "follow_stream_enabled": "follow_stream_enabled",
+            "log_entries_kept": "log_entries_kept",
         }
 
     def _normalize_config_tag_settings(self, settings: dict[str, object]) -> dict[str, object]:
         supported_keys = self._config_tag_supported_keys()
 
         alias_map = {k.casefold(): k for k in supported_keys}
+        alias_map.update(
+            {
+                "openmaximized": "open_maximized",
+                "reverseselectionfg": "reverse_selection_fg",
+                "reversetextcolorwhenselected": "reverse_selection_fg",
+            }
+        )
 
         updates: dict[str, object] = {}
         for key, raw_value in settings.items():
             key_cf = key.casefold()
-            if key_cf in {"openmaximized", "open_maximized"}:
-                raise ValueError("Config tags cannot change open_maximized")
-
-            if key_cf in {
-                "reverseselectionfg",
-                "reverse_selection_fg",
-                "reversetextcolorwhenselected",
-            }:
-                raise ValueError("Config tags cannot change reverse_selection_fg")
-
             canonical = alias_map.get(key_cf)
             if canonical is None or canonical not in supported_keys:
                 raise ValueError(f"Unknown config key: {key}")
@@ -2836,8 +2860,30 @@ class FIMPad(tk.Tk):
                     if not isinstance(raw_value, str):
                         raise ValueError(f"{canonical} must be a string")
                     updates[cfg_key] = self._validate_color_string(raw_value)
+                elif canonical in {
+                    "reverse_selection_fg",
+                    "open_maximized",
+                    "line_numbers_enabled",
+                    "spellcheck_enabled",
+                    "follow_stream_enabled",
+                }:
+                    if not isinstance(raw_value, bool):
+                        raise ValueError(f"{canonical} must be a boolean")
+                    updates[cfg_key] = raw_value
                 elif canonical == "scroll_speed_multiplier":
                     updates[cfg_key] = max(1, min(10, int(raw_value)))
+                elif canonical in {
+                    "spellcheck_view_buffer_lines",
+                    "spellcheck_scroll_debounce_ms",
+                }:
+                    updates[cfg_key] = max(0, int(raw_value))
+                elif canonical == "spellcheck_full_document_line_threshold":
+                    updates[cfg_key] = max(1, int(raw_value))
+                elif canonical == "log_entries_kept":
+                    log_entries_val = int(raw_value)
+                    if not 0 <= log_entries_val <= 9999:
+                        raise ValueError("log_entries_kept must be between 0 and 9999")
+                    updates[cfg_key] = log_entries_val
                 elif canonical == "spell_lang":
                     if not isinstance(raw_value, str):
                         raise ValueError("spell_lang must be a string")
