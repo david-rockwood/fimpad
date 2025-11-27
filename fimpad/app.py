@@ -2738,6 +2738,12 @@ class FIMPad(tk.Tk):
             else:
                 self._schedule_spellcheck_for_frame(frame, delay_ms=200)
 
+    def _fim_tokens_missing(self) -> bool:
+        return any(
+            not (self.cfg.get(key, "").strip())
+            for key in ("fim_prefix", "fim_suffix", "fim_middle")
+        )
+
     def _validate_color_string(self, value: str) -> str:
         color = value.strip()
         if not color:
@@ -3204,7 +3210,11 @@ class FIMPad(tk.Tk):
 
         try:
             fim_request = parse_fim_request(
-                content, cursor_offset, tokens=tokens, marker_token=marker_token
+                content,
+                cursor_offset,
+                tokens=tokens,
+                marker_token=marker_token,
+                force_completion=self._fim_tokens_missing(),
             )
         except TagParseError as exc:
             self._highlight_tag_span(
@@ -3418,6 +3428,8 @@ class FIMPad(tk.Tk):
         request_cfg.update(fim_request.config_overrides)
 
         if fim_request.use_completion:
+            # Completion fallback: ignore any suffix text when building the
+            # prompt, but keep ``safe_suffix`` for logging/debugging.
             prompt = fim_request.before_region
         else:
             prompt = (
