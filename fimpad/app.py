@@ -22,6 +22,14 @@ from tkinter import colorchooser, messagebox, simpledialog, ttk
 
 import enchant
 
+from .bol_utils import (
+    _deindent_block,
+    _delete_leading_chars,
+    _indent_block,
+    _prepend_to_lines,
+    _spaces_to_tabs,
+    _tabs_to_spaces,
+)
 from .client import stream_completion
 from .config import CONFIG_PATH, DEFAULTS, WORD_RE, ConfigSaveError, load_config, save_config
 from .icons import set_app_icon
@@ -113,6 +121,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-q>", lambda e: self._on_close())
         self.bind_all("<Alt-u>", lambda e: self._event_on_current_text("<<Undo>>"))
         self.bind_all("<Alt-r>", lambda e: self._event_on_current_text("<<Redo>>"))
+        self.bind_all("<Alt-backslash>", lambda e: self._open_bol_tool())
         self.bind_all("<Alt-slash>", lambda e: self._open_replace_dialog())
         self.bind_all("<Alt-period>", lambda e: self._open_regex_replace_dialog())
         # Tk text widgets already include standard bindings (Ctrl+C/X/V, Ctrl+A, Delete).
@@ -590,6 +599,7 @@ class FIMPad(tk.Tk):
         text.bind("<Alt-Escape>", self._on_interrupt_stream)
         text.bind("<Alt-comma>", self._on_show_fim_log_shortcut)
         text.bind("<Alt-grave>", self._on_validate_tags_shortcut)
+        text.bind("<Alt-backslash>", lambda e: self._open_bol_tool())
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
@@ -901,6 +911,9 @@ class FIMPad(tk.Tk):
         )
         editmenu.add_command(
             label="Regex & Replace…", accelerator="Alt+.", command=self._open_regex_replace_dialog
+        )
+        editmenu.add_command(
+            label="BOL Tool…", accelerator="Alt+\\", command=self._open_bol_tool
         )
         editmenu.add_separator()
         editmenu.add_command(
@@ -2432,6 +2445,222 @@ class FIMPad(tk.Tk):
         w.protocol("WM_DELETE_WINDOW", on_close)
         w.bind("<Destroy>", on_destroy, add="+")
         self._prepare_child_window(w)
+
+    def _open_bol_tool(self, event=None):
+        st = self._current_tab_state()
+        if not st or self._is_log_tab(st):
+            return
+        text = st.get("text")
+        if text is None:
+            return
+
+        try:
+            original_sel: tuple[str, str] | None = (
+                text.index("sel.first"),
+                text.index("sel.last"),
+            )
+        except tk.TclError:
+            original_sel = None
+
+        original_content = text.get("1.0", "end-1c")
+        original_dirty = st.get("dirty", False)
+        original_insert = text.index(tk.INSERT)
+        original_yview = text.yview()
+
+        def selected_line_range() -> tuple[int, int]:
+            try:
+                start_idx = text.index("sel.first")
+                end_idx = text.index("sel.last")
+            except tk.TclError:
+                line_idx = text.index(tk.INSERT)
+                line_num = int(line_idx.split(".")[0])
+                return line_num, line_num
+
+            start_line = int(text.index(f"{start_idx} linestart").split(".")[0])
+            try:
+                end_target = text.index(f"{end_idx} -1c")
+            except tk.TclError:
+                end_target = end_idx
+            end_line = int(text.index(f"{end_target} linestart").split(".")[0])
+            return start_line, end_line
+
+        def get_selected_lines() -> tuple[int, int, list[str]]:
+            start_line, end_line = selected_line_range()
+            lines = [
+                text.get(f"{line}.0", f"{line}.0 lineend")
+                for line in range(start_line, end_line + 1)
+            ]
+            return start_line, end_line, lines
+
+        def apply_transformation(transform: Callable[[list[str]], list[str]]) -> None:
+            start_line, end_line, lines = get_selected_lines()
+            yview = text.yview()
+            insert_idx = text.index(tk.INSERT)
+            new_lines = transform(list(lines))
+            if new_lines is None or len(new_lines) != len(lines):
+                return
+            text.edit_separator()
+            for offset, new_line in enumerate(new_lines):
+                target_line = start_line + offset
+                line_start = f"{target_line}.0"
+                line_end = f"{target_line}.0 lineend"
+                text.delete(line_start, line_end)
+                text.insert(line_start, new_line)
+            text.edit_separator()
+            sel_start = f"{start_line}.0"
+            sel_end = f"{end_line}.0 lineend"
+            text.tag_remove("sel", "1.0", tk.END)
+            text.tag_add("sel", sel_start, sel_end)
+            with contextlib.suppress(Exception):
+                text.yview_moveto(yview[0])
+            text.mark_set(tk.INSERT, insert_idx)
+            text.see(sel_start)
+            text.focus_set()
+            self._schedule_line_number_update(st["frame"], delay_ms=10)
+
+        start_line, end_line = selected_line_range()
+        text.tag_remove("sel", "1.0", tk.END)
+        text.tag_add("sel", f"{start_line}.0", f"{end_line}.0 lineend")
+        text.see(f"{start_line}.0")
+
+        w = tk.Toplevel(self)
+        w.title("BOL Tool")
+        w.resizable(False, False)
+
+        indent_size_var = tk.StringVar(value="4")
+        prefix_var = tk.StringVar(value="")
+        delete_count_var = tk.StringVar(value="1")
+
+        def indent_size() -> int:
+            try:
+                return int(indent_size_var.get())
+            except ValueError:
+                return 4
+
+        def delete_count() -> int:
+            try:
+                return int(delete_count_var.get())
+            except ValueError:
+                return 1
+
+        def clear_changes() -> None:
+            text.edit_separator()
+            st["suppress_modified"] = True
+            text.delete("1.0", tk.END)
+            text.insert("1.0", original_content)
+            text.edit_modified(False)
+            st["suppress_modified"] = False
+            self._set_dirty(st, original_dirty)
+            text.mark_set(tk.INSERT, original_insert)
+            with contextlib.suppress(Exception):
+                text.yview_moveto(original_yview[0])
+            text.tag_remove("sel", "1.0", tk.END)
+            if original_sel:
+                text.tag_add("sel", original_sel[0], original_sel[1])
+            self._schedule_line_number_update(st["frame"], delay_ms=10)
+
+        def cancel_dialog() -> None:
+            clear_changes()
+            w.destroy()
+
+        controls = ttk.Frame(w, padding=12)
+        controls.grid(row=0, column=0, sticky="nsew")
+        w.columnconfigure(0, weight=1)
+
+        ttk.Label(controls, text="Indent size:").grid(row=0, column=0, sticky="e", padx=(0, 6))
+        indent_combo = ttk.Combobox(
+            controls,
+            values=[str(i) for i in range(1, 9)],
+            textvariable=indent_size_var,
+            width=4,
+        )
+        indent_combo.grid(row=0, column=1, sticky="w")
+        indent_combo.bind(
+            "<<ComboboxSelected>>", lambda _e: indent_size_var.set(indent_combo.get())
+        )
+
+        ttk.Button(
+            controls,
+            text="Tabs → Spaces",
+            command=lambda: apply_transformation(
+                lambda lines: _tabs_to_spaces(lines, indent_size())
+            ),
+        ).grid(row=0, column=2, padx=(12, 0))
+        ttk.Button(
+            controls,
+            text="Spaces → Tabs",
+            command=lambda: apply_transformation(
+                lambda lines: _spaces_to_tabs(lines, indent_size())
+            ),
+        ).grid(row=0, column=3, padx=(8, 0))
+
+        ttk.Button(
+            controls,
+            text="Indent",
+            command=lambda: apply_transformation(
+                lambda lines: _indent_block(lines, indent_size())
+            ),
+        ).grid(row=1, column=2, pady=(10, 0), padx=(12, 0), sticky="we")
+        ttk.Button(
+            controls,
+            text="De-indent",
+            command=lambda: apply_transformation(
+                lambda lines: _deindent_block(lines, indent_size())
+            ),
+        ).grid(row=1, column=3, pady=(10, 0), padx=(8, 0), sticky="we")
+
+        ttk.Label(controls, text="Prepend:").grid(
+            row=2, column=0, sticky="e", padx=(0, 6), pady=(10, 0)
+        )
+        ttk.Entry(controls, textvariable=prefix_var, width=30).grid(
+            row=2, column=1, columnspan=2, sticky="we", pady=(10, 0)
+        )
+        ttk.Button(
+            controls,
+            text="Apply",
+            command=lambda: apply_transformation(
+                lambda lines: _prepend_to_lines(lines, prefix_var.get())
+            ),
+        ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0))
+
+        ttk.Label(controls, text="Delete leading:").grid(
+            row=3, column=0, sticky="e", padx=(0, 6), pady=(10, 0)
+        )
+        delete_combo = ttk.Combobox(
+            controls,
+            values=[str(i) for i in range(1, 9)],
+            textvariable=delete_count_var,
+            width=4,
+        )
+        delete_combo.grid(row=3, column=1, sticky="w", pady=(10, 0))
+        delete_combo.bind(
+            "<<ComboboxSelected>>", lambda _e: delete_count_var.set(delete_combo.get())
+        )
+        ttk.Button(
+            controls,
+            text="Delete",
+            command=lambda: apply_transformation(
+                lambda lines: _delete_leading_chars(lines, delete_count())
+            ),
+        ).grid(row=3, column=3, padx=(8, 0), pady=(10, 0), sticky="we")
+
+        controls.columnconfigure(1, weight=1)
+        controls.columnconfigure(2, weight=1)
+        controls.columnconfigure(3, weight=1)
+
+        btns = ttk.Frame(w, padding=(12, 0, 12, 12))
+        btns.grid(row=1, column=0, sticky="e")
+        ttk.Button(btns, text="Clear Changes", command=clear_changes).grid(
+            row=0, column=0, padx=(0, 8)
+        )
+        ttk.Button(btns, text="Apply", command=w.destroy).grid(
+            row=0, column=1, padx=(0, 8)
+        )
+        ttk.Button(btns, text="Cancel", command=cancel_dialog).grid(row=0, column=2)
+
+        w.protocol("WM_DELETE_WINDOW", cancel_dialog)
+        self._prepare_child_window(w)
+        indent_combo.focus_set()
 
     # ---------- Settings ----------
 
