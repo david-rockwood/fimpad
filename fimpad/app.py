@@ -783,8 +783,14 @@ class FIMPad(tk.Tk):
         return bool(st and st.get("is_log_tab"))
 
     def _update_tab_title(self, st):
-        tab = self.nb.select()
-        if not tab:
+        frame = st.get("frame")
+        if frame is None:
+            return
+        try:
+            tab = str(frame)
+            if tab not in self.nb.tabs():
+                return
+        except tk.TclError:
             return
         title = self._format_tab_title(st)
         self._apply_tab_title(tab, title)
