@@ -10,10 +10,10 @@ A lively day at the beach.
 
 ```
 [[[{
-fgColor:"#d8d8d8";
-bgColor:"#384868";
-caretColor:"#c800c8";
-selectionColor:"#dd9500";
+"fg": "#d8d8d8",
+"bg": "#384868",
+"highlight1": "#c800c8",
+"highlight2": "#dd9500"
 }]]]
 ```
 
@@ -25,10 +25,10 @@ A serious theme with a calm light-gray background for long reading sessions and 
 
 ```
 [[[{
-fgColor:"#141414";
-bgColor:"#d8d8d8";
-caretColor:"#b40a0a";
-selectionColor:"#a4a4a4";
+"fg": "#141414",
+"bg": "#d8d8d8",
+"highlight1": "#b40a0a",
+"highlight2": "#a4a4a4"
 }]]]
 ```
 
@@ -39,10 +39,10 @@ A deep green, low-brightness theme inspired by old phosphor terminals and woodla
 
 ```
 [[[{
-fgColor:"#88f888";
-bgColor:"#001800";
-caretColor:"#d8f8d8";
-selectionColor:"#005800";
+"fg": "#88f888",
+"bg": "#001800",
+"highlight1": "#d8f8d8",
+"highlight2": "#005800"
 }]]]
 ```
 
@@ -54,10 +54,10 @@ A warm, inviting theme with soft sand tones and a glowing amber caret, tuned for
 
 ```
 [[[{
-fgColor:"#580848";
-bgColor:"#d4b4b4";
-caretColor:"#e87818";
-selectionColor:"#d4c4b4";
+"fg": "#580848",
+"bg": "#d4b4b4",
+"highlight1": "#e87818",
+"highlight2": "#d4c4b4"
 }]]]
 ```
 
@@ -69,10 +69,10 @@ A cool, bright theme with icy blue shadows and crisp high-contrast text.
 
 ```
 [[[{
-fgColor:"#0a1a2a";
-bgColor:"#e9f3ff";
-caretColor:"#0060d0";
-selectionColor:"#c0d8f4";
+"fg": "#0a1a2a",
+"bg": "#e9f3ff",
+"highlight1": "#0060d0",
+"highlight2": "#c0d8f4"
 }]]]
 ```
 
@@ -84,10 +84,10 @@ A high-energy neon look with black void background, electric pink highlights, an
 
 ```
 [[[{
-fgColor:"#ff66ff";
-bgColor:"#000000";
-caretColor:"#ff33cc";
-selectionColor:"#00ffff";
+"fg": "#ff66ff",
+"bg": "#000000",
+"highlight1": "#ff33cc",
+"highlight2": "#00ffff"
 }]]]
 ```
 
@@ -99,10 +99,10 @@ A cozy, warm, brown-tinted theme for relaxed writing and gentle focus.
 
 ```
 [[[{
-fgColor:"#3a2a20";
-bgColor:"#d0c0b4";
-caretColor:"#a0522d";
-selectionColor:"#f0f0e0";
+"fg": "#3a2a20",
+"bg": "#d0c0b4",
+"highlight1": "#a0522d",
+"highlight2": "#f0f0e0"
 }]]]
 ```
 
@@ -114,10 +114,10 @@ A dark, focused theme with a near-black slate background and a cool blue caret f
 
 ```
 [[[{
-fgColor:"#e0e0e0";
-bgColor:"#141820";
-caretColor:"#3878f8";
-selectionColor:"#283868";
+"fg": "#e0e0e0",
+"bg": "#141820",
+"highlight1": "#3878f8",
+"highlight2": "#283868"
 }]]]
 ```
 
@@ -129,10 +129,10 @@ A low-saturation, gentle grayscale theme with super-soft contrast and a muted gr
 
 ```
 [[[{
-fgColor:"#303030";
-bgColor:"#e0e0e0";
-caretColor:"#606060";
-selectionColor:"#d0d0d0";
+"fg": "#303030",
+"bg": "#e0e0e0",
+"highlight1": "#606060",
+"highlight2": "#d0d0d0"
 }]]]
 ```
 
@@ -144,10 +144,10 @@ A dusk-toned reading theme, with dim bluish-gray surroundings and a soft, parchm
 
 ```
 [[[{
-fgColor:"#f8e8d8";
-bgColor:"#1e2530";
-caretColor:"#d88858";
-selectionColor:"#404868";
+"fg": "#f8e8d8",
+"bg": "#1e2530",
+"highlight1": "#d88858",
+"highlight2": "#404868"
 }]]]
 ```
 
@@ -159,10 +159,10 @@ A cool teal theme with equal parts green and blue, low red, and a gentle oceanic
 
 ```
 [[[{
-fgColor:"#ccffff";
-bgColor:"#004050";
-caretColor:"#00d8d8";
-selectionColor:"#286f78";
+"fg": "#ccffff",
+"bg": "#004050",
+"highlight1": "#00d8d8",
+"highlight2": "#286f78"
 }]]]
 ```
 
@@ -174,10 +174,10 @@ A subtle, art-studio-inspired theme with charcoal walls and faint warm accents t
 
 ```
 [[[{
-fgColor:"#f7ece3";
-bgColor:"#121416";
-caretColor:"#c86840";
-selectionColor:"#3f3f48";
+"fg": "#f7ece3",
+"bg": "#121416",
+"highlight1": "#c86840",
+"highlight2": "#3f3f48"
 }]]]
 ```
 
@@ -189,10 +189,10 @@ A warm brass-and-cream theme with vintage magazine vibes and a mellow, tarnished
 
 ```
 [[[{
-fgColor:"#3c2a1a";
-bgColor:"#f8f0e0";
-caretColor:"#d08040";
-selectionColor:"#d8c0b0";
+"fg": "#3c2a1a",
+"bg": "#f8f0e0",
+"highlight1": "#d08040",
+"highlight2": "#d8c0b0"
 }]]]
 ```
 
@@ -204,10 +204,10 @@ A clean high-latitude theme with bright icy blues, near-black fjord depths, and 
 
 ```
 [[[{
-fgColor:"#d8d8f0";
-bgColor:"#000828";
-caretColor:"#a0c8f8";
-selectionColor:"#142454";
+"fg": "#d8d8f0",
+"bg": "#000828",
+"highlight1": "#a0c8f8",
+"highlight2": "#142454"
 }]]]
 ```
 
@@ -219,10 +219,10 @@ A warm, saturated theme inspired by sunset terminals from the 1980s, with orange
 
 ```
 [[[{
-fgColor:"#ffdcb8";
-bgColor:"#281028";
-caretColor:"#ff9040";
-selectionColor:"#502080";
+"fg": "#ffdcb8",
+"bg": "#281028",
+"highlight1": "#ff9040",
+"highlight2": "#502080"
 }]]]
 ```
 
@@ -234,10 +234,10 @@ A bright, old-school cyan-on-black console theme with gentle neon edges and stro
 
 ```
 [[[{
-fgColor:"#b6ffff";
-bgColor:"#000000";
-caretColor:"#00e0e0";
-selectionColor:"#004040";
+"fg": "#b6ffff",
+"bg": "#000000",
+"highlight1": "#00e0e0",
+"highlight2": "#004040"
 }]]]
 ```
 
@@ -249,10 +249,10 @@ A cozy autumn palette with pumpkin-orange undertones, warm muted browns, and a b
 
 ```
 [[[{
-fgColor:"#3a261c";
-bgColor:"#f7ecd1";
-caretColor:"#d1782c";
-selectionColor:"#e5c9a4";
+"fg": "#3a261c",
+"bg": "#f7ecd1",
+"highlight1": "#d1782c",
+"highlight2": "#e5c9a4"
 }]]]
 ```
 
@@ -264,10 +264,10 @@ A quiet, meditative theme with deep violet shelving, lavender cast text, and a p
 
 ```
 [[[{
-fgColor:"#eee9ff";
-bgColor:"#1e1630";
-caretColor:"#c4b0ff";
-selectionColor:"#42345c";
+"fg": "#eee9ff",
+"bg": "#1e1630",
+"highlight1": "#c4b0ff",
+"highlight2": "#42345c"
 }]]]
 ```
 
@@ -279,10 +279,10 @@ A steel-and-slate industrial theme with cold-gray surfaces and a subtle red warn
 
 ```
 [[[{
-fgColor:"#e0e0e0";
-bgColor:"#131312";
-caretColor:"#d24848";
-selectionColor:"#3a3b40";
+"fg": "#e0e0e0",
+"bg": "#131312",
+"highlight1": "#d24848",
+"highlight2": "#3a3b40"
 }]]]
 ```
 
@@ -293,10 +293,10 @@ selectionColor:"#3a3b40";
 A stark , dark,  and bloody theme.
 ```
 [[[{
-fgColor:"#e8e8e8";
-bgColor:"#090909";
-caretColor:"#444444";
-selectionColor:"#d81010";
+"fg": "#e8e8e8",
+"bg": "#090909",
+"highlight1": "#444444",
+"highlight2": "#d81010"
 }]]]
 ```
 
