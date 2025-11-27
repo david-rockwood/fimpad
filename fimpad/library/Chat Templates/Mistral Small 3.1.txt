@@ -1,0 +1,10 @@
+<s>[INST]
+[SYSTEM_PROMPT]
+You are a helpful assistant.
+[/SYSTEM_PROMPT]
+
+User: What is Hawaii like?
+Assistant: Hawaii is...
+
+User: What about the food?
+[/INST]
