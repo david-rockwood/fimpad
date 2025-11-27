@@ -3496,6 +3496,9 @@ class FIMPad(tk.Tk):
             start_index = text.index("stream_here")
             end_index = text.index(f"{start_index}+{marker_len}c")
             text.delete(start_index, end_index)
+            for extra in fim_request.prepend_actions:
+                with contextlib.suppress(tk.TclError):
+                    text.insert("stream_here", extra)
             self._set_dirty(st, True)
             st["stream_mark"] = "stream_here"
 
