@@ -86,7 +86,13 @@ Token = TextToken | TagToken
 
 @dataclass(frozen=True)
 class FIMRequest:
-    """Parsed representation of a FIM marker relative to source text."""
+    """Parsed representation of a FIM marker relative to source text.
+
+    ``safe_suffix`` always preserves the user-authored text after the marker,
+    even when ``use_completion`` forces pure completion mode. In completion
+    mode that suffix text is kept only for logging/UX while the prompt sent to
+    the model omits it entirely.
+    """
 
     marker: TagToken
     prefix_token: TagToken | None
@@ -161,10 +167,14 @@ def parse_fim_request(
     *,
     tokens: list[Token] | None = None,
     marker_token: TagToken | None = None,
+    force_completion: bool = False,
 ) -> FIMRequest | None:
     """Parse FIM instructions around ``cursor_offset``.
 
     Returns ``None`` when the cursor is not inside a FIM marker.
+
+    ``force_completion`` bypasses suffix-based FIM prompting (e.g., when
+    the configured FIM tokens are unavailable) and forces completion mode.
     """
 
     try:
@@ -183,7 +193,7 @@ def parse_fim_request(
         content, tokens, marker_token, prefix_token, suffix_token
     )
     safe_suffix = _strip_triple_tags(after_region)
-    use_completion = safe_suffix.strip() == ""
+    use_completion = force_completion or safe_suffix.strip() == ""
 
     max_tokens = _clamp_tokens(fim_tag.max_tokens or default_n, default_n)
     keep_tags = any(fn.name in {"keep", "keep_tags"} for fn in fim_tag.functions)

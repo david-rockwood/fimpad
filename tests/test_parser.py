@@ -343,6 +343,19 @@ def test_use_completion_when_only_non_comment_tags_follow():
     assert fim_request.use_completion is True
 
 
+def test_force_completion_flag_disables_fim_suffix():
+    content = "AAA [[[5]]] BBB"
+    marker = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(
+        content, marker.start + 1, force_completion=True
+    )
+
+    assert fim_request is not None
+    assert fim_request.use_completion is True
+    assert fim_request.safe_suffix.strip() == "BBB"
+
+
 def test_temp_and_top_p_overrides_accept_string_numbers():
     content = '[[[4; temp(".5"); top_p("0.8")]]]'
     token = _collect_tags(content)[0]
