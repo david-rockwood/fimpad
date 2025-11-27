@@ -599,7 +599,11 @@ class FIMPad(tk.Tk):
         text.bind("<Alt-Escape>", self._on_interrupt_stream)
         text.bind("<Alt-comma>", self._on_show_fim_log_shortcut)
         text.bind("<Alt-grave>", self._on_validate_tags_shortcut)
-        text.bind("<Alt-backslash>", lambda e: self._open_bol_tool())
+        def open_bol_from_text(event=None):
+            self._open_bol_tool()
+            return "break"
+
+        text.bind("<Alt-backslash>", open_bol_from_text)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
@@ -2617,7 +2621,7 @@ class FIMPad(tk.Tk):
         )
         ttk.Button(
             controls,
-            text="Apply",
+            text="Prepend",
             command=lambda: apply_transformation(
                 lambda lines: _prepend_to_lines(lines, prefix_var.get())
             ),
