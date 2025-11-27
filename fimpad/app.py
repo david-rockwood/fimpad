@@ -30,6 +30,7 @@ from .parser import (
     TRIPLE_RE,
     ConfigTag,
     FIMRequest,
+    FIMTag,
     PrefixSuffixTag,
     TagParseError,
     TagToken,
@@ -123,6 +124,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Control-Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
         self.bind_all("<Control-Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
         self.bind_all("<Control-Shift-G>", self._on_generate_shortcut)
+        self.bind_all("<Control-Shift-C>", self._on_apply_config_tag_shortcut)
         self.bind_all("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Control-Shift-I>", self._on_interrupt_stream)
@@ -580,6 +582,7 @@ class FIMPad(tk.Tk):
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
         text.bind("<Control-Shift-G>", self._on_generate_shortcut)
+        text.bind("<Control-Shift-C>", self._on_apply_config_tag_shortcut)
         text.bind("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
         text.bind("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
         text.bind("<Control-Shift-I>", self._on_interrupt_stream)
@@ -947,6 +950,11 @@ class FIMPad(tk.Tk):
             label="Paste Last FIM Tag",
             accelerator="Ctrl+Shift+P",
             command=self.paste_last_fim_tag,
+        )
+        aimenu.add_command(
+            label="Apply Config Tag",
+            accelerator="Ctrl+Shift+C",
+            command=self.apply_config_tag,
         )
         aimenu.add_command(
             label="Interrupt Stream",
@@ -2856,6 +2864,61 @@ class FIMPad(tk.Tk):
         self._apply_config_changes(new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad)
         self._show_message("Config Tag", "Settings applied from config tag.", parent=st.get("text"))
 
+    def apply_config_tag(self) -> None:
+        st = self._current_tab_state()
+        if not st:
+            return
+        if self._is_log_tab(st):
+            return
+
+        text_widget = st.get("text")
+        if text_widget is None:
+            return
+
+        try:
+            cursor_index = text_widget.index(tk.INSERT)
+            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
+        except Exception:
+            cursor_offset = None
+
+        content = text_widget.get("1.0", tk.END)
+        if cursor_offset is None:
+            cursor_offset = len(content)
+        cursor_offset = max(0, min(len(content), cursor_offset))
+
+        try:
+            tokens = list(parse_triple_tokens(content))
+        except TagParseError as exc:
+            self._highlight_tag_at_cursor(st, content=content, cursor_offset=cursor_offset)
+            self._show_error("Config Tag", "Tag could not be parsed.", detail=str(exc))
+            return
+
+        guidance = (
+            "Place the caret inside or immediately after a config tag to apply it."
+        )
+
+        marker_token = self._find_active_tag(tokens, cursor_offset)
+        if marker_token is None:
+            self._show_message("Config Tag", guidance, parent=text_widget)
+            return
+
+        if not isinstance(marker_token.tag, ConfigTag):
+            self._highlight_tag_span(
+                st,
+                start=marker_token.start,
+                end=marker_token.end,
+                content=content,
+            )
+            self._show_message("Config Tag", guidance, parent=text_widget)
+            return
+
+        self._apply_config_tag(
+            st,
+            marker_token.tag,
+            marker_token=marker_token,
+            content=content,
+        )
+
     def validate_tags_current(self) -> None:
         st = self._current_tab_state()
         if not st:
@@ -3123,7 +3186,7 @@ class FIMPad(tk.Tk):
             self._show_message("Generate", guidance, parent=text_widget)
             return
 
-        if marker_token.kind not in {"fim", "config"}:
+        if marker_token.kind != "fim" or not isinstance(marker_token.tag, FIMTag):
             self._highlight_tag_span(
                 st,
                 start=marker_token.start,
@@ -3131,15 +3194,6 @@ class FIMPad(tk.Tk):
                 content=content,
             )
             self._show_message("Generate", guidance, parent=text_widget)
-            return
-
-        if marker_token.kind == "config" and isinstance(marker_token.tag, ConfigTag):
-            self._apply_config_tag(
-                st,
-                marker_token.tag,
-                marker_token=marker_token,
-                content=content,
-            )
             return
 
         try:
@@ -3167,6 +3221,10 @@ class FIMPad(tk.Tk):
 
     def _on_generate_shortcut(self, event):
         self.generate()
+        return "break"
+
+    def _on_apply_config_tag_shortcut(self, event):
+        self.apply_config_tag()
         return "break"
 
     def _on_interrupt_stream(self, event):
