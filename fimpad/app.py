@@ -119,17 +119,17 @@ class FIMPad(tk.Tk):
         # Avoid re-binding them here because double bindings cause duplicated actions
         # (for example, pasting twice). If you want to change those defaults, adjust
         # the widget configuration rather than adding new global bindings.
-        self.bind_all("<Control-Alt-w>", lambda e: self._toggle_wrap_current())  # wrap toggle
-        self.bind_all("<Control-Alt-f>", lambda e: self._toggle_follow_stream())  # follow toggle
-        self.bind_all("<Control-Alt-s>", lambda e: self._toggle_spellcheck())  # spell toggle
-        self.bind_all("<Control-Alt-n>", lambda e: self._toggle_line_numbers())  # line numbers
-        self.bind_all("<Control-Shift-G>", self._on_generate_shortcut)
-        self.bind_all("<Control-Shift-C>", self._on_apply_config_tag_shortcut)
-        self.bind_all("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
-        self.bind_all("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
-        self.bind_all("<Control-Shift-I>", self._on_interrupt_stream)
-        self.bind_all("<Control-Shift-L>", self._on_show_fim_log_shortcut)
-        self.bind_all("<Control-Shift-V>", self._on_validate_tags_shortcut)
+        self.bind_all("<Alt-w>", lambda e: self._toggle_wrap_current())  # wrap toggle
+        self.bind_all("<Alt-m>", lambda e: self._toggle_follow_stream())  # follow toggle
+        self.bind_all("<Alt-p>", lambda e: self._toggle_spellcheck())  # spell toggle
+        self.bind_all("<Alt-l>", lambda e: self._toggle_line_numbers())  # line numbers
+        self.bind_all("<Alt-bracketleft>", self._on_generate_shortcut)
+        self.bind_all("<Alt-equal>", self._on_apply_config_tag_shortcut)
+        self.bind_all("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
+        self.bind_all("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
+        self.bind_all("<Alt-Escape>", self._on_interrupt_stream)
+        self.bind_all("<Alt-comma>", self._on_show_fim_log_shortcut)
+        self.bind_all("<Alt-grave>", self._on_validate_tags_shortcut)
         self.bind_all("<Alt-c>", lambda e: self._close_current_tab())  # close tab
         self.bind_all("<Alt-semicolon>", lambda e: self._open_settings())
 
@@ -581,13 +581,13 @@ class FIMPad(tk.Tk):
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
-        text.bind("<Control-Shift-G>", self._on_generate_shortcut)
-        text.bind("<Control-Shift-C>", self._on_apply_config_tag_shortcut)
-        text.bind("<Control-Shift-R>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Control-Shift-P>", self._on_paste_last_fim_tag_shortcut)
-        text.bind("<Control-Shift-I>", self._on_interrupt_stream)
-        text.bind("<Control-Shift-L>", self._on_show_fim_log_shortcut)
-        text.bind("<Control-Shift-V>", self._on_validate_tags_shortcut)
+        text.bind("<Alt-bracketleft>", self._on_generate_shortcut)
+        text.bind("<Alt-equal>", self._on_apply_config_tag_shortcut)
+        text.bind("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
+        text.bind("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
+        text.bind("<Alt-Escape>", self._on_interrupt_stream)
+        text.bind("<Alt-comma>", self._on_show_fim_log_shortcut)
+        text.bind("<Alt-grave>", self._on_validate_tags_shortcut)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
@@ -904,7 +904,7 @@ class FIMPad(tk.Tk):
         self._wrap_menu_var = tk.BooleanVar(value=True)
         togglemenu.add_checkbutton(
             label="Wrap",
-            accelerator="Ctrl+Alt+W",
+            accelerator="Alt+W",
             variable=self._wrap_menu_var,
             command=self._on_wrap_menu_toggled,
         )
@@ -913,7 +913,7 @@ class FIMPad(tk.Tk):
         )
         togglemenu.add_checkbutton(
             label="Follow Stream",
-            accelerator="Ctrl+Alt+F",
+            accelerator="Alt+M",
             variable=self._follow_menu_var,
             command=self._on_follow_menu_toggled,
         )
@@ -922,14 +922,14 @@ class FIMPad(tk.Tk):
         )
         togglemenu.add_checkbutton(
             label="Line Numbers",
-            accelerator="Ctrl+Alt+N",
+            accelerator="Alt+L",
             variable=self._line_numbers_menu_var,
             command=self._toggle_line_numbers,
         )
         self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
         togglemenu.add_checkbutton(
             label="Spellcheck",
-            accelerator="Ctrl+Alt+S",
+            accelerator="Alt+P",
             variable=self._spell_menu_var,
             command=self._toggle_spellcheck,
         )
@@ -938,37 +938,37 @@ class FIMPad(tk.Tk):
         aimenu = tk.Menu(menubar, tearoff=0)
         aimenu.add_command(
             label="Generate",
-            accelerator="Ctrl+Shift+G",
+            accelerator="Alt+[",
             command=self.generate,
         )
         aimenu.add_command(
             label="Repeat Last FIM",
-            accelerator="Ctrl+Shift+R",
+            accelerator="Alt+]",
             command=self.repeat_last_fim,
         )
         aimenu.add_command(
             label="Paste Last FIM Tag",
-            accelerator="Ctrl+Shift+P",
+            accelerator="Alt+'",
             command=self.paste_last_fim_tag,
         )
         aimenu.add_command(
             label="Apply Config Tag",
-            accelerator="Ctrl+Shift+C",
+            accelerator="Alt+=",
             command=self.apply_config_tag,
         )
         aimenu.add_command(
             label="Interrupt Stream",
-            accelerator="Ctrl+Shift+I",
+            accelerator="Alt+Esc",
             command=self.interrupt_stream,
         )
         aimenu.add_command(
             label="Validate Tags",
-            accelerator="Ctrl+Shift+V",
+            accelerator="Alt+`",
             command=self.validate_tags_current,
         )
         aimenu.add_command(
             label="Show Log",
-            accelerator="Ctrl+Shift+L",
+            accelerator="Alt+,",
             command=self.show_fim_log,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
