@@ -2534,6 +2534,7 @@ class FIMPad(tk.Tk):
         indent_size_var = tk.StringVar(value="4")
         prefix_var = tk.StringVar(value="")
         delete_count_var = tk.StringVar(value="1")
+        skip_empty_var = tk.BooleanVar(value=False)
 
         def indent_size() -> int:
             try:
@@ -2587,14 +2588,18 @@ class FIMPad(tk.Tk):
             controls,
             text="Tabs → Spaces",
             command=lambda: apply_transformation(
-                lambda lines: _tabs_to_spaces(lines, indent_size())
+                lambda lines: _tabs_to_spaces(
+                    lines, indent_size(), skip_empty_var.get()
+                )
             ),
         ).grid(row=0, column=2, padx=(12, 0))
         ttk.Button(
             controls,
             text="Spaces → Tabs",
             command=lambda: apply_transformation(
-                lambda lines: _spaces_to_tabs(lines, indent_size())
+                lambda lines: _spaces_to_tabs(
+                    lines, indent_size(), skip_empty_var.get()
+                )
             ),
         ).grid(row=0, column=3, padx=(8, 0))
 
@@ -2602,14 +2607,18 @@ class FIMPad(tk.Tk):
             controls,
             text="Indent",
             command=lambda: apply_transformation(
-                lambda lines: _indent_block(lines, indent_size())
+                lambda lines: _indent_block(
+                    lines, indent_size(), skip_empty_var.get()
+                )
             ),
         ).grid(row=1, column=2, pady=(10, 0), padx=(12, 0), sticky="we")
         ttk.Button(
             controls,
             text="De-indent",
             command=lambda: apply_transformation(
-                lambda lines: _deindent_block(lines, indent_size())
+                lambda lines: _deindent_block(
+                    lines, indent_size(), skip_empty_var.get()
+                )
             ),
         ).grid(row=1, column=3, pady=(10, 0), padx=(8, 0), sticky="we")
 
@@ -2623,7 +2632,9 @@ class FIMPad(tk.Tk):
             controls,
             text="Prepend",
             command=lambda: apply_transformation(
-                lambda lines: _prepend_to_lines(lines, prefix_var.get())
+                lambda lines: _prepend_to_lines(
+                    lines, prefix_var.get(), skip_empty_var.get()
+                )
             ),
         ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0))
 
@@ -2644,9 +2655,17 @@ class FIMPad(tk.Tk):
             controls,
             text="Delete",
             command=lambda: apply_transformation(
-                lambda lines: _delete_leading_chars(lines, delete_count())
+                lambda lines: _delete_leading_chars(
+                    lines, delete_count(), skip_empty_var.get()
+                )
             ),
         ).grid(row=3, column=3, padx=(8, 0), pady=(10, 0), sticky="we")
+
+        ttk.Checkbutton(
+            controls,
+            text="Do not apply changes to empty lines",
+            variable=skip_empty_var,
+        ).grid(row=4, column=0, columnspan=4, sticky="w", pady=(12, 0))
 
         controls.columnconfigure(1, weight=1)
         controls.columnconfigure(2, weight=1)

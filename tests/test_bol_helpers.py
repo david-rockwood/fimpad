@@ -6,6 +6,7 @@ from fimpad.bol_utils import (
     _indent_block,
     _indent_unit_for_lines,
     _leading_whitespace_style,
+    _prepend_to_lines,
     _spaces_to_tabs,
     _tabs_to_spaces,
 )
@@ -51,3 +52,24 @@ def test_indent_and_deindent_respects_block_style():
 def test_delete_leading_chars_truncates_safely():
     assert _delete_leading_chars(["abc", "", "ab"], 3) == ["", "", ""]
     assert _delete_leading_chars(["abcdef"], 2) == ["cdef"]
+
+
+def test_skip_empty_lines_flag():
+    lines = ["", "  ", "\t", "foo"]
+    assert _indent_block(lines, 2, skip_empty=True) == ["", "  ", "\t", "  foo"]
+    assert _deindent_block(["", "  foo", "\tbar"], 2, skip_empty=True) == [
+        "",
+        "foo",
+        "\tbar",
+    ]
+    assert _tabs_to_spaces(["\t", "\tfoo"], 4, skip_empty=True) == ["\t", "    foo"]
+    assert _spaces_to_tabs(["    ", "    foo"], 4, skip_empty=True) == [
+        "    ",
+        "\tfoo",
+    ]
+    assert _prepend_to_lines(lines, "* ", skip_empty=True) == ["", "  ", "\t", "* foo"]
+    assert _delete_leading_chars(["", "    ", "foobar"], 2, skip_empty=True) == [
+        "",
+        "    ",
+        "obar",
+    ]

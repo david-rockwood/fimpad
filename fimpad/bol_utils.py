@@ -28,19 +28,33 @@ def _indent_unit_for_lines(lines: Sequence[str], indent_size: int) -> str:
     return "\t" if style == "tabs" else " " * indent_size
 
 
-def _tabs_to_spaces(lines: Sequence[str], indent_size: int) -> list[str]:
+def _is_blank_line(line: str) -> bool:
+    return not line.strip()
+
+
+def _tabs_to_spaces(
+    lines: Sequence[str], indent_size: int, skip_empty: bool = False
+) -> list[str]:
     replacement = " " * max(1, min(indent_size, 8))
     converted: list[str] = []
     for line in lines:
+        if skip_empty and _is_blank_line(line):
+            converted.append(line)
+            continue
         prefix = _leading_whitespace(line)
         converted.append(prefix.replace("\t", replacement) + line[len(prefix) :])
     return converted
 
 
-def _spaces_to_tabs(lines: Sequence[str], indent_size: int) -> list[str]:
+def _spaces_to_tabs(
+    lines: Sequence[str], indent_size: int, skip_empty: bool = False
+) -> list[str]:
     tab_size = max(1, min(indent_size, 8))
     converted: list[str] = []
     for line in lines:
+        if skip_empty and _is_blank_line(line):
+            converted.append(line)
+            continue
         prefix = _leading_whitespace(line)
         remainder = line[len(prefix) :]
         new_prefix_parts: list[str] = []
@@ -62,15 +76,28 @@ def _spaces_to_tabs(lines: Sequence[str], indent_size: int) -> list[str]:
     return converted
 
 
-def _indent_block(lines: Sequence[str], indent_size: int) -> list[str]:
-    indent_unit = _indent_unit_for_lines(lines, indent_size)
-    return [f"{indent_unit}{line}" for line in lines]
-
-
-def _deindent_block(lines: Sequence[str], indent_size: int) -> list[str]:
+def _indent_block(
+    lines: Sequence[str], indent_size: int, skip_empty: bool = False
+) -> list[str]:
     indent_unit = _indent_unit_for_lines(lines, indent_size)
     result: list[str] = []
     for line in lines:
+        if skip_empty and _is_blank_line(line):
+            result.append(line)
+            continue
+        result.append(f"{indent_unit}{line}")
+    return result
+
+
+def _deindent_block(
+    lines: Sequence[str], indent_size: int, skip_empty: bool = False
+) -> list[str]:
+    indent_unit = _indent_unit_for_lines(lines, indent_size)
+    result: list[str] = []
+    for line in lines:
+        if skip_empty and _is_blank_line(line):
+            result.append(line)
+            continue
         if indent_unit == "\t":
             if line.startswith("\t"):
                 result.append(line[1:])
@@ -83,14 +110,30 @@ def _deindent_block(lines: Sequence[str], indent_size: int) -> list[str]:
     return result
 
 
-def _prepend_to_lines(lines: Sequence[str], prefix: str) -> list[str]:
+def _prepend_to_lines(
+    lines: Sequence[str], prefix: str, skip_empty: bool = False
+) -> list[str]:
     if not prefix:
         return list(lines)
-    return [f"{prefix}{line}" for line in lines]
+    result: list[str] = []
+    for line in lines:
+        if skip_empty and _is_blank_line(line):
+            result.append(line)
+            continue
+        result.append(f"{prefix}{line}")
+    return result
 
 
-def _delete_leading_chars(lines: Sequence[str], count: int) -> list[str]:
+def _delete_leading_chars(
+    lines: Sequence[str], count: int, skip_empty: bool = False
+) -> list[str]:
     if count < 1:
         return list(lines)
     amount = min(count, 8)
-    return [line[amount:] if len(line) > amount else "" for line in lines]
+    result: list[str] = []
+    for line in lines:
+        if skip_empty and _is_blank_line(line):
+            result.append(line)
+            continue
+        result.append(line[amount:] if len(line) > amount else "")
+    return result
