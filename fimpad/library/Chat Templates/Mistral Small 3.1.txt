@@ -3,8 +3,8 @@
 You are a helpful assistant.
 [/SYSTEM_PROMPT]
 
-User: What is Hawaii like?
-Assistant: Hawaii is...
+User:
 
-User: What about the food?
+What is the population of Utah?
+[[[8000;prepend("\n\nAssistant:\n\n");append("\n\nUser:\n\n")]]]
 [/INST]
