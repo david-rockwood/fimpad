@@ -35,7 +35,7 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
         "A [[[5; stop(\"alpha\")]]] "
         "B [[[2; chop('tail')]]] "
         "C [[[prefix]]] D [[[suffix hard]]] E [[[(note about things) after]]]" """ F"""
-        " [[[ {font:'TkDefaultFont'; bgColor:'#ffffff'} ]]]"
+        " [[[ {\"font_family\": \"TkDefaultFont\", \"bg\": \"#ffffff\"} ]]]"
     )
     tokens = list(parse_triple_tokens(content))
 
@@ -61,8 +61,8 @@ def test_parse_triple_tokens_classifies_tag_types_and_reconstructs():
     config_token = tag_tokens[5]
     assert isinstance(config_token.tag, ConfigTag)
     assert config_token.tag.settings == {
-        "font": "TkDefaultFont",
-        "bgColor": "#ffffff",
+        "font_family": "TkDefaultFont",
+        "bg": "#ffffff",
     }
 
 
@@ -179,7 +179,7 @@ def test_parse_fim_request_returns_none_for_non_fim_marker():
 
 
 def test_parse_fim_request_ignores_config_marker_under_cursor():
-    content = "[[[{font:'TkDefaultFont'}]]] Middle [[[3]]]"
+    content = "[[[{\"font_family\": \"TkDefaultFont\"}]]] Middle [[[3]]]"
     tokens = list(parse_triple_tokens(content))
 
     config_token = next(t for t in tokens if isinstance(t, TagToken) and t.kind == "config")
@@ -195,10 +195,10 @@ def test_unknown_function_raises():
 
 def test_config_tag_requires_braces_and_quotes():
     with pytest.raises(TagParseError):
-        list(parse_triple_tokens("[[[font:\"TkDefaultFont\"]]]"))
+        list(parse_triple_tokens("[[[\"font_family\": \"TkDefaultFont\"]]]"))
 
     with pytest.raises(TagParseError):
-        list(parse_triple_tokens("[[[{font:TkDefaultFont}]]]"))
+        list(parse_triple_tokens("[[[{font_family:TkDefaultFont}]]]"))
 
 
 def test_bang_after_fim_count_rejected():
@@ -346,7 +346,7 @@ def test_parse_fim_request_strips_comments_and_collects_overrides():
 
 
 def test_use_completion_when_only_non_comment_tags_follow():
-    content = "[[[5]]] [[[{font:'TkDefaultFont'}]]]"
+    content = "[[[5]]] [[[{\"font_family\": \"TkDefaultFont\"}]]]"
     marker = _collect_tags(content)[0]
 
     fim_request = parse_fim_request(content, marker.start + 1)

@@ -1,6 +1,7 @@
 """Utilities for tokenizing and parsing triple-bracket markers."""
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -36,7 +37,7 @@ class FIMTag:
 
 @dataclass(frozen=True)
 class ConfigTag:
-    settings: dict[str, str]
+    settings: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -318,46 +319,20 @@ def _parse_config_tag(body: str) -> ConfigTag:
     if not body.startswith("{") or not body.endswith("}"):
         raise TagParseError("Config tags must start with '{' and end with '}'")
 
-    inner = body[1:-1].strip()
-    settings: dict[str, str] = {}
+    sanitized = re.sub(r",(?=\s*[}\]])", "", body)
 
-    i = 0
-    while i < len(inner):
-        i = _consume_whitespace(inner, i)
-        if i >= len(inner):
-            break
-        if inner[i] == ";":
-            i += 1
-            continue
+    try:
+        parsed = json.loads(sanitized)
+    except json.JSONDecodeError as exc:  # noqa: F841
+        raise TagParseError("Config tags must contain valid JSON") from exc
 
-        key_match = re.match(r"(?P<key>[A-Za-z][A-Za-z0-9_]*)", inner[i:])
-        if not key_match:
-            raise TagParseError("Config tags require identifiers before ':'")
+    if not isinstance(parsed, dict) or not parsed:
+        raise TagParseError("Config tags must contain a non-empty JSON object")
 
-        key = key_match.group("key")
-        i += key_match.end()
-        i = _consume_whitespace(inner, i)
-        if i >= len(inner) or inner[i] != ":":
-            raise TagParseError("Config tag entries must use key:\"value\" syntax")
+    if any(not isinstance(k, str) for k in parsed):
+        raise TagParseError("Config tag keys must be strings")
 
-        i += 1
-        i = _consume_whitespace(inner, i)
-        if i >= len(inner):
-            raise TagParseError("Config tag values must be quoted strings")
-
-        if inner[i] not in {'"', "'"}:
-            raise TagParseError("Config tag values must be quoted strings")
-
-        value, i = _parse_string_literal(inner, i)
-        settings[key] = value
-        i = _consume_whitespace(inner, i)
-        if i < len(inner) and inner[i] not in {";"}:
-            raise TagParseError("Config settings must be separated by semicolons")
-
-    if not settings:
-        raise TagParseError("Config tags require at least one setting")
-
-    return ConfigTag(settings=settings)
+    return ConfigTag(settings=parsed)
 
 
 def _token_to_function(token: _TokenPiece) -> FIMFunction:

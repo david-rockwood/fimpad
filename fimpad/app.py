@@ -2757,42 +2757,27 @@ class FIMPad(tk.Tk):
     def _font_available(self, font_name: str) -> bool:
         return font_name in set(self._available_font_families())
 
-    def _normalize_config_tag_settings(self, settings: dict[str, str]) -> dict[str, object]:
+    def _normalize_config_tag_settings(self, settings: dict[str, object]) -> dict[str, object]:
         supported_keys = {
             "endpoint": "endpoint",
             "temperature": "temperature",
-            "topP": "top_p",
-            "fimPrefix": "fim_prefix",
-            "fimSuffix": "fim_suffix",
-            "fimMiddle": "fim_middle",
-            "fontFamily": "font_family",
-            "fontSize": "font_size",
-            "editorPadding": "editor_padding_px",
-            "lineNumberPadding": "line_number_padding_px",
-            "fgColor": "fg",
-            "bgColor": "bg",
-            "caretColor": "highlight1",
-            "selectionColor": "highlight2",
-            "scrollSpeed": "scroll_speed_multiplier",
-            "spellLang": "spell_lang",
+            "top_p": "top_p",
+            "fim_prefix": "fim_prefix",
+            "fim_suffix": "fim_suffix",
+            "fim_middle": "fim_middle",
+            "font_family": "font_family",
+            "font_size": "font_size",
+            "editor_padding_px": "editor_padding_px",
+            "line_number_padding_px": "line_number_padding_px",
+            "fg": "fg",
+            "bg": "bg",
+            "highlight1": "highlight1",
+            "highlight2": "highlight2",
+            "scroll_speed_multiplier": "scroll_speed_multiplier",
+            "spell_lang": "spell_lang",
         }
 
         alias_map = {k.casefold(): k for k in supported_keys}
-        alias_map.update(
-            {
-                "font": "fontFamily",
-                "fontfamily": "fontFamily",
-                "fontsize": "fontSize",
-                "editorpaddingpx": "editorPadding",
-                "linenumberpaddingpx": "lineNumberPadding",
-                "topp": "topP",
-                "top_p": "topP",
-                "textcolor": "fgColor",
-                "tecolor": "fgColor",
-                "scrollspeedmultiplier": "scrollSpeed",
-                "spelllanguage": "spellLang",
-            }
-        )
 
         updates: dict[str, object] = {}
         for key, raw_value in settings.items():
@@ -2817,25 +2802,35 @@ class FIMPad(tk.Tk):
 
             try:
                 if canonical == "endpoint":
+                    if not isinstance(raw_value, str):
+                        raise ValueError("endpoint must be a string")
                     updates[cfg_key] = raw_value.strip().rstrip("/")
-                elif canonical in {"temperature", "topP"}:
+                elif canonical in {"temperature", "top_p"}:
                     updates[cfg_key] = float(raw_value)
-                elif canonical in {"fimPrefix", "fimSuffix", "fimMiddle"}:
+                elif canonical in {"fim_prefix", "fim_suffix", "fim_middle"}:
+                    if not isinstance(raw_value, str):
+                        raise ValueError(f"{canonical} must be a string")
                     updates[cfg_key] = raw_value
-                elif canonical == "fontFamily":
+                elif canonical == "font_family":
+                    if not isinstance(raw_value, str):
+                        raise ValueError("font_family must be a string")
                     font_val = raw_value.strip() or DEFAULTS["font_family"]
                     if not self._font_available(font_val):
                         raise ValueError(f"Font not available: {font_val}")
                     updates[cfg_key] = font_val
-                elif canonical == "fontSize":
+                elif canonical == "font_size":
                     updates[cfg_key] = max(6, min(72, int(raw_value)))
-                elif canonical in {"editorPadding", "lineNumberPadding"}:
+                elif canonical in {"editor_padding_px", "line_number_padding_px"}:
                     updates[cfg_key] = max(0, int(raw_value))
-                elif canonical in {"fgColor", "bgColor", "caretColor", "selectionColor"}:
+                elif canonical in {"fg", "bg", "highlight1", "highlight2"}:
+                    if not isinstance(raw_value, str):
+                        raise ValueError(f"{canonical} must be a string")
                     updates[cfg_key] = self._validate_color_string(raw_value)
-                elif canonical == "scrollSpeed":
+                elif canonical == "scroll_speed_multiplier":
                     updates[cfg_key] = max(1, min(10, int(raw_value)))
-                elif canonical == "spellLang":
+                elif canonical == "spell_lang":
+                    if not isinstance(raw_value, str):
+                        raise ValueError("spell_lang must be a string")
                     lang_val = raw_value.strip() or DEFAULTS.get("spell_lang", "en_US")
                     if lang_val not in self._available_spell_langs:
                         raise ValueError(f"Spellcheck language not available: {lang_val}")

@@ -255,35 +255,39 @@ Config tags apply editor settings. They may be inline or multiline and are trigg
 ```
 ConfigTag ::= '[[' '[' '[' WS? '{' ConfigBody '}' WS? ']' ']' ']'
 
-ConfigBody ::= ConfigEntry (';' WS? ConfigEntry)* ';'?
-ConfigEntry ::= ConfigKey WS? ':' WS? STRING
-ConfigKey   ::= IDENT  (use camelCase for readability)
+ConfigBody ::= JSON-style object with double-quoted keys that match config.json
 ```
 
 Example:
 
 ```text
-[[[{font:"Ubuntu Sans"; fontSize:"24"; bgColor:"#141414"; fgColor:"#f5f5f5"}]]]
+[[[{
+"font_family": "Ubuntu Sans",
+"font_size": 24,
+"bg": "#141414",
+"fg": "#f5f5f5",
+}]]]
 ```
 
 ### 5.2 Supported Keys
 
 Each entry mirrors a Settings window field (values are the text you would type there). Recognized keys:
 
-* `endpoint`, `temperature`, `topP`
-* `fimPrefix`, `fimSuffix`, `fimMiddle`
-* `font`/`fontFamily`, `fontSize`
-* `editorPadding`, `lineNumberPadding`
-* `fgColor`, `bgColor`, `caretColor`, `selectionColor`
-* `scrollSpeed`
-* `spellLang`
+* `endpoint`, `temperature`, `top_p`
+* `fim_prefix`, `fim_suffix`, `fim_middle`
+* `font_family`, `font_size`
+* `editor_padding_px`, `line_number_padding_px`
+* `fg`, `bg`, `highlight1`, `highlight2`
+* `scroll_speed_multiplier`
+* `spell_lang`
 
 The `open_maximized` setting **cannot** be changed via config tags.
 
 ### 5.3 Semantics
 
-* All values must be quoted strings.
-* Numeric fields are validated (floats for temperature/topP; integers with bounds for sizes and padding).
+* Keys must match the names used in `config.json` and be wrapped in double quotes.
+* Numeric fields follow the types used in `config.json` (floats for temperature/top_p; integers with bounds for sizes and padding).
+* Whitespace is flexible; a trailing comma before the closing `}` is permitted.
 * Colors must be valid Tk color strings; otherwise an error is shown and nothing changes.
 * Fonts and spellcheck languages are validated against what the system provides. Missing fonts/languages produce an error and no settings are applied.
 * On success, the settings are applied immediately (as if saved from the Settings window) and persisted to the config file. The config tag itself remains in the document.
