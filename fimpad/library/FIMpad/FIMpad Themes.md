@@ -1,6 +1,6 @@
 # FIMpad Themes
 
-Place your caret within in a config tag below and press Alt+= to apply it. This will change the colors in your text editor.
+Place your caret within in a config tag below and press Alt+= (or use the menu entry at AI -> Apply Config Tag) to apply it. This will change the colors in your text editor.
 
 
 
@@ -19,21 +19,6 @@ selectionColor:"#dd9500";
 
 
 
-## Forest Terminal
-
-A deep green, low-brightness theme inspired by old phosphor terminals and woodland calm.
-
-```
-[[[{
-fgColor:"#88f888";
-bgColor:"#001800";
-caretColor:"#d8f8d8";
-selectionColor:"#005800";
-}]]]
-```
-
-
-
 ## Newspaper
 
 A serious theme with a calm light-gray background for long reading sessions and an assertive red caret to guide attention.
@@ -44,6 +29,20 @@ fgColor:"#141414";
 bgColor:"#d8d8d8";
 caretColor:"#b40a0a";
 selectionColor:"#a4a4a4";
+}]]]
+```
+
+
+## Forest Terminal
+
+A deep green, low-brightness theme inspired by old phosphor terminals and woodland calm.
+
+```
+[[[{
+fgColor:"#88f888";
+bgColor:"#001800";
+caretColor:"#d8f8d8";
+selectionColor:"#005800";
 }]]]
 ```
 
@@ -301,7 +300,7 @@ selectionColor:"#d81010";
 }]]]
 ```
 
-
+[[[(Change the two spots marked "EDIT HERE" below, then generate the tag to get an AI generated theme. It might be weird.)]]]
 
 ## EDIT HERE
 
