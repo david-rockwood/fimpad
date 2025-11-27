@@ -125,6 +125,7 @@ class FIMPad(tk.Tk):
         self.bind_all("<Alt-l>", lambda e: self._toggle_line_numbers())  # line numbers
         self.bind_all("<Alt-bracketleft>", self._on_generate_shortcut)
         self.bind_all("<Alt-equal>", self._on_apply_config_tag_shortcut)
+        self.bind_all("<Alt-minus>", self._on_paste_current_config_shortcut)
         self.bind_all("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
         self.bind_all("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
         self.bind_all("<Alt-Escape>", self._on_interrupt_stream)
@@ -583,6 +584,7 @@ class FIMPad(tk.Tk):
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
         text.bind("<Alt-bracketleft>", self._on_generate_shortcut)
         text.bind("<Alt-equal>", self._on_apply_config_tag_shortcut)
+        text.bind("<Alt-minus>", self._on_paste_current_config_shortcut)
         text.bind("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
         text.bind("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
         text.bind("<Alt-Escape>", self._on_interrupt_stream)
@@ -961,6 +963,11 @@ class FIMPad(tk.Tk):
             label="Apply Config Tag",
             accelerator="Alt+=",
             command=self.apply_config_tag,
+        )
+        aimenu.add_command(
+            label="Paste Current Config",
+            accelerator="Alt+-",
+            command=self.paste_current_config,
         )
         aimenu.add_command(
             label="Interrupt Stream",
@@ -2757,8 +2764,8 @@ class FIMPad(tk.Tk):
     def _font_available(self, font_name: str) -> bool:
         return font_name in set(self._available_font_families())
 
-    def _normalize_config_tag_settings(self, settings: dict[str, object]) -> dict[str, object]:
-        supported_keys = {
+    def _config_tag_supported_keys(self) -> dict[str, str]:
+        return {
             "endpoint": "endpoint",
             "temperature": "temperature",
             "top_p": "top_p",
@@ -2776,6 +2783,9 @@ class FIMPad(tk.Tk):
             "scroll_speed_multiplier": "scroll_speed_multiplier",
             "spell_lang": "spell_lang",
         }
+
+    def _normalize_config_tag_settings(self, settings: dict[str, object]) -> dict[str, object]:
+        supported_keys = self._config_tag_supported_keys()
 
         alias_map = {k.casefold(): k for k in supported_keys}
 
@@ -2839,6 +2849,17 @@ class FIMPad(tk.Tk):
                 raise ValueError(str(exc)) from exc
 
         return updates
+
+    def _build_current_config_tag(self) -> str:
+        supported_keys = self._config_tag_supported_keys()
+        cfg = self.__dict__.get("cfg") or {}
+        tag_settings = {k: cfg[k] for k in supported_keys if k in cfg}
+        lines = ["[[[{"]
+        for idx, (key, value) in enumerate(tag_settings.items()):
+            comma = "," if idx < len(tag_settings) - 1 else ""
+            lines.append(f'"{key}": {json.dumps(value)}{comma}')
+        lines.append("}]]]")
+        return "\n".join(lines)
 
     def _apply_config_tag(
         self,
@@ -2925,6 +2946,53 @@ class FIMPad(tk.Tk):
             marker_token=marker_token,
             content=content,
         )
+
+    def paste_current_config(self) -> None:
+        st = self._current_tab_state()
+        if not st:
+            return
+        if self._is_log_tab(st):
+            return
+
+        text_widget = st.get("text")
+        if text_widget is None:
+            return
+
+        try:
+            cursor_index = text_widget.index(tk.INSERT)
+            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
+        except Exception:
+            cursor_offset = None
+
+        content = text_widget.get("1.0", tk.END)
+        if cursor_offset is None:
+            cursor_offset = len(content)
+        cursor_offset = max(0, min(len(content), cursor_offset))
+
+        if self._caret_within_tag(content, cursor_offset):
+            self._show_error(
+                "Paste Current Config",
+                "You cannot paste a config tag when the caret is within a tag.",
+            )
+            return
+
+        marker = self._build_current_config_tag()
+
+        try:
+            start_index = text_widget.index(tk.INSERT)
+        except tk.TclError:
+            return
+
+        try:
+            text_widget.insert(start_index, marker)
+        except tk.TclError:
+            return
+
+        with contextlib.suppress(tk.TclError):
+            text_widget.mark_set(tk.INSERT, f"{start_index}+{len(marker)}c")
+        text_widget.tag_remove("sel", "1.0", tk.END)
+        text_widget.see(tk.INSERT)
+        text_widget.focus_set()
 
     def validate_tags_current(self) -> None:
         st = self._current_tab_state()
@@ -3236,6 +3304,10 @@ class FIMPad(tk.Tk):
 
     def _on_apply_config_tag_shortcut(self, event):
         self.apply_config_tag()
+        return "break"
+
+    def _on_paste_current_config_shortcut(self, event):
+        self.paste_current_config()
         return "break"
 
     def _on_interrupt_stream(self, event):
