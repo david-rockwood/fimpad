@@ -2854,7 +2854,12 @@ class FIMPad(tk.Tk):
         supported_keys = self._config_tag_supported_keys()
         cfg = self.__dict__.get("cfg") or {}
         tag_settings = {k: cfg[k] for k in supported_keys if k in cfg}
-        return f"[[[\n{json.dumps(tag_settings, indent=2)}]]]"
+        lines = ["[[[{"]
+        for idx, (key, value) in enumerate(tag_settings.items()):
+            comma = "," if idx < len(tag_settings) - 1 else ""
+            lines.append(f'"{key}": {json.dumps(value)}{comma}')
+        lines.append("}]]]")
+        return "\n".join(lines)
 
     def _apply_config_tag(
         self,
