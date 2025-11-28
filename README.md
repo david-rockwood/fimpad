@@ -76,7 +76,7 @@ Base models are better than instruct models for FIM, though both can work. For s
 
 The rightmost menu in FIMpad is the Library menu. The Library menu contains documentation, AI session templates, public domain books, and all of the examples that you will find in this README. When you select something in the Library menu, it opens as a new tab in FIMpad. The files in the Library menu are all .txt and .md files that are bundled with FIMpad.
 
-You will probably find it easier to load the examples below via the Library menu, since copying them from this README.md file can give you leading spaces from the block quote formatting. Find the examples in Library -> README Examples.
+You will probably find it easier to load the examples below via the Library menu, since copying some of them from this webpage can give you leading spaces from the block quote formatting. Find the examples in Library -> README Examples.
 
 ## Example 1: A simple completion
 
@@ -109,39 +109,43 @@ With FIM tags, text that appears before the FIM tag is *prefix*. Text that appea
 
 Let's look at an example that generates a BASH script. It uses a technique that you might call "declare what follows." In the prefix, describe what you want to be generated after the tag. Then optionally give a suffix that is something you would expect to see after whatever you want is generated. See below, before the FIM tag is executed.
 
-> #!/bin/bash
->
-> # This script takes a path to a video file ($1) and uses FFMPEG,
-> # which is in the PATH, to downscale the video to 480p and
-> # render it as an MP4 with AAC audio, with compression for
-> # both video and audio that targets small file size with not
-> # too much loss of quality. The file name of the rendered video
-> # will be the base name of the input file with "_compressed"
-> # appended before the extension. The final output 
-> # resolution dimensions will be divisible by two without
-> # remainder.
-> [[[400;temp("0.7");top_p("0.95")]]]
-> echo "The file has been rendered successfully."
-> exit 0
+```
+#!/bin/bash
+
+# This script takes a path to a video file ($1) and uses FFMPEG,
+# which is in the PATH, to downscale the video to 480p and
+# render it as an MP4 with AAC audio, with compression for
+# both video and audio that targets small file size with not
+# too much loss of quality. The file name of the rendered video
+# will be the base name of the input file with "_compressed"
+# appended before the extension. The final output 
+# resolution dimensions will be divisible by two without
+# remainder.
+[[[400;temp("0.7");top_p("0.95")]]]
+echo "The file has been rendered successfully."
+exit 0
+```
 
 Below is the result of the above, after executing the tag, using Granite Small Base:
 
-> #!/bin/bash
-> 
-> # This script takes a path to a video file ($1) and uses FFMPEG,
-> # which is in the PATH, to downscale the video to 480p and
-> # render it as an MP4 with AAC audio, with compression for
-> # both video and audio that targets small file size with not
-> # too much loss of quality. The file name of the rendered video
-> # will be the base name of the input file with "_compressed"
-> # appended before the extension. The final output 
-> # resolution dimensions will be divisible by two without
-> # remainder.
-> 
-> echo "Starting compression."
-> ffmpeg -i "$1" -vf scale=-2:480 -c:v libx264 -crf 23 -preset veryfast -c:a aac -b:a 128k "${1%.*}_compressed.mp4" -hide_banner
-> echo "The file has been rendered successfully."
-> exit 0
+```
+#!/bin/bash
+
+# This script takes a path to a video file ($1) and uses FFMPEG,
+# which is in the PATH, to downscale the video to 480p and
+# render it as an MP4 with AAC audio, with compression for
+# both video and audio that targets small file size with not
+# too much loss of quality. The file name of the rendered video
+# will be the base name of the input file with "_compressed"
+# appended before the extension. The final output 
+# resolution dimensions will be divisible by two without
+# remainder.
+
+echo "Starting compression."
+ffmpeg -i "$1" -vf scale=-2:480 -c:v libx264 -crf 23 -preset veryfast -c:a aac -b:a 128k "${1%.*}_compressed.mp4" -hide_banner
+echo "The file has been rendered successfully."
+exit 0
+```
 
 I tested this script on a 1080p video and it worked.
 
