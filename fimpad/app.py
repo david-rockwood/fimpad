@@ -2578,6 +2578,7 @@ class FIMPad(tk.Tk):
             values=[str(i) for i in range(1, 9)],
             textvariable=indent_size_var,
             width=4,
+            exportselection=False,
         )
         indent_combo.grid(row=0, column=1, sticky="w")
         indent_combo.bind(
@@ -2646,6 +2647,7 @@ class FIMPad(tk.Tk):
             values=[str(i) for i in range(1, 9)],
             textvariable=delete_count_var,
             width=4,
+            exportselection=False,
         )
         delete_combo.grid(row=3, column=1, sticky="w", pady=(10, 0))
         delete_combo.bind(
