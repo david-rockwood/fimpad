@@ -737,7 +737,6 @@ class FIMPad(tk.Tk):
         text.mark_set("insert", insert_idx)
         with contextlib.suppress(Exception):
             text.yview_moveto(yview)
-        text.see("insert")
         text.focus_set()
         self._schedule_line_number_update(frame, delay_ms=10)
 
