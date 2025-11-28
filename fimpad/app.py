@@ -1458,11 +1458,13 @@ class FIMPad(tk.Tk):
         self._persist_config()
         if self._follow_menu_var is not None:
             self._follow_menu_var.set(enabled)
-        if not enabled:
-            for st in self.tabs.values():
+        for st in self.tabs.values():
+            if not enabled:
                 st["stream_following"] = False
                 st["_stream_follow_primed"] = False
                 self._cancel_stream_follow_job(st)
+            elif st.get("stream_active"):
+                st["stream_following"] = True
 
     def _toggle_line_numbers(self):
         enabled = not self.cfg.get("line_numbers_enabled", False)
@@ -3994,6 +3996,7 @@ class FIMPad(tk.Tk):
         self._reset_stream_state(st)
         self._begin_stream_undo_group(st)
         st["stream_active"] = True
+        st["stream_following"] = self.cfg.get("follow_stream_enabled", True)
 
         self._fim_generation_active = True
         try:
