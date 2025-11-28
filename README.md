@@ -1,10 +1,10 @@
 # FIMpad
 
-A text editor that can do Fill-In-the-Middle (FIM) text generation within a text file.
+An LLM interface in the form of a tabbed GUI text editor.
 
-FIMpad is currently only tested on Linux, using llama.cpp's llama-server, serving IBM Granite 4.0 H models.
+FIMpad is currently only tested on Linux, using llama.cpp's llama-server to serve LLMs.
 
-If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that allows this.
+If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that makes this possible.
 
 ---
 
@@ -20,7 +20,7 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do Fill-In-the-Middle (FIM) generation at any point in a text file. FIM generation is a versatile, powerful, and quick way to help with story writing and coding, among many other things.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or Fill-In-the-Middle (FIM) generation at any point in a text file. And if you are willing to type the control tokens, or use a prepared template with these tokens already typed, you can have standard system/user/assistant chats with an instruct-tuned LLM.
 
 ---
 
@@ -34,422 +34,124 @@ A recent build of llama.cpp’s llama-server is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
-When you start llama-server, set a higher context size than the default 4096. Try 16000 to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
+When you start llama-server, set a higher context size than the default 4096. Try 16000 or higher to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
 
 ---
 
 ## The LLMs
 
-The recommended model is IBM Granite 4.0 H Base. FIMpad requires that FIM tokens be in the model's tokenizer. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those. Additionally, models without FIM tokens will work fine with FIMpad in completion mode, in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM.
+The recommended model is IBM Granite 4.0 H Base. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those.
 
-For an example of how to get other models with different FIM tokens to work with FIMpad; in order to get IBM Granite 3.3 Base working, you have to go into the FIMpad settings window and change the form of the FIM tokens to this: `<fim_prefix>`. The default FIM tokens for FIMpad are of the form `<|fim_prefix|>`, because that is what Granite 4.0 H Base uses. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
+Models without FIM tokens will work fine with FIMpad in completion mode, in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but FIMpad is best with a model that has FIM control tokens in the tokenizer.
 
-But it's easier to just use Granite 4.0.
+By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
 
-Granite 4.0 Small is 32B parameters. Granite 4.0 Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters on every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
+But it's easier to just use Granite 4.0 H LLMs if you are new to FIMpad. Many prefer certain LLMs due to the personality/alignment of the assistant, but when you are doing FIM with a base model, alignment is less noticeable.
 
-Granite Small is available at:
+Granite 4.0 H Small is 32B parameters. Granite 4.0 H Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters at every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
+
+Granite Small Base is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-base-GGUF/tree/main
 ```
-Granite Tiny is available at:
+Granite Tiny Base is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF/tree/main
 ```
 
-Base models are better than instruct models for FIM, though both can work.
+Granite Small Instruct is available at:
+```
+https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
+
+Granite Tiny Instruct is available at:
+```
+https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
+```
+
+Base models are better than instruct models for FIM, though both can work. For system/user/assistant chat, you need an instruct model.
 
 ---
 
-## Understanding FIMpad’s tag system
+## The Library menu
 
-FIMpad adds a small, lightweight “language” on top of plain text so you can run FIM completions directly inside your documents.
-Everything happens through **tags**, which are little blocks of text surrounded by:
+The rightmost menu in FIMpad is the Library menu. The Library menu contains documentation, AI session templates, public domain books, and all of the examples that you will find in this README. When you select something in the Library menu, it opens as a new tab in FIMpad. The files in the Library menu are all .txt and .md files that are bundled with FIMpad.
 
-```
-[[[ ... ]]]
-```
+You will probably find it easier to load the examples below via the Library menu, since copying them from this README.md file can give you leading spaces from the block quote formatting. Find the examples in Library -> README Examples.
 
----
+## Example 1: A simple completion
 
-## What tags are in FIMpad
+FIMpad uses tags enclosed in triple brackets to differentiate FIMpad tags from the rest of the text. There are four classes of tags. We start with the most important type of tag: the FIM tag. 
 
-A tag is a short instruction you place inside your document that tells FIMpad to do something:
+See how a FIM tag looks before you execute it below.
 
-* Generate text
-* Mark where the “prefix” or “suffix” of a context should be
-* Or just store notes that the model should not see
+> Four score and seven[[[50]]]
 
-Tags look like this:
+Here, 50 is the max number of tokens that the LLM will be allowed to generate when the FIM tag is executed. (If you are new to LLMs, estimate two tokens per word, and that will usually be an over-estimation. Often it is closer to one token per word.)
 
-```
-[[[something here]]]
-```
+Execute the FIM tag by placing the caret within the FIM tag, or immediately at the end of the tag after the last closing bracket.
+The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the caret term is used to disambiguate between the text cursor and the mouse cursor.)
 
-The **first character after `[[[`** tells FIMpad what *kind* of tag it is.
+With the caret within or immediately after the FIM tag, execute it by pressing Alt+[ (Or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
 
----
-
-## The Tag Types
-
-### **FIM Tags: “Generate something here”**
-
-These begin with a digit:
-
-```
-[[[200]]]
-```
-
-And they can have optional functions:
-
-```
-[[[200; temp("0.9")]]]
-```
-
-A FIM tag is a tiny script:
-
-1. The number (`200`) says **how many tokens** the model may generate.
-2. After that you can optionally write a sequence of **functions** (like `stop("END")` or `append("\n")`) that tell FIMpad how to configure the model and how to post-process the output.
-
-Think of a FIM tag as:
-
-> “Take the surrounding text (between prefix and suffix tags), call the model, generate up to N tokens, then apply these rules to the result.”
-
-A FIM tag runs **right where it sits** in the document, and the generated text appears there.
-
-### **Prefix/Suffix Tags: “Define what text the model will see”**
-
-These use a word:
-
-```
-[[[prefix]]]
-... some text ...
-[[[suffix]]]
-```
-
-Prefix/suffix tags carve out the **context window** that a nearby FIM tag will use. Whatever is between the nearest prefix and suffix tags is what the model sees. If no prefix or suffix tags are used, the model sees everything in the file that isn't a tag.
-
-There are *soft* tags (`prefix`/`suffix`) and *hard* tags (`PREFIX`/`SUFFIX`):
-
-* **Soft** ones auto-delete after use
-* **Hard** ones stay permanently
-
-Soft tags make it easy to generate text for a narrow range of context, without cluttering the file with tags.
-
-Hard tags are good for long-lasting structure.
-
----
-
-### **Comment Tags: “Notes the model can’t see”**
-
-These start with `(`:
-
-```
-[[[(This is a note to myself; the model will never see it.)]]]
-```
-
-Comment tags are:
-
-* Visible to **you**
-* Invisible to **the model**
-* Never auto-deleted
-* Never affect context boundaries
-
-They’re ideal for instructions, reminders, metadata, or debugging notes embedded inside the document.
-
----
-
-### **Config Tags: “Apply a saved theme or settings preset”**
-
-These start with a `{` and contain **camelCase** keys with quoted values that mirror the Settings window fields:
-
-```
-[[[{font:"Ubuntu Sans"; fontSize:"24"; bgColor:"#ffffff"; fgColor:"#101010"}]]]
-```
-
-Supported keys:
-
-* `endpoint`, `temperature`, `topP`
-* `fimPrefix`, `fimSuffix`, `fimMiddle`
-* `font`/`fontFamily`, `fontSize`
-* `editorPadding`, `lineNumberPadding`
-* `fgColor`, `bgColor`, `caretColor`, `selectionColor`
-* `scrollSpeed`
-* `spellLang`
-
-Notes:
-
-* Values must be quoted strings (what you’d type into the Settings window).
-* Fonts and spellcheck languages are validated; if unavailable, you’ll see an error and nothing changes.
-* Press **Alt+=** with the caret inside or next to the tag to apply it. Config tags stay in the document after use.
-
----
-
-## How FIMpad Decides What Context to Send to the Model
-
-Whenever you execute a FIM tag:
-
-1. FIMpad searches **backwards** from the tag to find the nearest `prefix` or `PREFIX`.
-2. Then it searches **forward** to find the nearest `suffix` or `SUFFIX`.
-3. The model sees everything *between* those two boundaries.
-4. Comment tags inside that region are stripped out before sending to the model.
-5. After generation:
-
-   * **Soft** prefix/suffix tags that were used are automatically deleted.
-   * **Hard** tags remain.
-
-Simple mental model:
-
-> FIM tags generate.
-> Prefix/suffix tags define what they see.
-> Comment tags are invisible to the model.
-> Config tags apply application settings.
-
----
-
-## Tag Summary
-
-| Tag Type          | Looks Like                      | Purpose                                   |
-| ----------------- | ------------------------------- | ----------------------------------------- |
-| **FIM Tag**       | `[[[100; stop("END")]]]`        | Generate text here using FIM, with rules. |
-| **Prefix/Suffix** | `[[[prefix]]]` / `[[[suffix]]]` | Define what text the model sees.          |
-| **Comment Tag**   | `[[[(note)]]]`                  | Annotation; invisible to model.           |
-| **Config Tag**    | `[[[{fgColor:"#141414"}]]]`                   | Apply settings/themes from inside text.   |
-
----
-
-## Using FIM tags
-
-All tags in FIMpad are enclosed in triple brackets, in order to strongly differentiate tags from regular text. Of the four classes of tags in FIMpad, FIM tags are the most important. A FIM tag marks the location in a text file where you want the LLM-generated text to be inserted. Below is an example of a simple FIM tag before execution.
-
-> Four score and seven [[[50]]]
-
-
-The number 50 is enclosed in triple brackets. This FIM tag will stream a maximum of 50 tokens into the document. To execute a FIM tag, click inside the FIM tag such that the caret is within or directly after the FIM tag. Then press Alt+[ (or use the menu entry at AI -> Generate.) Below is an example of the result (although your result may not be an exact match due to the variability of LLM generation.).
-
-> Four score and seven years ago, our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal. Now we are engaged in a great civil war, testing whether that nation, or any nation so
-
-
-Upon execution of the FIM tag, the tag is deleted from the document. All of the text between the beginning of the file and the location of the now-deleted FIM tag is considered prefix text. All of the text between the now-deleted FIM tag and the end of the file is considered suffix text. The prefix and the suffix are sent to the LLM server, and then the LLM server streams back the 50 (or fewer) tokens that the LLM deems most likely to appear between the prefix and the suffix.
-
-In the above example, the document was empty past the FIM tag, other than a newline character. In cases like this the streamed response is just a completion of the prefix. If there are newline characters in the suffix but nothing else, FIMpad treats this as a completion. Completion is not true FIM because it lacks a suffix. Nonetheless you can do completion with FIM tags by simply not providing suffix text after the tag.
-
----
-
-## The FIM tag `stop()` function
-
-Within FIM tags you can list functions that will modify what the FIM tag does. Below we have an example of an FIM tag without a function.
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: [[[75]]]
-
-and, after execution:
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane:  I feel the same way. I'm really looking forward to it.
->
-> John: Me, too. But I'm afraid the government might intervene again to prevent the market from doing its job, and so prevent a recovery.
->
-> Jane: Well, we will just have to stay alert and be prepared to act, should that happen.
->
-> John: Yeah, that's the spirit.
-
-The LLM generated multiple comments for John and Jane. In a situation where you want to chat, as John, with Jane, you want the generation to stop after Jane's comment, not John's, so that you can respond as John. And you want only one comment from Jane. And ideally the text inserted from the LLM will end exactly after "John: ", so that you can just start typing your response. You can set this up with the `stop()` function. The argument given to `stop()` is a stop sequence, which is a sequence of characters that tell FIMpad where to cut off the generation. If the stop sequence is generated by the LLM, the stop sequence characters are the last characters that will be inserted into the document for that FIM tag generation. See the example below, before generation.
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: [[[75;stop("John: ")]]]
-
-and after generation:
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: 
-
-It is not guaranteed that the LLM will generate a specific stop sequence, but it becomes likely when there is a well-established pattern of consistent repetition of that sequence in the prefix and/or the suffix.
-
-In order to avoid retyping the FIM tag, you can press Alt+] (or use the menu entry at AI -> Repeat Last FIM) to execute the last executed FIM tag at the current caret position. And if you want to look at or modify the last executed FIM tag before you execute it, press Alt+' (or use the menu entry at AI -> Paste Last FIM Tag) and the last executed FIM tag will be pasted at the position of the caret.
-
-If you ever want to stop FIM generation mid-stream, you can do that by pressing Alt+Esc (or use the menu entry at AI -> Interrupt Stream.) The text inserted into the document up to that point will remain, but the server will stop generating, and you can clear what was generated by pressing Alt+U (undo.)
-
-So we now have a single comment from Jane, followed by a new line with the caret after the "John: " label. Then all you need to do in order to continue chatting with Jane is type your reply as John, then type the "Jane: " label on a new line, and then press Alt+] to generate the last executed FIM tag.
-
-Still, if we are going to be talking with Jane for a while, it is annoying to have to type the "Jane: " label on a new line over and over again. We will resolve this in the next section.
-
----
-
-## The FIM tag `append()` function
-
-The append function simply adds some text onto the end of a streamed FIM insertion. See the example below, before generation.
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle.
->
-> Jane: [[[75;stop("John: ");append("\n\nJane: ")]]]
-
-and after generation:
-
-> John: Hello Jane.
->
-> Jane: Hi John!
->
-> John: Did you hear that our stupid economy collapsed?
->
-> Jane: Yes. So I hear, so I hear.
->
-> John: On the one hand, this will bring much suffering. On the other hand, I am eager to see a paradigm shift towards a more sensible allocation of resources.
->
-> Jane: 3D printers will make the scarcity of resources seem even more preposterous.
->
-> John: That's an interesting angle.
->
-> Jane: 3D printers can't be far off, it seems.
->
-> John:
+> Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
 > 
-> Jane: 
+> Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived
 
-Now all you have to do is click after the "John: " label and type your response, then click after the "Jane: " label to place the caret, then press Alt+] (assuming that you used an FIM tag prior and you want to repeat it.)
+There is variability in LLM output, so your results may not look like the above exactly.
 
----
+## Example 2: Fill in the middle.
 
-## Writing a story with FIMpad
+In the prior example there was no text after the FIM tag, so it was generated as a completion. But if you are using an LLM capable if FIM (Fill In the Middle), and if you have the FIM tokens for it set correctly in the FIMpad settings window, you will get a FIM generation when you execute a FIM tag and there is text after the tag.
 
-One strategy for writing a story with FIMpad is to start with a sentence that you don't know how to finish.
+By default, FIMpad is has the proper FIM tokens for IBM Granite 4.0 H LLMs, so if you are using Granite you don't have to worry about setting those tokens.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, [[[120]]]
+With FIM tags, text that appears before the FIM tag is *prefix*. Text that appears after the tag is *suffix*.
 
-after generation:
+Let's look at an example that generates a BASH script. It uses a technique that you might call "declare what follows." In the prefix, describe what you want to be generated after the tag. Then optionally give a suffix that is something you would expect to see after whatever you want is generated. See below, before the FIM tag is executed.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
+> #!/bin/bash
 >
->The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his playful antics, his love of bananas, and his uncanny ability to mimic human behavior.
->
->One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
+> # This script takes a path to a video file ($1) and uses FFMPEG,
+> # which is in the PATH, to downscale the video to 480p and
+> # render it as an MP4 with AAC audio, with compression for
+> # both video and audio that targets small file size with not
+> # too much loss of quality. The file name of the rendered video
+> # will be the base name of the input file with "_compressed"
+> # appended before the extension. The final output 
+> # resolution dimensions will be divisible by two without
+> # remainder.
+> [[[400;temp("0.7");top_p("0.95")]]]
+> echo "The file has been rendered successfully."
+> exit 0
 
-I don't want George to be known for his playful antics, so I estimate the token length of the description of something else that he could be known for at about 5 tokens, and I do this:
+Below is the result of the above, after executing the tag, using Granite Small Base:
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his [[[5]]] , his love of bananas, and his uncanny ability to mimic human behavior.
->
->One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
+> #!/bin/bash
+> 
+> # This script takes a path to a video file ($1) and uses FFMPEG,
+> # which is in the PATH, to downscale the video to 480p and
+> # render it as an MP4 with AAC audio, with compression for
+> # both video and audio that targets small file size with not
+> # too much loss of quality. The file name of the rendered video
+> # will be the base name of the input file with "_compressed"
+> # appended before the extension. The final output 
+> # resolution dimensions will be divisible by two without
+> # remainder.
+> 
+> echo "Starting compression."
+> ffmpeg -i "$1" -vf scale=-2:480 -c:v libx264 -crf 23 -preset veryfast -c:a aac -b:a 128k "${1%.*}_compressed.mp4" -hide_banner
+> echo "The file has been rendered successfully."
+> exit 0
 
-After I generate I have this:
+I tested this script on a 1080p video and it worked.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
->
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
 
-Now let's provide a suffix after this next tag to drive Jake's paragraph towards impending conflict. The suffix doesn't even need to be good, it can be deleted after, it just provides a target state for the story so that the LLM interpolates plot between the prefix and the suffix.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
->
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, [[[120]]]
->
-> Because of that, Jake started to get very nervous.
 
-after generation:
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
->
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, who had just started working at the zoo to make some extra money while he finished his degree in biology. Jake was a bit of a nervous wreck, and he was always on edge when he was on duty.
->
-> That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
->
-> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer,
->
-> Because of that, Jake started to get very nervous.
 
-The "Jake's heart" paragraph near the end was cut off by the max token limit of 120 that I gave. Let's remove the suffix text that I wrote earlier and complete that paragraph.
 
-The `stop()` function can take multiple arguments that represent multiple stop sequences for a single FIM generation. The first of these stop sequences that is encountered during streaming is the one that terminates the FIM insertion. We'll use this below to make sure that generation stops cleanly at the end of a paragraph, by stopping at any point where there is a newline following a period, a question mark, or an exclamation point.
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
->
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, who had just started working at the zoo to make some extra money while he finished his degree in biology. Jake was a bit of a nervous wreck, and he was always on edge when he was on duty.
->
-> That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
->
-> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, [[[55;stop(".\n","?\n","!\n")]]]
 
-after generation:
 
-> It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
->
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
->
-> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, who had just started working at the zoo to make some extra money while he finished his degree in biology. Jake was a bit of a nervous wreck, and he was always on edge when he was on duty.
->
-> That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
->
-> Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Alt+[ to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writer's block.
-
-When writing fiction with FIM, the three concepts described above (completion, replacement, and interpolation) are very useful.
-
----
-
-## The FIMpad Library
-
-FIMpad has a menu called "Library". Within that menu you will find examples of things you can do with AI in FIMpad, FIMpad documentation, and some public domain books.
-
-Everything you click on in the Library represents a .txt or .md file that is bundled with the FIMpad release. When you click on a menu entry in the Library menu, that document will open in a new tab, and some of those documents have tags that you can execute.
-
-Once you get FIMpad up and running with a connection to a local LLM server, try some of the example tags in Library -> Examples. Then try changing your text editor color scheme by looking at Library -> FIMpad -> FIMpad Themes.
