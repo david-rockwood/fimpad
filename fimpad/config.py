@@ -30,7 +30,7 @@ DEFAULTS = {
     "reverse_selection_fg": False,
     "open_maximized": False,
     "scroll_speed_multiplier": 1,
-    "line_numbers_enabled": False,
+    "line_numbers_enabled": True,
     "spellcheck_enabled": True,
     # Spellcheck tweaks
     "spellcheck_view_buffer_lines": 30,
