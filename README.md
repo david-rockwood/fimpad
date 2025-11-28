@@ -44,7 +44,7 @@ The recommended models are IBM Granite 4.0 H Base and Mistral Small 3.1 Base. Bo
 
 Base models are better than instruct models for FIM, though both can do FIM. For system/user/assistant completion chat, you need an instruct model.
 
-Models without FIM control tokens will work with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM control tokens are sent to the LLM, and if the LLM does not recognize the FIM control tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but then you are stuck with only completions of the prefix; the responses will not influenced by the suffix.
+Models without FIM control tokens will work with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM control tokens are sent to the LLM, and if the LLM does not recognize the FIM control tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but then you will only get completions of the prefix; the responses will not be influenced by the suffix.
 
 By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad, you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
 
