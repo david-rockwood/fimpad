@@ -561,6 +561,7 @@ class FIMPad(tk.Tk):
             "stream_buffer": [],
             "stream_flush_job": None,
             "stream_mark": None,
+            "stream_active": False,
             "stream_following": False,
             "_stream_follow_primed": False,
             "stream_patterns": [],
@@ -640,8 +641,13 @@ class FIMPad(tk.Tk):
             self._last_tab = self.nb.select()
 
         text.focus_set()
-        text.mark_set("insert", "1.0")
-        text.see("1.0")
+        if is_log:
+            with contextlib.suppress(tk.TclError):
+                text.mark_set("insert", tk.END)
+                text.see(tk.END)
+        else:
+            text.mark_set("insert", "1.0")
+            text.see("1.0")
 
         self._apply_line_numbers_state(st, st["line_numbers_enabled"])
 
@@ -661,7 +667,15 @@ class FIMPad(tk.Tk):
 
         current = self.nb.select()
         if current:
-            self._restore_tab_view(current)
+            try:
+                frame = self.nametowidget(current)
+            except Exception:
+                frame = None
+            st = self.tabs.get(frame) if frame else None
+            if st and self._is_log_tab(st):
+                self._scroll_log_tab_to_end(st)
+            else:
+                self._restore_tab_view(current)
             self._restore_tab_text_tool(current)
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
             self._schedule_line_number_update(current, delay_ms=10)
@@ -805,9 +819,6 @@ class FIMPad(tk.Tk):
             self._log_tab_frame = None
             return
 
-        follow_enabled = self.cfg.get("follow_stream_enabled", True)
-        should_follow = follow_enabled and self._should_follow(text)
-
         log_body = self._render_fim_log_body()
         st["suppress_modified"] = True
         text.config(state=tk.NORMAL)
@@ -816,8 +827,7 @@ class FIMPad(tk.Tk):
         text.edit_modified(False)
         st["suppress_modified"] = False
         text.config(state=tk.DISABLED)
-        if should_follow:
-            text.see(tk.END)
+        self._scroll_log_tab_to_end(st)
 
     def _open_fim_log_tab(self) -> None:
         if self._log_tab_frame is not None:
@@ -831,6 +841,7 @@ class FIMPad(tk.Tk):
         log_body = self._render_fim_log_body()
         st = self._new_tab(content=log_body, title="FIMpad_log.jsonl", is_log=True)
         self._log_tab_frame = st["frame"]
+        self._scroll_log_tab_to_end(st)
 
     def show_fim_log(self) -> None:
         self._open_fim_log_tab()
@@ -3445,6 +3456,53 @@ class FIMPad(tk.Tk):
             return True
         return last >= 0.999
 
+    def _scroll_log_tab_to_end(self, st: dict) -> None:
+        text: tk.Text | None = st.get("text") if st else None
+        if text is None:
+            return
+        st["suppress_modified"] = True
+        with contextlib.suppress(tk.TclError):
+            text.config(state=tk.NORMAL)
+            text.mark_set("insert", tk.END)
+            text.see(tk.END)
+            text.edit_modified(False)
+            text.config(state=tk.DISABLED)
+        st["suppress_modified"] = False
+
+    def _stream_follow_enabled(self, st: dict) -> bool:
+        cfg = self.__dict__.get("cfg") or {}
+        return bool(st.get("stream_active") and cfg.get("follow_stream_enabled", True))
+
+    def _maybe_follow_stream(self, st: dict, mark: str) -> None:
+        text: tk.Text | None = st.get("text") if st else None
+        if text is None or not mark:
+            return
+        if not self._stream_follow_enabled(st):
+            st["stream_following"] = False
+            st["_stream_follow_primed"] = False
+            return
+
+        should_follow = st.get("stream_following", self._should_follow(text))
+        if should_follow:
+            text.see(mark)
+            primed = st.pop("_stream_follow_primed", False)
+            if primed:
+                st["stream_following"] = True
+                return
+            try:
+                if text.dlineinfo(mark) is None:
+                    st["stream_following"] = False
+                    st["_stream_follow_primed"] = False
+                else:
+                    st["stream_following"] = True
+                    st["_stream_follow_primed"] = False
+            except Exception:
+                st["stream_following"] = False
+                st["_stream_follow_primed"] = False
+        elif self._should_follow(text):
+            st["stream_following"] = True
+            st["_stream_follow_primed"] = False
+
     def _show_unsupported_fim_error(self, exc: TagParseError) -> None:
         self._show_error("Generate", "FIM marker could not be parsed.", detail=str(exc))
 
@@ -3456,6 +3514,7 @@ class FIMPad(tk.Tk):
         st["stream_flush_job"] = None
         st["stream_buffer"].clear()
         st["stream_mark"] = None
+        st["stream_active"] = False
         st["stream_following"] = False
         st["_stream_follow_primed"] = False
         st["stream_patterns"] = []
@@ -3575,37 +3634,11 @@ class FIMPad(tk.Tk):
             cur = text.index(mark)
         except tk.TclError:
             cur = text.index(tk.END)
-        cfg = self.__dict__.get("cfg") or {}
-        follow_enabled = cfg.get("follow_stream_enabled", True)
-        if follow_enabled:
-            should_follow = st.get("stream_following", self._should_follow(text))
-        else:
-            should_follow = False
-            st["stream_following"] = False
-            st["_stream_follow_primed"] = False
         text.insert(cur, piece)
         st["stream_accumulated"] = st.get("stream_accumulated", "") + piece
         with contextlib.suppress(tk.TclError):
             text.tag_remove("misspelled", cur, f"{cur}+{len(piece)}c")
-        if should_follow:
-            text.see(mark)
-            primed = st.pop("_stream_follow_primed", False)
-            if primed:
-                st["stream_following"] = True
-            else:
-                try:
-                    if text.dlineinfo(mark) is None:
-                        st["stream_following"] = False
-                        st["_stream_follow_primed"] = False
-                    else:
-                        st["stream_following"] = True
-                        st["_stream_follow_primed"] = False
-                except Exception:
-                    st["stream_following"] = False
-                    st["_stream_follow_primed"] = False
-        elif follow_enabled and self._should_follow(text):
-            st["stream_following"] = True
-            st["_stream_follow_primed"] = False
+        self._maybe_follow_stream(st, mark)
         self._set_dirty(st, True)
 
     def _force_flush_stream_buffer(self, frame, mark):
@@ -3919,6 +3952,7 @@ class FIMPad(tk.Tk):
 
         self._reset_stream_state(st)
         self._begin_stream_undo_group(st)
+        st["stream_active"] = True
 
         self._fim_generation_active = True
         try:
@@ -4007,6 +4041,7 @@ class FIMPad(tk.Tk):
             self._set_busy(False)
             with contextlib.suppress(Exception):
                 self._end_stream_undo_group(st)
+            st["stream_active"] = False
             self._show_error("Generation Error", "Generation failed to start.", detail=str(exc))
             return
 
@@ -4028,6 +4063,7 @@ class FIMPad(tk.Tk):
                             mark = st_err.get("stream_mark") or "stream_here"
                             self._force_flush_stream_buffer(frame, mark)
                             self._end_stream_undo_group(st_err)
+                            st_err["stream_active"] = False
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._show_error(
@@ -4044,6 +4080,8 @@ class FIMPad(tk.Tk):
                         if kind == "stream_done":
                             self._fim_generation_active = False
                             self._set_busy(False)
+                            if st:
+                                st["stream_active"] = False
                         continue
                     st = self.tabs[frame]
                     text = st["text"]
@@ -4131,8 +4169,10 @@ class FIMPad(tk.Tk):
                                 mark = text.index(f"{mark}+{len(extra)}c")
                             except tk.TclError:
                                 continue
+                            self._maybe_follow_stream(st, mark)
                         st["post_actions"] = []
                         self._end_stream_undo_group(st)
+                        st["stream_active"] = False
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._set_dirty(st, True)
@@ -4156,6 +4196,8 @@ class FIMPad(tk.Tk):
                     self._set_busy(False)
                     with contextlib.suppress(Exception):
                         self._end_stream_undo_group(st)
+                    if st:
+                        st["stream_active"] = False
                     self._show_error(
                         "Generation Error",
                         "Streaming update failed.",
