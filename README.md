@@ -62,6 +62,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF/tree/main
 Granite Small Instruct is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
+```
 
 Granite Tiny Instruct is available at:
 ```
