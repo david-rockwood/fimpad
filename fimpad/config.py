@@ -38,6 +38,7 @@ DEFAULTS = {
     "spellcheck_full_document_line_threshold": 100,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
     "follow_stream_enabled": True,
+    "stream_follow_debounce_ms": 2000,
     "log_entries_kept": 200,
 }
 
