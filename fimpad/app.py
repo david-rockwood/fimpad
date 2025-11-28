@@ -2854,6 +2854,14 @@ class FIMPad(tk.Tk):
                 )
             )
         )
+        spellcheck_debounce_var = tk.StringVar(
+            value=str(
+                cfg.get(
+                    "spellcheck_scroll_debounce_ms",
+                    DEFAULTS["spellcheck_scroll_debounce_ms"],
+                )
+            )
+        )
         scroll_speed_var = tk.StringVar(
             value=str(
                 cfg.get("scroll_speed_multiplier", DEFAULTS["scroll_speed_multiplier"])
@@ -2921,6 +2929,14 @@ class FIMPad(tk.Tk):
         row += 1
 
         add_row(row, "Stream follow debounce (ms):", stream_follow_debounce_var, width=8)
+        row += 1
+
+        add_row(
+            row,
+            "Spellcheck debounce (ms):",
+            spellcheck_debounce_var,
+            width=8,
+        )
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -3059,6 +3075,9 @@ class FIMPad(tk.Tk):
                 new_cfg["stream_follow_debounce_ms"] = max(
                     0, int(stream_follow_debounce_var.get())
                 )
+                new_cfg["spellcheck_scroll_debounce_ms"] = max(
+                    0, int(spellcheck_debounce_var.get())
+                )
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
                     new_cfg["spell_lang"] = self._spell_lang
@@ -3076,6 +3095,32 @@ class FIMPad(tk.Tk):
             )
             w.destroy()
 
+        def restore_defaults():
+            confirmed = messagebox.askyesno(
+                "Restore Default Config",
+                (
+                    "Are you sure you want to restore the default configuration "
+                    "setting, overwriting your current settings?"
+                ),
+                parent=w,
+            )
+            if not confirmed:
+                return
+
+            prev_pad = self.cfg.get("editor_padding_px", DEFAULTS["editor_padding_px"])
+            prev_line_pad = self.cfg.get(
+                "line_number_padding_px", DEFAULTS["line_number_padding_px"]
+            )
+            new_cfg = DEFAULTS.copy()
+            self._spell_lang = new_cfg.get("spell_lang", DEFAULTS.get("spell_lang", "en_US"))
+            self._apply_config_changes(
+                new_cfg, prev_pad=prev_pad, prev_line_pad=prev_line_pad
+            )
+            w.destroy()
+
+        tk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
+            row=row, column=0, padx=8, pady=12, sticky="w"
+        )
         tk.Button(w, text="Save", command=apply_and_close).grid(
             row=row, column=1, padx=8, pady=12, sticky="e"
         )
