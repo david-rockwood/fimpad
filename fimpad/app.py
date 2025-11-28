@@ -2599,7 +2599,7 @@ class FIMPad(tk.Tk):
                     lines, indent_size(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=0, column=2, padx=(12, 0))
+        ).grid(row=0, column=2, padx=(12, 0), sticky="we")
         ttk.Button(
             controls,
             text="Spaces → Tabs",
@@ -2609,7 +2609,7 @@ class FIMPad(tk.Tk):
                     lines, indent_size(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=0, column=3, padx=(8, 0))
+        ).grid(row=0, column=3, padx=(8, 0), sticky="we")
 
         ttk.Button(
             controls,
@@ -2647,7 +2647,7 @@ class FIMPad(tk.Tk):
                     lines, prefix_var.get(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0))
+        ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0), sticky="we")
 
         ttk.Label(controls, text="Delete leading:").grid(
             row=3, column=0, sticky="e", padx=(0, 6), pady=(10, 0)
