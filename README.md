@@ -161,7 +161,7 @@ If you wanted a script that paid more attention to avoiding errors, you could st
 set -euo pipefail
 ```
 
-Careful Bash script writers will often start out like that, instead of `#!/bin/bash`.
+Careful Bash script writers will often start out like that, instead of starting with `#!/bin/bash`.
 
 You may have noticed that the FIM tag used in this example is more complicated than the FIM tag used in Example 1. FIM tags have optional functions that can be used to control what FIMpad does when a FIM tag is executed. The two FIM tag functions used here are `temp()` and `top_p()`. They control the Temperature and Top P settings, (which tend to affect obedience versus creativity,) that the LLM server uses during generation. In the FIMpad settings window you can set the default Temperature and Top P values, but the `temp()` and `top_p()` functions provide per-execution overrides of the default values.
 
