@@ -79,6 +79,8 @@ The rightmost menu in FIMpad is the Library menu. The Library menu contains docu
 
 You will probably find it easier to load the examples below via the Library menu, since copying some of them from this webpage can give you leading spaces from the block quote formatting. Find the examples in Library -> README Examples.
 
+---
+
 ## Example 1: A simple completion
 
 FIMpad uses tags enclosed in triple brackets to differentiate FIMpad tags from the rest of the text. There are four classes of tags. We start with the most important type of tag: the FIM tag. 
@@ -99,6 +101,8 @@ With the caret within or immediately after the FIM tag, execute the tag by press
 > Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived
 
 There is variability in LLM output, so your results may not look exactly like those above.
+
+---
 
 ## Example 2: Fill in the middle.
 
@@ -195,6 +199,8 @@ Or this:
 
 The last semicolon before the end of the tag is optional. Double quotes surrounding the function arguments are required. When a FIM tag function takes more than one argument, commas separate those. The first part of a FIM tag must always be an integer representing max tokens for that generation.
 
+---
+
 ## Example 3: Chat with a base model
 
 You can write a few lines to establish context and get a little chat going. It is best to use labels and write in a structured way, so that the LLM has a predictable format to follow. In the following example there is regular alternation of speakers. I'm going to chat as Chauncey and have the LLM be Fiona. Here is the setup before the first generation:
@@ -237,6 +243,7 @@ Anyway, let's see how this example plays out after generation.
 
 From this point you can keep chatting with Fiona in a way that does not require typing more labels and tags.
 
+---
 
 
 
