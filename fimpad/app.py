@@ -2469,8 +2469,6 @@ class FIMPad(tk.Tk):
         original_content = text.get("1.0", "end-1c")
         original_dirty = st.get("dirty", False)
         original_insert = text.index(tk.INSERT)
-        original_yview = text.yview()
-
         def selected_line_range() -> tuple[int, int]:
             try:
                 start_idx = text.index("sel.first")
@@ -2549,6 +2547,7 @@ class FIMPad(tk.Tk):
                 return 1
 
         def clear_changes() -> None:
+            current_yview = text.yview()
             text.edit_separator()
             st["suppress_modified"] = True
             text.delete("1.0", tk.END)
@@ -2558,7 +2557,7 @@ class FIMPad(tk.Tk):
             self._set_dirty(st, original_dirty)
             text.mark_set(tk.INSERT, original_insert)
             with contextlib.suppress(Exception):
-                text.yview_moveto(original_yview[0])
+                text.yview_moveto(current_yview[0])
             text.tag_remove("sel", "1.0", tk.END)
             if original_sel:
                 text.tag_add("sel", original_sel[0], original_sel[1])
