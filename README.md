@@ -20,7 +20,7 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill-In-the-Middle) generation at any point in a text file. And if you are willing to type the control tokens, or use a prepared template with these tokens already typed, you can have standard system/user/assistant chats with an instruct-tuned LLM.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill In the Middle) generation at any point in a text file. And if you are willing to type the control tokens, or use a template with these tokens already typed, you can have standard system/user/assistant chats with an instruct-tuned LLM.
 
 ---
 
@@ -40,9 +40,9 @@ When you start llama-server, set a higher context size than the default 4096. Tr
 
 ## The LLMs
 
-The recommended model is IBM Granite 4.0 H Base. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so some people may be able to get other models working by adjusting those.
+The recommended model is IBM Granite 4.0 H Base. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so you can probably get other models working by adjusting those.
 
-Models without FIM tokens will work fine with FIMpad in completion mode, in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but FIMpad is best with a model that has FIM control tokens in the tokenizer.
+Models without FIM tokens will work fine with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but FIMpad is best with a model that has FIM control tokens in the tokenizer.
 
 By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
 
@@ -90,7 +90,7 @@ See how a FIM tag looks before you execute it below.
 Here, 50 is the max number of tokens that the LLM will be allowed to generate when the FIM tag is executed. (If you are new to LLMs, estimate two tokens per word, and that will usually be an over-estimation. Often it is closer to one token per word.)
 
 Execute the FIM tag by placing the caret within the FIM tag, or immediately at the end of the tag after the last closing bracket.
-The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the caret term is used to disambiguate between the text cursor and the mouse cursor.)
+The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
 
 With the caret within or immediately after the FIM tag, execute it by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
 
@@ -219,7 +219,7 @@ then the model will stop at the first stop sequence that the LLM generates first
 
 (There is another FIM tag function called `chop()` that does the same thing as `stop()`, except it discards the stop sequence, so that last thing streamed into the text editor is the last character that was generated before the stop sequence.)
 
-The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select AI -> Repeat Last FIM in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select AI -> Paste Last FIM Tag in the menu) and the last executed FIM tag that you executed will be pasted at the current position of the carat.
+The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select `AI -> Paste Last FIM Tag` in the menu) and the last executed FIM tag that you executed will be pasted at the current position of the carat.
 
 Anyway, let's see how this example plays out after generation.
 
