@@ -2860,6 +2860,14 @@ class FIMPad(tk.Tk):
         log_entries_var = tk.StringVar(
             value=str(cfg.get("log_entries_kept", DEFAULTS["log_entries_kept"]))
         )
+        stream_follow_debounce_var = tk.StringVar(
+            value=str(
+                cfg.get(
+                    "stream_follow_debounce_ms",
+                    DEFAULTS["stream_follow_debounce_ms"],
+                )
+            )
+        )
         fg_var = tk.StringVar(value=cfg["fg"])
         bg_var = tk.StringVar(value=cfg["bg"])
         highlight1_var = tk.StringVar(value=cfg["highlight1"])
@@ -2908,6 +2916,9 @@ class FIMPad(tk.Tk):
         row += 1
 
         add_row(row, "FIM log entries to keep:", log_entries_var, width=8)
+        row += 1
+
+        add_row(row, "Stream follow debounce (ms):", stream_follow_debounce_var, width=8)
         row += 1
 
         tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
@@ -3043,6 +3054,9 @@ class FIMPad(tk.Tk):
                 if not 0 <= log_entries_val <= 9999:
                     raise ValueError("log_entries_kept must be between 0 and 9999")
                 new_cfg["log_entries_kept"] = log_entries_val
+                new_cfg["stream_follow_debounce_ms"] = max(
+                    0, int(stream_follow_debounce_var.get())
+                )
                 if show_spell_lang:
                     self._spell_lang = spell_lang_var.get().strip() or DEFAULTS["spell_lang"]
                     new_cfg["spell_lang"] = self._spell_lang
@@ -3185,6 +3199,7 @@ class FIMPad(tk.Tk):
             "spellcheck_full_document_line_threshold": "spellcheck_full_document_line_threshold",
             "spell_lang": "spell_lang",
             "follow_stream_enabled": "follow_stream_enabled",
+            "stream_follow_debounce_ms": "stream_follow_debounce_ms",
             "log_entries_kept": "log_entries_kept",
         }
 
@@ -3252,6 +3267,7 @@ class FIMPad(tk.Tk):
                 elif canonical in {
                     "spellcheck_view_buffer_lines",
                     "spellcheck_scroll_debounce_ms",
+                    "stream_follow_debounce_ms",
                 }:
                     updates[cfg_key] = max(0, int(raw_value))
                 elif canonical == "spellcheck_full_document_line_threshold":
@@ -3503,8 +3519,18 @@ class FIMPad(tk.Tk):
         st["_pending_follow_mark"] = mark
         if st.get("_stream_follow_job") is None:
             frame = st.get("frame")
+            cfg = self.__dict__.get("cfg") or {}
+            debounce_ms = max(
+                0,
+                int(
+                    cfg.get(
+                        "stream_follow_debounce_ms",
+                        DEFAULTS["stream_follow_debounce_ms"],
+                    )
+                ),
+            )
             st["_stream_follow_job"] = self.after(
-                2000, lambda fr=frame: self._perform_stream_follow(fr)
+                debounce_ms, lambda fr=frame: self._perform_stream_follow(fr)
             )
 
     def _perform_stream_follow(self, frame: tk.Misc | None) -> None:
