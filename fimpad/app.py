@@ -573,6 +573,8 @@ class FIMPad(tk.Tk):
             "line_numbers_enabled": self.cfg.get("line_numbers_enabled", False),
             "_line_number_job": None,
             "is_log_tab": is_log,
+            "text_tool_window": None,
+            "text_tool_type": None,
         }
 
         self._apply_editor_padding(st, self.cfg["editor_padding_px"])
@@ -797,6 +799,30 @@ class FIMPad(tk.Tk):
 
     def _is_log_tab(self, st: dict | None) -> bool:
         return bool(st and st.get("is_log_tab"))
+
+    def _clear_text_tool_window(self, st: dict, window: tk.Misc | None = None) -> None:
+        if window is not None and st.get("text_tool_window") is not window:
+            return
+        st["text_tool_window"] = None
+        st["text_tool_type"] = None
+
+    def _destroy_text_tool_window(self, st: dict) -> None:
+        window = st.get("text_tool_window")
+        if window is not None:
+            with contextlib.suppress(tk.TclError):
+                if window.winfo_exists():
+                    window.destroy()
+        self._clear_text_tool_window(st)
+
+    def _track_text_tool_window(self, st: dict, window: tk.Misc, tool_type: str) -> None:
+        st["text_tool_window"] = window
+        st["text_tool_type"] = tool_type
+
+        def on_destroy(event: tk.Event) -> None:
+            if event.widget is window:
+                self._clear_text_tool_window(st, window)
+
+        window.bind("<Destroy>", on_destroy, add="+")
 
     def _update_tab_title(self, st):
         frame = st.get("frame")
@@ -2043,6 +2069,8 @@ class FIMPad(tk.Tk):
             return
         text = st["text"]
 
+        self._destroy_text_tool_window(st)
+
         w = tk.Toplevel(self)
         w.title("Find & Replace")
         w.resizable(False, False)
@@ -2198,16 +2226,20 @@ class FIMPad(tk.Tk):
         def on_destroy(event: tk.Event) -> None:
             if event.widget is w:
                 clear_highlight()
+                self._clear_text_tool_window(st, w)
 
         self._prepare_child_window(w)
         w.bind("<Destroy>", on_destroy, add="+")
         w.protocol("WM_DELETE_WINDOW", close_dialog)
+        self._track_text_tool_window(st, w, "replace")
 
     def _open_regex_replace_dialog(self):
         st = self._current_tab_state()
         if not st:
             return
         text = st["text"]
+
+        self._destroy_text_tool_window(st)
 
         w = tk.Toplevel(self)
         w.title("Regex Find & Replace")
@@ -2445,10 +2477,12 @@ class FIMPad(tk.Tk):
         def on_destroy(event: tk.Event) -> None:
             if event.widget is w:
                 clear_highlight()
+                self._clear_text_tool_window(st, w)
 
         w.protocol("WM_DELETE_WINDOW", on_close)
         w.bind("<Destroy>", on_destroy, add="+")
         self._prepare_child_window(w)
+        self._track_text_tool_window(st, w, "regex_replace")
 
     def _open_bol_tool(self, event=None):
         st = self._current_tab_state()
@@ -2457,6 +2491,8 @@ class FIMPad(tk.Tk):
         text = st.get("text")
         if text is None:
             return
+
+        self._destroy_text_tool_window(st)
 
         try:
             original_sel: tuple[str, str] | None = (
@@ -2699,9 +2735,15 @@ class FIMPad(tk.Tk):
             row=0, column=2, sticky="we"
         )
 
+        def on_destroy(event: tk.Event) -> None:
+            if event.widget is w:
+                self._clear_text_tool_window(st, w)
+
         w.protocol("WM_DELETE_WINDOW", cancel_dialog)
         self._prepare_child_window(w)
         indent_combo.focus_set()
+        w.bind("<Destroy>", on_destroy, add="+")
+        self._track_text_tool_window(st, w, "bol")
 
     # ---------- Settings ----------
 
