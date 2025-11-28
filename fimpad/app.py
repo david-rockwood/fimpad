@@ -564,6 +564,8 @@ class FIMPad(tk.Tk):
             "stream_active": False,
             "stream_following": False,
             "_stream_follow_primed": False,
+            "_stream_follow_job": None,
+            "_pending_follow_mark": None,
             "stream_patterns": [],
             "stream_accumulated": "",
             "stream_cancelled": False,
@@ -1460,6 +1462,7 @@ class FIMPad(tk.Tk):
             for st in self.tabs.values():
                 st["stream_following"] = False
                 st["_stream_follow_primed"] = False
+                self._cancel_stream_follow_job(st)
 
     def _toggle_line_numbers(self):
         enabled = not self.cfg.get("line_numbers_enabled", False)
@@ -3092,6 +3095,7 @@ class FIMPad(tk.Tk):
             if not follow_enabled:
                 st["stream_following"] = False
                 st["_stream_follow_primed"] = False
+                self._cancel_stream_follow_job(st)
             selection_fg = (
                 self.cfg["bg"]
                 if self.cfg.get("reverse_selection_fg", False)
@@ -3473,6 +3477,14 @@ class FIMPad(tk.Tk):
         cfg = self.__dict__.get("cfg") or {}
         return bool(st.get("stream_active") and cfg.get("follow_stream_enabled", True))
 
+    def _cancel_stream_follow_job(self, st: dict) -> None:
+        job = st.get("_stream_follow_job")
+        if job is not None:
+            with contextlib.suppress(Exception):
+                self.after_cancel(job)
+        st["_stream_follow_job"] = None
+        st["_pending_follow_mark"] = None
+
     def _maybe_follow_stream(self, st: dict, mark: str) -> None:
         text: tk.Text | None = st.get("text") if st else None
         if text is None or not mark:
@@ -3480,16 +3492,44 @@ class FIMPad(tk.Tk):
         if not self._stream_follow_enabled(st):
             st["stream_following"] = False
             st["_stream_follow_primed"] = False
+            self._cancel_stream_follow_job(st)
+            return
+
+        st["_pending_follow_mark"] = mark
+        if st.get("_stream_follow_job") is None:
+            frame = st.get("frame")
+            st["_stream_follow_job"] = self.after(
+                2000, lambda fr=frame: self._perform_stream_follow(fr)
+            )
+
+    def _perform_stream_follow(self, frame: tk.Misc | None) -> None:
+        st = self.tabs.get(frame) if frame else None
+        if not st:
+            return
+
+        st["_stream_follow_job"] = None
+        mark = st.get("_pending_follow_mark")
+        st["_pending_follow_mark"] = None
+        text: tk.Text | None = st.get("text")
+        if text is None or not mark:
+            return
+
+        if not self._stream_follow_enabled(st):
+            st["stream_following"] = False
+            st["_stream_follow_primed"] = False
             return
 
         should_follow = st.get("stream_following", self._should_follow(text))
         if should_follow:
-            text.see(mark)
             primed = st.pop("_stream_follow_primed", False)
             if primed:
                 st["stream_following"] = True
                 return
             try:
+                if hasattr(text, "yview_pickplace"):
+                    text.yview_pickplace(mark)
+                else:
+                    text.see(mark)
                 if text.dlineinfo(mark) is None:
                     st["stream_following"] = False
                     st["_stream_follow_primed"] = False
@@ -3517,6 +3557,7 @@ class FIMPad(tk.Tk):
         st["stream_active"] = False
         st["stream_following"] = False
         st["_stream_follow_primed"] = False
+        self._cancel_stream_follow_job(st)
         st["stream_patterns"] = []
         st["stream_accumulated"] = ""
         st["stream_cancelled"] = False
