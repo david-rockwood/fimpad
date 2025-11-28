@@ -19,7 +19,7 @@ A lively day at the beach.
 
 
 
-## Newspaper
+## Newspaper (This is the default FIMpad theme)
 
 A serious theme with a calm light-gray background for long reading sessions and an assertive red caret to guide attention.
 
