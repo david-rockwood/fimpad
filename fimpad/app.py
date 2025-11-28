@@ -2575,6 +2575,8 @@ class FIMPad(tk.Tk):
         controls.grid(row=0, column=0, sticky="nsew")
         w.columnconfigure(0, weight=1)
 
+        button_width = 14
+
         ttk.Label(controls, text="Indent size:").grid(row=0, column=0, sticky="e", padx=(0, 6))
         indent_combo = ttk.Combobox(
             controls,
@@ -2591,6 +2593,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Tabs → Spaces",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _tabs_to_spaces(
                     lines, indent_size(), skip_empty_var.get()
@@ -2600,6 +2603,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Spaces → Tabs",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _spaces_to_tabs(
                     lines, indent_size(), skip_empty_var.get()
@@ -2610,6 +2614,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Indent",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _indent_block(
                     lines, indent_size(), skip_empty_var.get()
@@ -2619,6 +2624,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="De-indent",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _deindent_block(
                     lines, indent_size(), skip_empty_var.get()
@@ -2635,6 +2641,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Prepend",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _prepend_to_lines(
                     lines, prefix_var.get(), skip_empty_var.get()
@@ -2659,6 +2666,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Delete",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _delete_leading_chars(
                     lines, delete_count(), skip_empty_var.get()
@@ -2677,14 +2685,19 @@ class FIMPad(tk.Tk):
         controls.columnconfigure(3, weight=1)
 
         btns = ttk.Frame(w, padding=(12, 0, 12, 12))
-        btns.grid(row=1, column=0, sticky="e")
-        ttk.Button(btns, text="Clear Changes", command=clear_changes).grid(
-            row=0, column=0, padx=(0, 8)
+        btns.grid(row=1, column=0, sticky="ew")
+        btns.columnconfigure(0, weight=1)
+        btns.columnconfigure(1, weight=1)
+        btns.columnconfigure(2, weight=1)
+        ttk.Button(btns, text="Clear Changes", width=button_width, command=clear_changes).grid(
+            row=0, column=0, padx=(0, 8), sticky="we"
         )
-        ttk.Button(btns, text="Apply", command=w.destroy).grid(
-            row=0, column=1, padx=(0, 8)
+        ttk.Button(btns, text="Apply", width=button_width, command=w.destroy).grid(
+            row=0, column=1, padx=(0, 8), sticky="we"
         )
-        ttk.Button(btns, text="Cancel", command=cancel_dialog).grid(row=0, column=2)
+        ttk.Button(btns, text="Cancel", width=button_width, command=cancel_dialog).grid(
+            row=0, column=2, sticky="we"
+        )
 
         w.protocol("WM_DELETE_WINDOW", cancel_dialog)
         self._prepare_child_window(w)
