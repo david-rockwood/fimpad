@@ -29,7 +29,7 @@ DEFAULTS = {
     "highlight2": "#a4a4a4",
     "reverse_selection_fg": False,
     "open_maximized": False,
-    "scroll_speed_multiplier": 1,
+    "scroll_speed_multiplier": 4,
     "line_numbers_enabled": True,
     "spellcheck_enabled": True,
     # Spellcheck tweaks
