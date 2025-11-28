@@ -5,6 +5,6 @@ You are a helpful assistant.
 
 User:
 
-What is the population of Utah?
+What are the differences between the islands of Hawaii?
 [[[8000;prepend("\n\nAssistant:\n\n");append("\n\nUser:\n\n")]]]
 [/INST]
