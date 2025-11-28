@@ -657,10 +657,12 @@ class FIMPad(tk.Tk):
         previous = self._last_tab
         if previous:
             self._store_tab_view(previous)
+            self._withdraw_tab_text_tool(previous)
 
         current = self.nb.select()
         if current:
             self._restore_tab_view(current)
+            self._restore_tab_text_tool(current)
             self._schedule_spellcheck_for_frame(current, delay_ms=80)
             self._schedule_line_number_update(current, delay_ms=10)
 
@@ -682,6 +684,27 @@ class FIMPad(tk.Tk):
         st["last_insert"] = text.index("insert")
         st["last_yview"] = text.yview()[0]
 
+    def _withdraw_tab_text_tool(self, tab_id: str) -> None:
+        try:
+            frame = self.nametowidget(tab_id)
+        except Exception:
+            return
+        st = self.tabs.get(frame)
+        if not st:
+            return
+
+        window = st.get("text_tool_window")
+        if not window:
+            return
+        try:
+            if window.winfo_exists():
+                with contextlib.suppress(tk.TclError):
+                    window.withdraw()
+            else:
+                self._clear_text_tool_window(st)
+        except tk.TclError:
+            self._clear_text_tool_window(st)
+
     def _restore_tab_view(self, tab_id: str) -> None:
         try:
             frame = self.nametowidget(tab_id)
@@ -701,6 +724,28 @@ class FIMPad(tk.Tk):
         text.see("insert")
         text.focus_set()
         self._schedule_line_number_update(frame, delay_ms=10)
+
+    def _restore_tab_text_tool(self, tab_id: str) -> None:
+        try:
+            frame = self.nametowidget(tab_id)
+        except Exception:
+            return
+        st = self.tabs.get(frame)
+        if not st:
+            return
+
+        window = st.get("text_tool_window")
+        if not window:
+            return
+        try:
+            if window.winfo_exists():
+                with contextlib.suppress(tk.TclError):
+                    window.deiconify()
+                    window.lift()
+            else:
+                self._clear_text_tool_window(st)
+        except tk.TclError:
+            self._clear_text_tool_window(st)
 
     def _log_fim_generation(self, fim_request: FIMRequest) -> None:
         timestamp = datetime.now().isoformat(timespec="seconds")
