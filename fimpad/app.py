@@ -1233,6 +1233,8 @@ class FIMPad(tk.Tk):
         scrollbar: ttk.Scrollbar | None = st.get("scrollbar")
         if scrollbar:
             scrollbar.set(first, last)
+        with contextlib.suppress(TypeError, ValueError):
+            st["last_yview"] = float(first)
         self._schedule_line_number_update(frame, delay_ms=10)
         scroll_delay = int(
             self.cfg.get(
@@ -1247,6 +1249,8 @@ class FIMPad(tk.Tk):
         if not st:
             return
         st["text"].yview(*args)
+        with contextlib.suppress(Exception):
+            st["last_yview"] = float(st["text"].yview()[0])
         self._schedule_line_number_update(frame, delay_ms=10)
 
     def _schedule_line_number_update(self, frame, delay_ms: int = 30) -> None:
