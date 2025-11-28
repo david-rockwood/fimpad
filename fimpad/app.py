@@ -2470,7 +2470,6 @@ class FIMPad(tk.Tk):
         original_dirty = st.get("dirty", False)
         original_insert = text.index(tk.INSERT)
         original_yview = text.yview()
-
         def selected_line_range() -> tuple[int, int]:
             try:
                 start_idx = text.index("sel.first")
@@ -2536,17 +2535,21 @@ class FIMPad(tk.Tk):
         delete_count_var = tk.StringVar(value="1")
         skip_empty_var = tk.BooleanVar(value=False)
 
-        def indent_size() -> int:
+        def _clamp_bol_value(var: tk.StringVar) -> int:
             try:
-                return int(indent_size_var.get())
+                value = int(var.get())
             except ValueError:
-                return 4
+                value = 1
+
+            value = max(1, min(8, value))
+            var.set(str(value))
+            return value
+
+        def indent_size() -> int:
+            return _clamp_bol_value(indent_size_var)
 
         def delete_count() -> int:
-            try:
-                return int(delete_count_var.get())
-            except ValueError:
-                return 1
+            return _clamp_bol_value(delete_count_var)
 
         def clear_changes() -> None:
             text.edit_separator()
@@ -2572,40 +2575,46 @@ class FIMPad(tk.Tk):
         controls.grid(row=0, column=0, sticky="nsew")
         w.columnconfigure(0, weight=1)
 
+        button_width = 14
+
         ttk.Label(controls, text="Indent size:").grid(row=0, column=0, sticky="e", padx=(0, 6))
         indent_combo = ttk.Combobox(
             controls,
             values=[str(i) for i in range(1, 9)],
             textvariable=indent_size_var,
             width=4,
+            exportselection=False,
         )
         indent_combo.grid(row=0, column=1, sticky="w")
-        indent_combo.bind(
-            "<<ComboboxSelected>>", lambda _e: indent_size_var.set(indent_combo.get())
-        )
+        indent_combo.bind("<<ComboboxSelected>>", lambda _e: indent_size())
+        indent_combo.bind("<FocusOut>", lambda _e: indent_size())
+        indent_combo.bind("<Return>", lambda _e: indent_size())
 
         ttk.Button(
             controls,
             text="Tabs → Spaces",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _tabs_to_spaces(
                     lines, indent_size(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=0, column=2, padx=(12, 0))
+        ).grid(row=0, column=2, padx=(12, 0), sticky="we")
         ttk.Button(
             controls,
             text="Spaces → Tabs",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _spaces_to_tabs(
                     lines, indent_size(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=0, column=3, padx=(8, 0))
+        ).grid(row=0, column=3, padx=(8, 0), sticky="we")
 
         ttk.Button(
             controls,
             text="Indent",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _indent_block(
                     lines, indent_size(), skip_empty_var.get()
@@ -2615,6 +2624,7 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="De-indent",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _deindent_block(
                     lines, indent_size(), skip_empty_var.get()
@@ -2631,12 +2641,13 @@ class FIMPad(tk.Tk):
         ttk.Button(
             controls,
             text="Prepend",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _prepend_to_lines(
                     lines, prefix_var.get(), skip_empty_var.get()
                 )
             ),
-        ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0))
+        ).grid(row=2, column=3, padx=(8, 0), pady=(10, 0), sticky="we")
 
         ttk.Label(controls, text="Delete leading:").grid(
             row=3, column=0, sticky="e", padx=(0, 6), pady=(10, 0)
@@ -2646,14 +2657,16 @@ class FIMPad(tk.Tk):
             values=[str(i) for i in range(1, 9)],
             textvariable=delete_count_var,
             width=4,
+            exportselection=False,
         )
         delete_combo.grid(row=3, column=1, sticky="w", pady=(10, 0))
-        delete_combo.bind(
-            "<<ComboboxSelected>>", lambda _e: delete_count_var.set(delete_combo.get())
-        )
+        delete_combo.bind("<<ComboboxSelected>>", lambda _e: delete_count())
+        delete_combo.bind("<FocusOut>", lambda _e: delete_count())
+        delete_combo.bind("<Return>", lambda _e: delete_count())
         ttk.Button(
             controls,
             text="Delete",
+            width=button_width,
             command=lambda: apply_transformation(
                 lambda lines: _delete_leading_chars(
                     lines, delete_count(), skip_empty_var.get()
@@ -2672,14 +2685,19 @@ class FIMPad(tk.Tk):
         controls.columnconfigure(3, weight=1)
 
         btns = ttk.Frame(w, padding=(12, 0, 12, 12))
-        btns.grid(row=1, column=0, sticky="e")
-        ttk.Button(btns, text="Clear Changes", command=clear_changes).grid(
-            row=0, column=0, padx=(0, 8)
+        btns.grid(row=1, column=0, sticky="ew")
+        btns.columnconfigure(0, weight=1)
+        btns.columnconfigure(1, weight=1)
+        btns.columnconfigure(2, weight=1)
+        ttk.Button(btns, text="Clear Changes", width=button_width, command=clear_changes).grid(
+            row=0, column=0, padx=(0, 8), sticky="we"
         )
-        ttk.Button(btns, text="Apply", command=w.destroy).grid(
-            row=0, column=1, padx=(0, 8)
+        ttk.Button(btns, text="Apply", width=button_width, command=w.destroy).grid(
+            row=0, column=1, padx=(0, 8), sticky="we"
         )
-        ttk.Button(btns, text="Cancel", command=cancel_dialog).grid(row=0, column=2)
+        ttk.Button(btns, text="Cancel", width=button_width, command=cancel_dialog).grid(
+            row=0, column=2, sticky="we"
+        )
 
         w.protocol("WM_DELETE_WINDOW", cancel_dialog)
         self._prepare_child_window(w)
