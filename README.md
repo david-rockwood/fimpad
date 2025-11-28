@@ -92,19 +92,19 @@ Here, 50 is the max number of tokens that the LLM will be allowed to generate wh
 Execute the FIM tag by placing the caret within the FIM tag, or immediately at the end of the tag after the last closing bracket.
 The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
 
-With the caret within or immediately after the FIM tag, execute it by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
+With the caret within or immediately after the FIM tag, execute the tag by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
 
 > Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
 > 
 > Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived
 
-There is variability in LLM output, so your results may not look like the above exactly.
+There is variability in LLM output, so your results may not look exactly like those above.
 
 ## Example 2: Fill in the middle.
 
 In the prior example there was no text after the FIM tag, so it was generated as a completion. But if you are using an LLM capable if FIM (Fill In the Middle), and if you have the FIM tokens for it set correctly in the FIMpad settings window, you will get a FIM generation when you execute a FIM tag and there is text after the tag.
 
-By default, FIMpad is has the proper FIM tokens for IBM Granite 4.0 H LLMs, so if you are using Granite you don't have to worry about setting those tokens.
+FIMpad has the proper FIM tokens for IBM Granite 4.0 H LLMs set as defaults, so if you are using Granite 4.0 H you don't have to worry about setting those tokens.
 
 With FIM tags, text that appears before the FIM tag is *prefix*. Text that appears after the tag is *suffix*.
 
@@ -159,7 +159,7 @@ set -euo pipefail
 
 Careful Bash script writers will often start out like that, instead of `#!/bin/bash`.
 
-You may have noticed that the FIM tag used in this example is more complicated than the FIM tag used in Example 1. FIM tags have optional functions that can be used to control what FIMpad does before, during, and after a FIM tag is executed. The two used here are `temp()` and top_p(). They control the temperature and top P settings (which tend to affect obedience versus creativity) that the LLM server uses during generation. In the FIMpad settings window you can set the default Temperature and Top P values, but the `temp()` and `top_p()` functions provide per-execution overrides of the default values.
+You may have noticed that the FIM tag used in this example is more complicated than the FIM tag used in Example 1. FIM tags have optional functions that can be used to control what FIMpad does when a FIM tag is executed. The two FIM tag functions used here are `temp()` and `top_p()`. They control the Temperature and Top P settings, (which tend to affect obedience versus creativity,) that the LLM server uses during generation. In the FIMpad settings window you can set the default Temperature and Top P values, but the `temp()` and `top_p()` functions provide per-execution overrides of the default values.
 
 Let's take a closer look at this tag.
 
@@ -197,7 +197,7 @@ The last semicolon before the end of the tag is optional. Double quotes surround
 
 ## Example 3: Chat with a base model
 
-You can write a few lines to establish context and get a little chat going. It is good to use labels and write it in a structured way. In the following example there is regular alternation of speakers. I'm going to chat as Chauncey and have the LLM be Fiona. Here is the setup before the first generation:
+You can write a few lines to establish context and get a little chat going. It is best to use labels and write in a structured way, so that the LLM has a predictable format to follow. In the following example there is regular alternation of speakers. I'm going to chat as Chauncey and have the LLM be Fiona. Here is the setup before the first generation:
 
 > Chauncey: I have been told that you are very intelligent and very creative.
 >
@@ -207,7 +207,7 @@ You can write a few lines to establish context and get a little chat going. It i
 >
 > Fiona: [[[250; stop("Chauncey: "); append("\n\nFiona: ")]]]
 
-The first function in the FIM tag is `stop()`. This function takes one or more arguments representing stop sequences. A *stop sequence* is a string that, if generated by the LLM, ends generation immediately at that point. So the last thing that gets inserted into the text editor is "Chauncey: ", with the space at the end, so I can just start typing what I want to say after the LLM generates what Fiona says. If I didn't use stop, the LLM would likely keep going at write dialogue for Chauncey, which I don't want in this case since I will be speaking for Chauncey.
+The first function in the FIM tag is `stop()`. This function takes one or more arguments representing stop sequences. A *stop sequence* is a string that, if generated by the LLM, ends generation immediately at that point. So the last thing that gets inserted into the text editor is "Chauncey: ", with the space at the end, so I can just start typing what I want to say after the LLM generates what Fiona says. If I didn't use stop, the LLM would likely keep going and write dialogue for Chauncey, which I don't want in this case since I will be speaking for Chauncey.
 
 If more than one stop sequence is given, like this:
 
@@ -215,11 +215,11 @@ If more than one stop sequence is given, like this:
 [[[250; stop("Chauncey: ","Narrator: ")]]]
 ```
 
-then the model will stop at the first stop sequence that the LLM generates first, if any. If neither of the stop sequences are generated, the LLM will just stream text until it finishes or hits max tokens. But in the example above, since I establish a regular pattern of speaker label alternation, "Chauncey: " is very likely to appear when the LLM completes this prefix.
+then the model will stop at the first stop sequence that the LLM generates, if any. If neither of the stop sequences are generated, the LLM will stream text until it finishes or hits max tokens. But in the example above, since I establish a regular pattern of speaker label alternation, "Chauncey: " is very likely to appear when the LLM completes this prefix.
 
 (There is another FIM tag function called `chop()` that does the same thing as `stop()`, except it discards the stop sequence, so that last thing streamed into the text editor is the last character that was generated before the stop sequence.)
 
-The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select `AI -> Paste Last FIM Tag` in the menu) and the last executed FIM tag that you executed will be pasted at the current position of the carat.
+The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select `AI -> Paste Last FIM Tag` in the menu) and the last FIM tag that you executed will be pasted at the current position of the caret.
 
 Anyway, let's see how this example plays out after generation.
 
