@@ -300,7 +300,7 @@ A stark , dark,  and bloody theme.
 }]]]
 ```
 
-[[[(Change the two spots marked "EDIT HERE" below, then generate the tag to get an AI generated theme. It might be weird.)]]]
+[[[(Change the two spots marked "EDIT HERE" below, then execute the FIM tag to get an AI generated theme. It might be weird.)]]]
 
 ## EDIT HERE
 
