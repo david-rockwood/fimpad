@@ -2534,17 +2534,21 @@ class FIMPad(tk.Tk):
         delete_count_var = tk.StringVar(value="1")
         skip_empty_var = tk.BooleanVar(value=False)
 
-        def indent_size() -> int:
+        def _clamp_bol_value(var: tk.StringVar) -> int:
             try:
-                return int(indent_size_var.get())
+                value = int(var.get())
             except ValueError:
-                return 4
+                value = 1
+
+            value = max(1, min(8, value))
+            var.set(str(value))
+            return value
+
+        def indent_size() -> int:
+            return _clamp_bol_value(indent_size_var)
 
         def delete_count() -> int:
-            try:
-                return int(delete_count_var.get())
-            except ValueError:
-                return 1
+            return _clamp_bol_value(delete_count_var)
 
         def clear_changes() -> None:
             current_yview = text.yview()
@@ -2580,9 +2584,9 @@ class FIMPad(tk.Tk):
             exportselection=False,
         )
         indent_combo.grid(row=0, column=1, sticky="w")
-        indent_combo.bind(
-            "<<ComboboxSelected>>", lambda _e: indent_size_var.set(indent_combo.get())
-        )
+        indent_combo.bind("<<ComboboxSelected>>", lambda _e: indent_size())
+        indent_combo.bind("<FocusOut>", lambda _e: indent_size())
+        indent_combo.bind("<Return>", lambda _e: indent_size())
 
         ttk.Button(
             controls,
@@ -2649,9 +2653,9 @@ class FIMPad(tk.Tk):
             exportselection=False,
         )
         delete_combo.grid(row=3, column=1, sticky="w", pady=(10, 0))
-        delete_combo.bind(
-            "<<ComboboxSelected>>", lambda _e: delete_count_var.set(delete_combo.get())
-        )
+        delete_combo.bind("<<ComboboxSelected>>", lambda _e: delete_count())
+        delete_combo.bind("<FocusOut>", lambda _e: delete_count())
+        delete_combo.bind("<Return>", lambda _e: delete_count())
         ttk.Button(
             controls,
             text="Delete",
