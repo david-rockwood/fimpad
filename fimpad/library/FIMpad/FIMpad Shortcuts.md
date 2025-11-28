@@ -1,10 +1,10 @@
 # FIMpad Shortcuts
 
-
+---
 
 ## Application shortcuts
 
-
+---
 
 ### File menu shortcuts
 
@@ -20,7 +20,7 @@ Alt+C - Close Tab
 
 Alt+Q - Quit
 
-
+---
 
 ### Edit menu shortcuts
 
@@ -44,7 +44,7 @@ Alt+. - Regex & Replace
 
 Alt+; - Open Settings Window
 
-
+---
 
 ### Toggle menu shortcuts
 
@@ -56,7 +56,7 @@ Alt+L - Toggle Line Numbering
 
 Alt+P - Toggle Spellchecking
 
-
+---
 
 ### AI menu shortcuts
 
@@ -74,7 +74,7 @@ Alt+` - Validate Tags
 
 Alt+, - Show Log
 
-
+---
 
 ### Tab switching shortcuts
 
@@ -84,11 +84,11 @@ Ctrl+PageUp - Switch Left 1 Tab
 
 Ctrl+PageDown - Switch 1 Tab Right
 
-
+---
 
 ## Text editing shortcuts provided by Tk
 
-
+---
 
 ### Mouse bindings
 
@@ -116,7 +116,7 @@ Insert key - Insert current selection at insertion cursor.
 
 Button-1 drag out of widget - Auto-scroll while dragging.
 
-
+---
 
 ### Cursor movement / navigation
 
@@ -164,7 +164,7 @@ Ctrl+End / Alt+> - Move cursor to end of text, clear selection.
 
 Ctrl+Shift+End - Same, but extend selection.
 
-
+---
 
 ### Selection / mark control
 
@@ -176,7 +176,7 @@ Ctrl+/ - Select entire contents of the document.
 
 Ctrl+\ - Clear any selection in the document.
 
-
+---
 
 ### Cut / copy / paste (Tk / Emacs style)
 
@@ -184,7 +184,7 @@ Ctrl+W - Cut: copy selection to clipboard and delete it.
 
 Ctrl+Y - Paste from clipboard at insertion cursor.
 
-
+---
 
 ### Deletion / killing
 
@@ -198,12 +198,10 @@ Ctrl+K - Kill from cursor to end of line; if already at end of line, delete the 
 
 Ctrl+X - Cut whatever is selected in the text document.
 
-
+---
 
 ### Emacs-like unusual operations
 
 Ctrl+O - “Open line”: insert a newline before the cursor without moving the cursor.
 
 Ctrl+T - Transpose the character left of the caret with the character right of the caret.
-
-

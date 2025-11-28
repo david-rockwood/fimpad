@@ -1,5 +1,7 @@
 # FIMpad Regex Help.md
 
+---
+
 ## Regex & Replace in FIMpad (Python `re` syntax)
 
 FIMpad includes a **Regex & Replace** tool for advanced searching and rewriting using **Python’s `re` regular expression syntax**.
@@ -306,5 +308,3 @@ Regex & Replace in FIMpad lets you:
 For most tasks, a pattern + groups + replacement + flags gives you powerful control without complexity.
 
 If you’re new to regex, start with simple patterns and experiment with **Find next** before doing **Replace all**.
-
-

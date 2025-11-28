@@ -34,19 +34,23 @@ A recent build of llama.cpp’s llama-server is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
-When you start llama-server, set a higher context size than the default 4096. Try 16000 or higher to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference. The max context size for IBM Granite 4.0 H is 131072.
+When you start llama-server, set a higher context size than the default 4096. Try 16000 or higher to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference.
 
 ---
 
 ## The LLMs
 
-The recommended model is IBM Granite 4.0 H Base. Granite seems to be the best smaller-sized generalist model that can do FIM currently. Some other models do support FIM, and the FIMpad settings window allows you to set the FIM tokens sent to the server, so you can probably get other models working by adjusting those.
+The recommended models are IBM Granite 4.0 H Base and Mistral Small 3.1 Base. Both have FIM control tokens. Granite seems better for technical work, Mistral Small seems better for creative work.
 
-Models without FIM tokens will work fine with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM tokens are sent to the LLM, and if the LLM does not recognize the FIM tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but FIMpad is best with a model that has FIM control tokens in the tokenizer.
+Base models are better than instruct models for FIM, though both can do FIM. For system/user/assistant completion chat, you need an instruct model.
 
-By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
+Models without FIM control tokens will work with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM control tokens are sent to the LLM, and if the LLM does not recognize the FIM control tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but then you are stuck with only completions of the prefix; the responses will not influenced by the suffix.
 
-But it's easier to just use Granite 4.0 H LLMs if you are new to FIMpad. Many prefer certain LLMs due to the personality/alignment of the assistant, but when you are doing FIM with a base model, alignment is less noticeable.
+By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad, you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
+
+There are also loadable configuration settings for Granite, Mistral Small, and completion-only mode at `Library -> FIMpad -> FIMpad Model Configs`. For other models you will need to follow the instructions above to manually configure FIMpad.
+
+### Granite 4.0 H
 
 Granite 4.0 H Small is 32B parameters. Granite 4.0 H Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters at every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
@@ -69,7 +73,19 @@ Granite Tiny Instruct is available at:
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-Base models are better than instruct models for FIM, though both can work. For system/user/assistant chat, you need an instruct model.
+### Mistral Small 3.1
+
+Mistral Small is 24B parameters. It is a dense model (not MoE) that seems better than Granite at creative writing and character personalities.
+
+Mistral Small Base is available at:
+```
+https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Base-2503-GGUF/tree/main
+```
+
+Mistral Small Instruct is available at:
+```
+https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Instruct-2503-GGUF/tree/main
+```
 
 ---
 

@@ -1,9 +1,0 @@
-Generating the tag below with any comment after the Human label exposes a format of RLHF that the LLM is trained on.
-
-
-
-[[[PREFIX]]]
-[Conversation 1]
-Human: Is marijuana bad?
-
-Assistant: [[[800]]]

@@ -2,7 +2,7 @@
 
 Place your caret within in a config tag below and press Alt+= (or use the menu entry at AI -> Apply Config Tag) to apply it. This will change the colors in your text editor.
 
-
+---
 
 ## The Beach
 
@@ -17,7 +17,7 @@ A lively day at the beach.
 }]]]
 ```
 
-
+---
 
 ## Newspaper (This is the default FIMpad theme)
 
@@ -31,7 +31,7 @@ A serious theme with a calm light-gray background for long reading sessions and 
 "highlight2": "#a4a4a4"
 }]]]
 ```
-
+---
 
 ## Forest Terminal
 
@@ -46,7 +46,7 @@ A deep green, low-brightness theme inspired by old phosphor terminals and woodla
 }]]]
 ```
 
-
+---
 
 ## Desert Sunset
 
@@ -61,7 +61,7 @@ A warm, inviting theme with soft sand tones and a glowing amber caret, tuned for
 }]]]
 ```
 
-
+---
 
 ## Glacial Breeze
 
@@ -76,7 +76,7 @@ A cool, bright theme with icy blue shadows and crisp high-contrast text.
 }]]]
 ```
 
-
+---
 
 ## Cyber Neon
 
@@ -91,7 +91,7 @@ A high-energy neon look with black void background, electric pink highlights, an
 }]]]
 ```
 
-
+---
 
 ## Coffee Shop
 
@@ -106,7 +106,7 @@ A cozy, warm, brown-tinted theme for relaxed writing and gentle focus.
 }]]]
 ```
 
-
+---
 
 ## Midnight Coding
 
@@ -121,7 +121,7 @@ A dark, focused theme with a near-black slate background and a cool blue caret f
 }]]]
 ```
 
-
+---
 
 ## Overcast Minimal
 
@@ -136,7 +136,7 @@ A low-saturation, gentle grayscale theme with super-soft contrast and a muted gr
 }]]]
 ```
 
-
+---
 
 ## Dusk Scholar
 
@@ -151,7 +151,7 @@ A dusk-toned reading theme, with dim bluish-gray surroundings and a soft, parchm
 }]]]
 ```
 
-
+---
 
 ## Caribbean Ocean
 
@@ -166,7 +166,7 @@ A cool teal theme with equal parts green and blue, low red, and a gentle oceanic
 }]]]
 ```
 
-
+---
 
 ## Shadow Studio
 
@@ -181,7 +181,7 @@ A subtle, art-studio-inspired theme with charcoal walls and faint warm accents t
 }]]]
 ```
 
-
+---
 
 ## Antique Brass
 
@@ -196,7 +196,7 @@ A warm brass-and-cream theme with vintage magazine vibes and a mellow, tarnished
 }]]]
 ```
 
-
+---
 
 ## Icy Fjord
 
@@ -211,7 +211,7 @@ A clean high-latitude theme with bright icy blues, near-black fjord depths, and 
 }]]]
 ```
 
-
+---
 
 ## Sunset Terminal
 
@@ -226,7 +226,7 @@ A warm, saturated theme inspired by sunset terminals from the 1980s, with orange
 }]]]
 ```
 
-
+---
 
 ## Retro Cyan Console
 
@@ -241,7 +241,7 @@ A bright, old-school cyan-on-black console theme with gentle neon edges and stro
 }]]]
 ```
 
-
+---
 
 ## Pumpkin Study
 
@@ -256,7 +256,7 @@ A cozy autumn palette with pumpkin-orange undertones, warm muted browns, and a b
 }]]]
 ```
 
-
+---
 
 ## Violet Library
 
@@ -271,7 +271,7 @@ A quiet, meditative theme with deep violet shelving, lavender cast text, and a p
 }]]]
 ```
 
-
+---
 
 ## Industrial Graphite
 
@@ -286,11 +286,12 @@ A steel-and-slate industrial theme with cold-gray surfaces and a subtle red warn
 }]]]
 ```
 
-
+---
 
 ## Vampire
 
 A stark , dark,  and bloody theme.
+
 ```
 [[[{
 "fg": "#e8e8e8",
@@ -300,10 +301,25 @@ A stark , dark,  and bloody theme.
 }]]]
 ```
 
+---
+
+## Amusement Park
+
+This theme has the atmosphere of an amusement park at night.
+
+```
+[[[{
+"fg": "#e4b02a",
+"bg": "#080820",
+"highlight1": "#f07000",
+"highlight2": "#400060"
+}]]]
+```
+
+---
 [[[(Change the two spots marked "EDIT HERE" below, then execute the FIM tag to get an AI generated theme. It might be weird.)]]]
+## EDIT TITLE HERE
 
-## EDIT HERE
-
-EDIT HERE
+EDIT DESCRIPTION HERE
 ```
 [[[200;temp("0.85");top_p("0.90");stop("}\]\]\]\n```\n")]]]
