@@ -327,7 +327,7 @@ after generation:
 
 Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Alt+[ to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writer's block.
 
-When writing fiction with FIM, the three concepts described above (completion, replacement, and interpolation) are very useful.
+When writing fiction with FIMpad, the three concepts described above (completion, replacement, and interpolation) are very useful.
 
 ---
 
