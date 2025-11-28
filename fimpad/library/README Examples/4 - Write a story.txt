@@ -1,0 +1,47 @@
+At this point in the README, you probably have not seen prefix and suffix tags. They are covered later in the README, but they are needed here so that I can include multiple independent examples in the same file. For now, just know that these tags constrain the range of prefix and suffix that is sent to the LLM, for the FIM tag that they enclose. Up until now, all the examples that you have seen have a prefix that ranges from the start of the file to the FIM tag, and a suffix that ranges from the FIM tag to the end of the file. Here, the prefix for a FIM tag starts at the nearest prefix tag above it, and suffix ends at the nearest suffix tag below the FIM tag.
+
+On to the examples.
+
+
+
+[[[PREFIX]]]
+It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, [[[120]]]
+[[[SUFFIX]]]
+
+
+
+[[[PREFIX]]]
+It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
+
+The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his [[[5]]], his love of bananas, and his uncanny ability to mimic human behavior.
+
+One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
+[[[SUFFIX]]]
+
+
+
+[[[PREFIX]]]
+It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
+
+The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
+
+One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, [[[120]]]
+
+Because of that, Jake started to get very nervous.
+[[[SUFFIX]]]
+
+
+
+[[[PREFIX]]]
+It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
+
+The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his sense of humor, his love of bananas, and his uncanny ability to mimic human behavior.
+
+One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, who had just started working at the zoo to make some extra money while he finished his degree in biology. Jake was a bit of a nervous wreck, and he was always on edge when he was on duty.
+
+That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
+
+Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, [[[55;stop(".\n","?\n","!\n")]]]
+[[[SUFFIX]]]
+
+

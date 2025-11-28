@@ -263,9 +263,9 @@ I don't want George to be known for his playful antics, so I estimate the token 
 
 > It was a dark and stormy midnight at the zoo, and the scene in the night shift employee break room near the gorilla enclosure was as boring as ever; however, 5 minutes later, all the employees would be having a near heart-attack and all the zoo animals would be wondering what the hell just happened.
 >
-> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his [[[5]]] , his love of bananas, and his uncanny ability to mimic human behavior.
+> The zoo had recently acquired a new gorilla, named George, who had quickly become a favorite among visitors and staff alike. George was a massive silverback gorilla with a personality that was as large as his body. He was known for his [[[5]]], his love of bananas, and his uncanny ability to mimic human behavior.
 >
->One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
+> One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties,
 
 After I generate I have this:
 
