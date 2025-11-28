@@ -34,12 +34,12 @@ DEFAULTS = {
     "spellcheck_enabled": True,
     # Spellcheck tweaks
     "spellcheck_view_buffer_lines": 30,
-    "spellcheck_scroll_debounce_ms": 2000,
+    "spellcheck_scroll_debounce_ms": 1000,
     "spellcheck_full_document_line_threshold": 100,
     "spell_lang": SPELLCHECK_DEFAULT_LANG,
     "follow_stream_enabled": True,
     "stream_follow_debounce_ms": 1000,
-    "log_entries_kept": 200,
+    "log_entries_kept": 10,
 }
 
 WORD_RE = re.compile(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", re.UNICODE)
