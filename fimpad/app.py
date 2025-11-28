@@ -762,7 +762,7 @@ class FIMPad(tk.Tk):
         except tk.TclError:
             self._clear_text_tool_window(st)
 
-    def _log_fim_generation(self, fim_request: FIMRequest) -> None:
+    def _log_fim_generation(self, fim_request: FIMRequest, response: str) -> None:
         timestamp = datetime.now().isoformat(timespec="seconds")
         if fim_request.use_completion:
             prefix_text = fim_request.before_region
@@ -775,12 +775,14 @@ class FIMPad(tk.Tk):
 
         entry = {
             "time": timestamp,
+            "tag": fim_request.marker.raw,
             "prefix": prefix_text,
             "suffix": suffix_text,
+            "response": response,
         }
-        json_line = json.dumps(entry, ensure_ascii=False)
+        json_block = json.dumps(entry, ensure_ascii=False, indent=4)
         previous_len = len(self._fim_log)
-        self._fim_log.append(json_line)
+        self._fim_log.append(json_block)
 
         changed = self._apply_log_retention()
         if changed or len(self._fim_log) != previous_len:
@@ -840,7 +842,7 @@ class FIMPad(tk.Tk):
             self._log_tab_frame = None
 
         log_body = self._render_fim_log_body()
-        st = self._new_tab(content=log_body, title="FIMpad_log.jsonl", is_log=True)
+        st = self._new_tab(content=log_body, title="FIMpad_log.json", is_log=True)
         self._log_tab_frame = st["frame"]
         self._scroll_log_tab_to_end(st)
 
@@ -3993,7 +3995,7 @@ class FIMPad(tk.Tk):
     def _launch_fim_or_completion_stream(self, st, content, fim_request: FIMRequest):
         cfg = self.cfg
         self._last_fim_marker = fim_request.marker.raw
-        self._log_fim_generation(fim_request)
+        st["active_fim_request"] = fim_request
 
         request_cfg = {
             "temperature": cfg["temperature"],
@@ -4115,6 +4117,7 @@ class FIMPad(tk.Tk):
             with contextlib.suppress(Exception):
                 self._end_stream_undo_group(st)
             st["stream_active"] = False
+            st.pop("active_fim_request", None)
             self._show_error("Generation Error", "Generation failed to start.", detail=str(exc))
             return
 
@@ -4137,6 +4140,7 @@ class FIMPad(tk.Tk):
                             self._force_flush_stream_buffer(frame, mark)
                             self._end_stream_undo_group(st_err)
                             st_err["stream_active"] = False
+                            st_err.pop("active_fim_request", None)
                         self._fim_generation_active = False
                         self._set_busy(False)
                         self._show_error(
@@ -4233,7 +4237,11 @@ class FIMPad(tk.Tk):
                     elif kind == "stream_done":
                         mark = st.get("stream_mark") or item.get("mark") or "stream_here"
                         self._force_flush_stream_buffer(frame, mark)
+                        generated_text = st.get("stream_accumulated", "")
                         st["stream_patterns"] = []
+                        fim_request = st.pop("active_fim_request", None)
+                        if fim_request:
+                            self._log_fim_generation(fim_request, generated_text)
                         st["stream_accumulated"] = ""
                         st["stream_stop_event"] = None
                         for extra in st.get("post_actions", []):
