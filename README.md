@@ -66,9 +66,9 @@ https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
 
 If you have a model that is capable of FIM, but uses unusual FIM control tokens, you can set the FIM tokens in the FIMpad settings window.
 
-If you have a model that does not have FIM control tokens, you can still use FIMpad for completion. Just set the FIM tokens in the FIMpad settings window to empty strings, then only the prefix will be sent to the LLM server. With the FIM tokens set to empty strings, you can even do system/user/assistant chat with instruct models, if you put the chat template role tags in the prefix text that you send to the model.
+If you have a model that does not have FIM control tokens, you can still use FIMpad for completion. To do this, set the FIM tokens in the FIMpad settings window to empty strings. Then only the prefix will be sent to the LLM server. With the FIM tokens set to empty strings, you can even do system/user/assistant chat with instruct models, if you put the chat template role tags in the prefix text that you send to the model.
 
-If you ever want to check if your suffix is actually being sent to the LLM server, check the log by pressing Alt+, (or use the menu entry at `AI -> Show Log`.) The logged events are one JSON object per generation. Log events have a "mode" name that will have value of either "completion generation" or "FIM generation". Additionally, events with completion generation mode will not have a "suffix" name or associated value.
+If you ever want to check if your suffix is actually being sent to the LLM server, check the log by pressing Alt+, (or use the menu entry at `AI -> Show Log`.) The logged events are one JSON object per generation. Log events have a "mode" name that will have value of either "completion generation" or "FIM generation". Additionally, completion generation events will not have a "suffix" name or associated value.
 
 ---
 
