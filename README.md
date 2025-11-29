@@ -40,13 +40,11 @@ When you start llama-server, set a higher context size than the default 4096. Tr
 
 ---
 
-## The Recommended LLMs
+## The Recommended LLM
 
-The recommended LLMs to use with FIMpad are IBM Granite 4.0 H Base and Mistral Small 3.1 Base. Both have FIM control tokens. Granite seems better for technical work, Mistral Small seems better for creative work.
+The recommended LLM to use with FIMpad is IBM Granite 4.0 H Base. It seems to be the best smaller FIM-capable generalist model that I have found so far.
 
 Use base models for FIM. Use instruct models for standard system/user/assistant chat.
-
-### Granite 4.0 H
 
 Granite 4.0 H Small is 32B parameters. Granite 4.0 H Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters at every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
 
@@ -68,22 +66,6 @@ Granite Tiny Instruct is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
-
-### Mistral Small 3.1
-
-Mistral Small is 24B parameters. It is a dense model (not MoE) that seems better than Granite at creative writing and character personalities.
-
-Mistral Small Base is available at:
-```
-https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Base-2503-GGUF/tree/main
-```
-
-Mistral Small Instruct is available at:
-```
-https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Instruct-2503-GGUF/tree/main
-```
-
----
 
 ## Configuring FIMpad for an LLM
 
