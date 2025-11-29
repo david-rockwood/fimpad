@@ -86,9 +86,10 @@ See how a FIM tag looks before you execute it below.
 
 > Four score and seven[[[50]]]
 
-Here, 50 is the max number of tokens that the LLM will be allowed to generate when the FIM tag is executed. (If you are new to LLMs, estimate two tokens per word, and that will usually be an over-estimation. Often it is closer to one token per word.)
+Here, 50 is the max number of tokens that the LLM will be allowed to generate when the FIM tag is executed.
 
 Execute the FIM tag by placing the caret within the FIM tag, or immediately at the end of the tag after the last closing bracket.
+
 The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
 
 With the caret within or immediately after the FIM tag, execute the tag by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
@@ -103,9 +104,7 @@ There is variability in LLM output, so your results may not look exactly like th
 
 ## Example 2: Fill in the middle.
 
-In the prior example there was no text after the FIM tag, so it was generated as a completion. But if you are using an LLM capable if FIM (Fill In the Middle), and if you have the FIM tokens for it set correctly in the FIMpad settings window, you will get a FIM generation when you execute a FIM tag and there is text after the tag.
-
-FIMpad has the proper FIM tokens for IBM Granite 4.0 H LLMs set as defaults, so if you are using Granite 4.0 H you don't have to worry about setting those tokens.
+In the prior example there was no text after the FIM tag, so it was generated as a completion. But if you are using an LLM capable of FIM (Fill In the Middle), and if you have the FIM tokens for it set correctly in the FIMpad settings window, you will get a FIM generation when you execute a FIM tag and there is text after the tag.
 
 With FIM tags, text that appears before the FIM tag is *prefix*. Text that appears after the tag is *suffix*.
 
@@ -149,7 +148,7 @@ echo "The file has been rendered successfully."
 exit 0
 ```
 
-I tested this script on a 1080p video and it worked. The LLM generated fewer than the given max of 400 tokens, because fewer than 400 tokens were needed to appropriately fill the gap between prefix and suffix.
+The LLM generated fewer than the given max of 400 tokens, because fewer than 400 tokens were needed to appropriately fill the gap between prefix and suffix.
 
 If you wanted a script that paid more attention to avoiding errors, you could start the prefix with something like this:
 
@@ -160,7 +159,7 @@ set -euo pipefail
 
 Careful Bash script writers will often start out like that, instead of starting with `#!/bin/bash`.
 
-You may have noticed that the FIM tag used in this example is more complicated than the FIM tag used in Example 1. FIM tags have optional functions that can be used to control what FIMpad does when a FIM tag is executed. The two FIM tag functions used here are `temp()` and `top_p()`. They control the Temperature and Top P settings, (which tend to affect obedience versus creativity,) that the LLM server uses during generation. In the FIMpad settings window you can set the default Temperature and Top P values, but the `temp()` and `top_p()` functions provide per-execution overrides of the default values.
+You may have noticed that the FIM tag used in this example is more complicated than the FIM tag used in Example 1. FIM tags have optional functions that can be used to control what FIMpad does when a FIM tag is executed. The two FIM tag functions used here are `temp()` and `top_p()`. They control the Temperature and Top P settings that the LLM server uses during generation. In the FIMpad settings window you can set the default Temperature and Top P values, but the `temp()` and `top_p()` functions provide per-execution overrides of the default values.
 
 Let's take a closer look at this tag.
 
@@ -322,9 +321,7 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Alt+[ to generate again. Some call this "rerolling", as in "taking another roll of the dice." Because of the semi-random variation in LLM responses, you can easily step through dozens of variations until you land on one that you like. This is a good way to deal with writer's block.
-
-When writing fiction with FIMpad, the three concepts described above (completion, replacement, and interpolation) are very useful.
+Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Alt+[ to generate again. Because of the semi-random variation in LLM responses, you can step through dozens of variations until you land on one that you like.
 
 ---
 
