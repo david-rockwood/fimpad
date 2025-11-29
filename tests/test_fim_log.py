@@ -3,6 +3,11 @@ from __future__ import annotations
 import json
 import sys
 import types
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+    from fimpad.app import FIMPad
+    from fimpad.parser import FIMRequest, TagToken
 
 
 class _StubEnchant:
@@ -17,11 +22,17 @@ class _StubEnchant:
 
 sys.modules.setdefault("enchant", _StubEnchant())
 
-from fimpad.app import FIMPad
-from fimpad.parser import FIMRequest, TagToken
+
+def _import_fim_modules():  # pragma: no cover - helper
+    from fimpad.app import FIMPad
+    from fimpad.parser import FIMRequest, TagToken
+
+    return FIMPad, FIMRequest, TagToken
 
 
-def _make_request(*, use_completion: bool) -> FIMRequest:
+def _make_request(*, use_completion: bool):
+    _, FIMRequest, TagToken = _import_fim_modules()
+
     marker = TagToken(start=0, end=0, raw="[[[/assistant]]]", body="", tag=None)
     return FIMRequest(
         marker=marker,
@@ -41,7 +52,9 @@ def _make_request(*, use_completion: bool) -> FIMRequest:
     )
 
 
-def _stub_app() -> FIMPad:
+def _stub_app():
+    FIMPad, _, _ = _import_fim_modules()
+
     app = object.__new__(FIMPad)
     app.cfg = {
         "fim_prefix": "<PRE>",
