@@ -18,6 +18,8 @@ pip install -e ".[dev]"
 python -m fimpad
 ```
 
+---
+
 ## Overview
 
 FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill In the Middle) generation at any point in a text file. And if you are willing to type the control tokens, or use a template with these tokens already typed, you can have standard system/user/assistant chats with an instruct-tuned LLM.
@@ -85,7 +87,7 @@ https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Instruct-2503-GGUF/tre
 
 ## Configuring FIMpad for an LLM
 
-By default, FIMpad is configured for Granite 4.0 H Base, both the Small and Tiny versions. If you want to use a different model, see the file that can be loaded through a FIMpad menu, at `Library -> FIMpad -> Model Configs`.
+By default, FIMpad is configured for Granite 4.0 H Base, both the Small and Tiny versions. If you want to use a different model, select `Library -> FIMpad -> Model Configs` in the FIMpad menu.
 
 If you want to load a model that does not yet have an entry in FIMpad Model Configs, figure out what FIM control tokens it uses, and set them in the FIMpad settings window.
 
