@@ -766,7 +766,6 @@ class FIMPad(tk.Tk):
         timestamp = datetime.now().isoformat(timespec="seconds")
         if fim_request.use_completion:
             prefix_text = fim_request.before_region
-            suffix_text = fim_request.safe_suffix
             mode = "completion generation"
         else:
             prefix_text = f"{self.cfg['fim_prefix']}{fim_request.before_region}"
@@ -780,9 +779,10 @@ class FIMPad(tk.Tk):
             "tag": fim_request.marker.raw,
             "mode": mode,
             "prefix": prefix_text,
-            "suffix": suffix_text,
             "response": response,
         }
+        if not fim_request.use_completion:
+            entry["suffix"] = suffix_text
         json_block = json.dumps(entry, ensure_ascii=False, indent=4)
         previous_len = len(self._fim_log)
         self._fim_log.append(json_block)

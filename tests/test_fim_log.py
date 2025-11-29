@@ -78,7 +78,7 @@ def test_log_includes_mode_for_completion_generation():
     payload = json.loads(app._fim_log[-1])
     assert payload["mode"] == "completion generation"
     assert payload["prefix"] == "prefix text"
-    assert payload["suffix"] == "suffix text"
+    assert "suffix" not in payload
 
 
 def test_log_includes_mode_for_fim_generation():
