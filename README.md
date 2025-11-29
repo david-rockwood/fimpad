@@ -45,6 +45,8 @@ When you start llama-server, set a higher context size than the default 4096. Tr
 
 Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad is configured to use by default.
 
+---
+
 Granite 4.0 H Small, a 32B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
@@ -59,6 +61,8 @@ Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
 ```
 https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
 ```
+
+---
 
 If you have a model that is capable of FIM, but uses unusual FIM control tokens, you can set the FIM tokens in the FIMpad settings window.
 
