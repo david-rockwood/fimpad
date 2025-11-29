@@ -95,7 +95,7 @@ If you want to load a model that does not yet have an entry in FIMpad Model Conf
 
 ## The Library menu
 
-The rightmost menu in FIMpad is the Library menu. The Library menu contains documentation, AI session templates, public domain books, and all of the examples that you will find in this README. When you select something in the Library menu, it opens as a new tab in FIMpad. The files in the Library menu are all .txt and .md files that are bundled with FIMpad.
+The rightmost menu in FIMpad is the Library menu. The Library menu contains documentation, chat starters, public domain books, and all of the examples that you will find in this README. When you select something in the Library menu, it opens as a new tab in FIMpad. The files in the Library menu are all .txt and .md files that are bundled with FIMpad.
 
 You will probably find it easier to load the examples below via the Library menu, since copying some of them from this webpage can give you leading spaces from the block quote formatting. Find the examples in Library -> README Examples.
 
