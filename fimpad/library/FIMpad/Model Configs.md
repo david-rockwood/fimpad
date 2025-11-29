@@ -23,7 +23,7 @@ These are the default FIM control token settings for FIMpad.
 ```
 [[[{
 "fim_prefix": "[PREFIX]",
-"fim_suffix": "[SUFFIX",
+"fim_suffix": "[SUFFIX]",
 "fim_middle": "[MIDDLE]",
 }]]]
 ```
