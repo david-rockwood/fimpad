@@ -22,7 +22,7 @@ python -m fimpad
 
 ## Overview
 
-FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill In the Middle) generation at any point in a text file. And if you are willing to type the control tokens, or use a template with these tokens already typed, you can have standard system/user/assistant chats with an instruct-tuned LLM.
+FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill In the Middle) generation at any point in a text file.
 
 ---
 
@@ -30,48 +30,39 @@ FIMpad is an AI sandbox and a text editor. The text editor is the interface to t
 
 FIMpad requires a connection to an LLM server that provides an OpenAI compatible endpoint. By default FIMpad looks for this endpoint at the base path of `http://localhost:8080`. This base path can be changed in the FIMpad settings window.
 
-Currently, FIMpad is only known to work with llama.cpp's llama-server serving the LLM. In the future, compatibility layers may be added to make FIMpad work with other servers, if there is demand for that.
+Currently, FIMpad is only known to work with llama.cpp's llama-server serving the LLM.
 
 A recent build of llama.cpp’s llama-server is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
-When you start llama-server, set a higher context size than the default 4096. Try 16000 or higher to start. Smaller runs faster; larger allows for longer documents and chats. Larger requires more RAM with CPU inference, or more VRAM with GPU inference.
+
+When you start llama-server, set a higher context size than the default 4096. Try 16000 or higher to start.
 
 ---
 
-## The Recommended LLM
+## FIM-capable LLMs
 
-The recommended LLM to use with FIMpad is IBM Granite 4.0 H Base. It seems to be the best smaller FIM-capable generalist model that I have found so far.
+Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad is configured to use by default.
 
-Use base models for FIM. Use instruct models for standard system/user/assistant chat.
-
-Granite 4.0 H Small is 32B parameters. Granite 4.0 H Tiny is 7B parameters. Both are MoE models and run faster than dense models of the same size. MoE models don’t activate all parameters at every step. This makes them generally faster with not much of a reduction in capability. With these two models, even without a GPU, you have a fast model in Granite Tiny and a less fast but smarter model in Granite Small.
-
-Granite Small Base is available at:
-```
-https://huggingface.co/ibm-granite/granite-4.0-h-small-base-GGUF/tree/main
-```
-Granite Tiny Base is available at:
-```
-https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF/tree/main
-```
-
-Granite Small Instruct is available at:
+Granite 4.0 H Small, a 32B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
 ```
 
-Granite Tiny Instruct is available at:
+Granite 4.0 H Tiny, a 7B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 ```
 
-## Configuring FIMpad for an LLM
+Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
+```
+https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
+```
 
-By default, FIMpad is configured for Granite 4.0 H Base, both the Small and Tiny versions. If you want to use a different model, select `Library -> FIMpad -> Model Configs` in the FIMpad menu.
+If you have a model that is capable of FIM, but uses unusual FIM control tokens, you can set the FIM tokens in the FIMpad settings window.
 
-If you want to load a model that does not yet have an entry in FIMpad Model Configs, figure out what FIM control tokens it uses, and set them in the FIMpad settings window.
+If you have a model that does not have FIM control tokens, you can still use FIMpad for completion. Just set the FIM tokens in the FIMpad settings window to empty strings, then only the prefix will be sent to the LLM server. With the FIM tokens set to empty strings, you can even do system/user/assistant chat with instruct models, if you put the chat template role tags in the prefix text that you send to the model.
 
 ---
 

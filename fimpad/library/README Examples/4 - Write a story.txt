@@ -1,7 +1,5 @@
 At this point in the README, you probably have not seen prefix and suffix tags. They are covered later in the README, but they are needed here so that I can include multiple independent examples in the same file. For now, just know that these tags constrain the range of prefix and suffix that is sent to the LLM, for the FIM tag that they enclose. Up until now, all the examples that you have seen have a prefix that ranges from the start of the file to the FIM tag, and a suffix that ranges from the FIM tag to the end of the file. Here, the prefix for a FIM tag starts at the nearest prefix tag above it, and suffix ends at the nearest suffix tag below the FIM tag.
 
-On to the examples.
-
 
 
 [[[PREFIX]]]

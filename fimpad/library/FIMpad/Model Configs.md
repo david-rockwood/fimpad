@@ -4,9 +4,9 @@ Place the caret within a config tag below and press Alt+= (or use the menu entry
 
 ---
 
-## IBM Granite 4.0 H Base (any parameter size)
+## Default FIM control Tokens
 
-These are the default FIM control token settings for FIMpad.
+These work with IBM Granite 4.0 H and Qwen 3 Coder 30B A3B.
 
 ```
 [[[{
@@ -18,21 +18,9 @@ These are the default FIM control token settings for FIMpad.
 
 ---
 
-## Mistral Small 3.1 Base
-
-```
-[[[{
-"fim_prefix": "[PREFIX]",
-"fim_suffix": "[SUFFIX]",
-"fim_middle": "[MIDDLE]",
-}]]]
-```
-
----
-
 ## Completion-only mode for any LLM
 
-If you want to use a model without FIM control tokens, apply the config tag below to make FIMpad run in completion-only mode. This way FIMpad will not send the LLM any FIM tokens that the LLM would misinterpret. This setting may also be useful for system/user/assistant chats with instruct models that do have FIM control tokens, because you want to run system/user/assistant chats as completions, not FIM.
+If you want to use a model without FIM control tokens, apply the config tag below to make FIMpad run in completion-only mode. This way FIMpad will not send the LLM any FIM tokens that the LLM would misinterpret, and it will not send suffix text. This setting may also be useful for system/user/assistant chats with instruct models that do have FIM control tokens, because you want to run system/user/assistant chats as completions, not FIM.
 
 ```
 [[[{

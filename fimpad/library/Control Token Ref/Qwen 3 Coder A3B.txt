@@ -4,8 +4,8 @@
   "padding": null,
   "added_tokens": [
     {
-      "id": 0,
-      "content": "<unk>",
+      "id": 151643,
+      "content": "<|endoftext|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -13,8 +13,8 @@
       "special": true
     },
     {
-      "id": 1,
-      "content": "<s>",
+      "id": 151644,
+      "content": "<|im_start|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -22,8 +22,8 @@
       "special": true
     },
     {
-      "id": 2,
-      "content": "</s>",
+      "id": 151645,
+      "content": "<|im_end|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -31,8 +31,8 @@
       "special": true
     },
     {
-      "id": 3,
-      "content": "[INST]",
+      "id": 151646,
+      "content": "<|object_ref_start|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -40,8 +40,8 @@
       "special": true
     },
     {
-      "id": 4,
-      "content": "[/INST]",
+      "id": 151647,
+      "content": "<|object_ref_end|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -49,8 +49,8 @@
       "special": true
     },
     {
-      "id": 5,
-      "content": "[AVAILABLE_TOOLS]",
+      "id": 151648,
+      "content": "<|box_start|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -58,8 +58,8 @@
       "special": true
     },
     {
-      "id": 6,
-      "content": "[/AVAILABLE_TOOLS]",
+      "id": 151649,
+      "content": "<|box_end|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -67,8 +67,8 @@
       "special": true
     },
     {
-      "id": 7,
-      "content": "[TOOL_RESULTS]",
+      "id": 151650,
+      "content": "<|quad_start|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -76,8 +76,8 @@
       "special": true
     },
     {
-      "id": 8,
-      "content": "[/TOOL_RESULTS]",
+      "id": 151651,
+      "content": "<|quad_end|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -85,8 +85,8 @@
       "special": true
     },
     {
-      "id": 9,
-      "content": "[TOOL_CALLS]",
+      "id": 151652,
+      "content": "<|vision_start|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -94,8 +94,8 @@
       "special": true
     },
     {
-      "id": 10,
-      "content": "[IMG]",
+      "id": 151653,
+      "content": "<|vision_end|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -103,8 +103,8 @@
       "special": true
     },
     {
-      "id": 11,
-      "content": "<pad>",
+      "id": 151654,
+      "content": "<|vision_pad|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -112,8 +112,8 @@
       "special": true
     },
     {
-      "id": 12,
-      "content": "[IMG_BREAK]",
+      "id": 151655,
+      "content": "<|image_pad|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -121,8 +121,8 @@
       "special": true
     },
     {
-      "id": 13,
-      "content": "[IMG_END]",
+      "id": 151656,
+      "content": "<|video_pad|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -130,57 +130,111 @@
       "special": true
     },
     {
-      "id": 14,
-      "content": "[PREFIX]",
+      "id": 151657,
+      "content": "<tool_call>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
     },
     {
-      "id": 15,
-      "content": "[MIDDLE]",
+      "id": 151658,
+      "content": "</tool_call>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
     },
     {
-      "id": 16,
-      "content": "[SUFFIX]",
+      "id": 151659,
+      "content": "<|fim_prefix|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
     },
     {
-      "id": 17,
-      "content": "[SYSTEM_PROMPT]",
+      "id": 151660,
+      "content": "<|fim_middle|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
     },
     {
-      "id": 18,
-      "content": "[/SYSTEM_PROMPT]",
+      "id": 151661,
+      "content": "<|fim_suffix|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
     },
     {
-      "id": 19,
-      "content": "[TOOL_CONTENT]",
+      "id": 151662,
+      "content": "<|fim_pad|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
       "normalized": false,
-      "special": true
+      "special": false
+    },
+    {
+      "id": 151663,
+      "content": "<|repo_name|>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
+    },
+    {
+      "id": 151664,
+      "content": "<|file_sep|>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
+    },
+    {
+      "id": 151665,
+      "content": "<tool_response>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
+    },
+    {
+      "id": 151666,
+      "content": "</tool_response>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
+    },
+    {
+      "id": 151667,
+      "content": "<think>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
+    },
+    {
+      "id": 151668,
+      "content": "</think>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": false
     }
 }
