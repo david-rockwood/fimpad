@@ -83,7 +83,7 @@ https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Instruct-2503-GGUF/tre
 
 ---
 
-## Configuring FIMpad for a LLM
+## Configuring FIMpad for an LLM
 
 By default, FIMpad is configured for Granite 4.0 H Base, both the Small and Tiny versions. If you want to use a different model, see the file that can be loaded through a FIMpad menu, at `Library -> FIMpad -> Model Configs`.
 
