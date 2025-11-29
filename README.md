@@ -38,17 +38,11 @@ When you start llama-server, set a higher context size than the default 4096. Tr
 
 ---
 
-## The LLMs
+## The Recommended LLMs
 
-The recommended models are IBM Granite 4.0 H Base and Mistral Small 3.1 Base. Both have FIM control tokens. Granite seems better for technical work, Mistral Small seems better for creative work.
+The recommended LLMs to use with FIMpad are IBM Granite 4.0 H Base and Mistral Small 3.1 Base. Both have FIM control tokens. Granite seems better for technical work, Mistral Small seems better for creative work.
 
-Base models are better than instruct models for FIM, though both can do FIM. For system/user/assistant completion chat, you need an instruct model.
-
-Models without FIM control tokens will work with FIMpad, in completion mode; in other words, if there is no suffix. But with a suffix, FIM control tokens are sent to the LLM, and if the LLM does not recognize the FIM control tokens, it interprets them as plain text, which confuses the response from the LLM. FIMpad provides a way to to disable FIM, but then you will only get completions of the prefix; the responses will not be influenced by the suffix.
-
-By default, FIMpad is set up to use the FIM tokens for IBM Granite 4.0 H. To get other models with different FIM tokens to work with FIMpad, you have to go into the FIMpad settings window and change the FIM tokens that it sends to the LLM server. For any model you want to try, go to the HuggingFace "Files and versions" page for that model, look in the tokenizer.json file, search for "fim", and if you find FIM tokens for prefix, suffix, and middle, set those in the FIMpad settings window.
-
-There are also loadable configuration settings for Granite, Mistral Small, and completion-only mode at `Library -> FIMpad -> FIMpad Model Configs`. For other models you will need to follow the instructions above to manually configure FIMpad.
+Use base models for FIM. Use instruct models for standard system/user/assistant chat.
 
 ### Granite 4.0 H
 
@@ -86,6 +80,14 @@ Mistral Small Instruct is available at:
 ```
 https://huggingface.co/mradermacher/Mistral-Small-3.1-24B-Instruct-2503-GGUF/tree/main
 ```
+
+---
+
+## Configuring FIMpad for a LLM
+
+By default, FIMpad is configured for Granite 4.0 H Base, both the Small and Tiny versions. If you want to use a different model, see the file that can be loaded through a FIMpad menu, at `Library -> FIMpad -> Model Configs`.
+
+If you want to load a model that does not yet have an entry in FIMpad Model Configs, figure out what FIM control tokens it uses, and set them in the FIMpad settings window.
 
 ---
 
