@@ -767,15 +767,18 @@ class FIMPad(tk.Tk):
         if fim_request.use_completion:
             prefix_text = fim_request.before_region
             suffix_text = fim_request.safe_suffix
+            mode = "completion generation"
         else:
             prefix_text = f"{self.cfg['fim_prefix']}{fim_request.before_region}"
             suffix_text = (
                 f"{self.cfg['fim_suffix']}{fim_request.safe_suffix}{self.cfg['fim_middle']}"
             )
+            mode = "FIM generation"
 
         entry = {
             "time": timestamp,
             "tag": fim_request.marker.raw,
+            "mode": mode,
             "prefix": prefix_text,
             "suffix": suffix_text,
             "response": response,
