@@ -115,13 +115,6 @@ class FIMPad(tk.Tk):
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
 
-        for idx in range(1, 10):
-            self.bind_all(
-                f"<Alt-Key-{idx}>",
-                lambda e, index=idx - 1: self._select_tab_by_index(index),
-            )
-        self.bind_all("<Alt-Key-0>", lambda e: self._select_tab_by_index(9))
-
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _persist_config(self) -> None:
@@ -219,6 +212,12 @@ class FIMPad(tk.Tk):
         add("<Alt-i>", self.interrupt_stream)
         add("<Alt-v>", self.validate_tags_current)
         add("<Alt-l>", self.show_fim_log)
+
+        for idx in range(1, 10):
+            add(f"<Alt-Key-{idx}>", lambda idx=idx - 1: self._select_tab_by_index(idx))
+        add("<Alt-Key-0>", lambda: self._select_tab_by_index(9))
+        add("<Control-Prior>", lambda: self._select_tab_by_offset(-1))
+        add("<Control-Next>", lambda: self._select_tab_by_offset(1))
 
     def _disable_builtin_text_shortcuts(self, text: tk.Text) -> None:
         allowed = {
@@ -993,6 +992,17 @@ class FIMPad(tk.Tk):
         if index < 0 or index >= len(tabs):
             return
         self.nb.select(tabs[index])
+
+    def _select_tab_by_offset(self, offset: int) -> None:
+        tabs = self.nb.tabs()
+        if not tabs:
+            return
+        try:
+            cur_index = tabs.index(self.nb.select())
+        except ValueError:
+            return
+        next_index = (cur_index + offset) % len(tabs)
+        self.nb.select(tabs[next_index])
 
     # ---------- Menu / Toolbar ----------
 
