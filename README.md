@@ -70,7 +70,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 
 ---
 
-If you have a model that is capable of FIM, but uses unusual FIM control tokens, you can set the FIM tokens in the FIMpad settings window.
+If you have a model that is capable of FIM, but it uses unusual FIM control tokens, you can set the FIM tokens in the FIMpad settings window.
 
 If you have a model that does not have FIM control tokens, you can still use FIMpad for completion. To do this, set the FIM tokens in the FIMpad settings window to empty strings. Then only the prefix will be sent to the LLM server. With the FIM tokens set to empty strings, you can also do system/user/assistant chat with instruct models, if you put the chat template role tokens in the prefix text.
 
