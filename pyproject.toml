@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fimpad"
-version = "0.0.5"
-description = "A lightweight text editor that can do LLM FIM (fill-in-the-middle) and chat within a txt file."
+version = "0.0.7"
+description = "FIMpad is a FIM-focused local LLM interface in the form of a tabbed GUI text editor. "
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
