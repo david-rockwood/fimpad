@@ -227,7 +227,7 @@ If more than one stop sequence is given, like this:
 
 then the model will stop at the first stop sequence that the LLM generates, if any. If neither of the stop sequences are generated, the LLM will stream text until it finishes or hits max tokens. But in the example above, since I establish a regular pattern of speaker label alternation, "Chauncey: " is very likely to appear when the LLM completes this prefix.
 
-(There is another FIM tag function called `chop()` that does the same thing as `stop()`, except it discards the stop sequence, so that last thing streamed into the text editor is the last character that was generated before the stop sequence.)
+(There is another FIM tag function called `chop()` that does the same thing as `stop()`, except it discards the stop sequence, so that the last thing streamed into the text editor is the last character that was generated before the stop sequence.)
 
 The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select `AI -> Paste Last FIM Tag` in the menu) and the last FIM tag that you executed will be pasted at the current position of the caret.
 
