@@ -173,6 +173,15 @@ class FIMPad(tk.Tk):
 
         return handler
 
+    @staticmethod
+    def _normalize_sequence(seq: str) -> str:
+        return (
+            seq.replace("KeyPress-", "")
+            .replace("KeyRelease-", "")
+            .replace("Key-", "")
+            .lower()
+        )
+
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
@@ -210,6 +219,40 @@ class FIMPad(tk.Tk):
         add("<Alt-i>", self.interrupt_stream)
         add("<Alt-v>", self.validate_tags_current)
         add("<Alt-l>", self.show_fim_log)
+
+    def _disable_builtin_text_shortcuts(self, text: tk.Text) -> None:
+        allowed = {
+            "<home>",
+            "<end>",
+            "<control-home>",
+            "<control-end>",
+            "<shift-home>",
+            "<shift-end>",
+            "<control-shift-home>",
+            "<control-shift-end>",
+        }
+        custom_shortcuts = {
+            self._normalize_sequence(seq) for seq, _handler in self._text_shortcut_bindings
+        }
+        swallow = lambda _e: "break"
+        try:
+            class_sequences = text.bind_class("Text") or []
+        except tk.TclError:
+            return
+
+        for sequence in class_sequences:
+            normalized = self._normalize_sequence(sequence)
+            if normalized in allowed:
+                continue
+            if not any(
+                modifier in normalized
+                for modifier in ("<control-", "<alt-", "<meta-", "<command-", "<option-")
+            ):
+                continue
+            if normalized in custom_shortcuts:
+                continue
+            text.bind(sequence, swallow)
+            text.bind(normalized, swallow)
 
     def _bind_shortcuts_to_text(self, text: tk.Text) -> None:
         for sequence, handler in self._text_shortcut_bindings:
@@ -619,6 +662,7 @@ class FIMPad(tk.Tk):
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
+        self._disable_builtin_text_shortcuts(text)
         self._bind_shortcuts_to_text(text)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
