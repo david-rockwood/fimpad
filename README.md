@@ -1,5 +1,9 @@
 # FIMpad
 
+
+https://github.com/user-attachments/assets/4a998eb3-a97a-4744-bc49-66a94b9f11a2
+
+
 FIMpad is a FIM-focused local LLM interface in the form of a tabbed GUI text editor.
 
 FIMpad is currently only tested on Linux, using llama.cpp's llama-server to serve LLMs.
