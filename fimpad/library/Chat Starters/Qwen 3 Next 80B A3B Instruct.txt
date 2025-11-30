@@ -1,7 +1,0 @@
-<|im_start|>system
-You are a helpful assistant.
-<|im_end|>
-
-<|im_start|>user
-EDIT USER PROMPT HERE
-[[[8000;prepend("<|im_end|>\n\n<|im_start|>assistant\n");append("\n<|im_end|>\n\n<|im_start|>user\n")]]]
