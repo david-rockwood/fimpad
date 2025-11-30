@@ -272,15 +272,19 @@
 Granite 4.0 introduces a hybrid Mamba-2/transformer architecture, with a Mixture-of-Experts (MoE) strategy in select models, delivering more than 70% lower memory requirements and 2x faster inference speeds compared to similar models, particularly in multi-session and long-context scenarios. The models deliver strong performance across benchmarks, with Granite 4.0 Small achieving industry-leading results in key agentic tasks like instruction following and function calling. These efficiencies make the models well-suited for a wide range of use cases like retrieval-augmented generation (RAG), multi-agent workflows, and edge deployments. Granite 4.0 is released under Apache 2.0, cryptographically signed for authenticity, and the first open model family certified under ISO 42001.
 
 ### Models
-Model	Architecture Type	Model Size	Intended Use
-Granite-4.0-H-Small Granite H Small	Hybrid, Mixture of Experts	32B total / 9B activated	Workhorse model for key enterprise tasks like RAG and agents
-Granite-4.0-H-Tiny Granite H Tiny	Hybrid, Mixture of Experts	7B total / 1B activated	Designed for low latency and local applications, particularly where the task has long prefill or other scenarios where a MoE model is desired
-Granite-4.0-H-Micro Granite H Micro	Hybrid, Dense	3B total	Designed for low latency and local applications, and as a building block to perform key tasks (like function calling) quickly within agentic workflows
-Granite-4.0-Micro Granite Micro	Traditional, Dense	3B total	Alternative option for users when Mamba2 support is not yet optimized (e.g. llama.cpp, PEFT, etc)
-Granite-4.0-H-1B Granite H 1B	Dense, Hybrid	1.5B	Ideal models for edge, on-device, and latency-sensitive use cases
-Granite-4.0-1B Granite 1B Hybrid	Dense, Traditional	1B	Alternative option for users when Mamba2 support is not yet optimized (e.g. llama.cpp, PEFT, etc)
-Granite-4.0-H-350M Granite H 350M	Dense, Hybrid	350M	Similar use cases as Granite-4.0-H-1B, but even smaller and cheaper to run
-Granite-4.0-350M Granite 350M Hybrid	Dense, Traditional	350M	Alternative option for users when Mamba2 support is not yet optimized (e.g. llama.cpp, PEFT, etc)
+### Models
+
+| Model Name               | Internal Name       | Architecture Type          | Model Size                 | Intended Use                                                                                 |
+|--------------------------|---------------------|-----------------------------|-----------------------------|-----------------------------------------------------------------------------------------------|
+| Granite-4.0-H-Small      | Granite H Small     | Hybrid, Mixture of Experts  | 32B total / 9B activated    | Workhorse model for enterprise tasks like RAG and agents                                      |
+| Granite-4.0-H-Tiny       | Granite H Tiny      | Hybrid, Mixture of Experts  | 7B total / 1B activated     | Designed for low latency and local applications; good when MoE inference is desired           |
+| Granite-4.0-H-Micro      | Granite H Micro     | Hybrid, Dense               | 3B total                   | Low latency, local tasks, and fast submodules inside agentic workflows                        |
+| Granite-4.0-Micro        | Granite Micro       | Traditional, Dense          | 3B total                   | Alternative to H-Micro for environments without optimized Mamba2 support (e.g., llama.cpp)    |
+| Granite-4.0-H-1B         | Granite H 1B        | Dense, Hybrid               | 1.5B                       | Ideal for edge/on-device tasks and latency-sensitive applications                             |
+| Granite-4.0-1B           | Granite 1B Hybrid   | Dense, Traditional          | 1B                         | Alternative option when Mamba2 optimizations aren’t available                                 |
+| Granite-4.0-H-350M       | Granite H 350M      | Dense, Hybrid               | 350M                       | Smaller, cheaper-to-run model for similar use cases as H-1B                                    |
+| Granite-4.0-350M         | Granite 350M Hybrid | Dense, Traditional          | 350M                       | Alternative option when Mamba2 support is not yet optimized                                    |
+
 ​
 ### Inference Examples​
 ```
