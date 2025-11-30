@@ -47,11 +47,12 @@ Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad 
 
 ---
 
-Qwen 3 Next 80B A3B Instruct, an MoE, (the IQ 2 M quantization level of this one is surprisingly good, worth a try if you are generating on CPU) is available at:
+Qwen 3 Next 80B A3B Instruct, an MoE, is available at:
 
 ```
 https://huggingface.co/bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF/tree/main
 ```
+(The IQ 2 M quantization level of Qwen 3 Next 80B A3B Instruct is surprisingly good, worth a try if you using a computer that can't handle this model at Q 4.)
 
 Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
 ```
