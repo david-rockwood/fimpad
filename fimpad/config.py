@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+import time
 
 APP_DIR = os.path.expanduser("~/.fimpad")
 CONFIG_PATH = os.path.join(APP_DIR, "config.json")
@@ -56,22 +57,31 @@ def load_config() -> dict:
         if not os.path.exists(CONFIG_PATH):
             save_config(DEFAULTS)
             return DEFAULTS.copy()
+
         with open(CONFIG_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        changed = False
-        for k in list(data):
-            if k in deprecated_keys:
-                data.pop(k, None)
-                changed = True
-        for k, v in DEFAULTS.items():
-            if k not in data:
-                data[k] = v
-                changed = True
-        if changed:
-            save_config(data)
-        return data
+            raw_data = json.load(f)
+        if not isinstance(raw_data, dict):
+            raise ValueError("Config file must contain a JSON object.")
+        data = raw_data
+    except (json.JSONDecodeError, ValueError):
+        _backup_corrupt_config()
+        save_config(DEFAULTS)
+        return DEFAULTS.copy()
     except Exception:
         return DEFAULTS.copy()
+
+    changed = False
+    for k in list(data):
+        if k in deprecated_keys:
+            data.pop(k, None)
+            changed = True
+    for k, v in DEFAULTS.items():
+        if k not in data:
+            data[k] = v
+            changed = True
+    if changed:
+        save_config(data)
+    return data
 
 
 def save_config(cfg: dict) -> None:
@@ -87,3 +97,21 @@ def save_config(cfg: dict) -> None:
         with contextlib.suppress(Exception):
             os.unlink(tmp_path)
         raise ConfigSaveError(f"Failed to save config to {CONFIG_PATH}: {exc}") from exc
+
+
+def _backup_corrupt_config() -> None:
+    """Preserve a corrupted config file before overwriting it.
+
+    If anything goes wrong during backup we silently continue because recovery
+    should not prevent the app from starting with default settings.
+    """
+
+    if not os.path.exists(CONFIG_PATH):
+        return
+
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    ms = int(time.time() * 1000) % 1000
+    backup_name = f"config.json.corrupt-{ts}-{ms:03d}"
+    backup_path = os.path.join(APP_DIR, backup_name)
+    with contextlib.suppress(Exception):
+        os.replace(CONFIG_PATH, backup_path)
