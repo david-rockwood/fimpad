@@ -98,7 +98,7 @@ See how a FIM tag looks before you execute it below.
 
 Here, 50 is the max number of tokens that the LLM will be allowed to generate when the FIM tag is executed.
 
-To execute the FIM tag, first place the caret within the FIM tag, or immediately at the end of the tag after the last closing bracket. The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
+To execute the FIM tag, first place the caret within the FIM tag, or immediately after the last closing bracket. The caret is the blinking marker for the position within the text that you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
 
 With the caret within or immediately after the FIM tag, execute the tag by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
 
