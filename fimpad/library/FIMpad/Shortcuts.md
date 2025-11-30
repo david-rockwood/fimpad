@@ -2,11 +2,7 @@
 
 ---
 
-## Application shortcuts
-
----
-
-### File menu shortcuts
+## File menu shortcuts
 
 Ctrl+N - New Tab
 
@@ -22,7 +18,7 @@ Ctrl+Q - Quit
 
 ---
 
-### Edit menu shortcuts
+## Edit menu shortcuts
 
 Ctrl+Z - Undo
 
@@ -48,7 +44,7 @@ Ctrl+G - Open Settings Window
 
 ---
 
-### Toggle menu shortcuts
+## Toggle menu shortcuts
 
 Alt+W - Toggle Word Wrap
 
@@ -60,7 +56,7 @@ Alt+S - Toggle Spellchecking
 
 ---
 
-### AI menu shortcuts
+## AI menu shortcuts
 
 Alt+G - Generate
 
@@ -80,7 +76,7 @@ Alt+L - Show Log
 
 ---
 
-### Shorcuts not availble through the menus
+## Shorcuts not availble through the menus
 
 Alt+(a number key) - Switch To Tab
 
