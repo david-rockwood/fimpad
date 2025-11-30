@@ -234,7 +234,7 @@ class FIMPad(tk.Tk):
         custom_shortcuts = {
             self._normalize_sequence(seq) for seq, _handler in self._text_shortcut_bindings
         }
-        def swallow(_event: tk.Event[tk.Misc] | None = None) -> str:
+        def swallow(_event: tk.Event | None = None) -> str:
             return "break"
         try:
             class_sequences = text.bind_class("Text") or []
