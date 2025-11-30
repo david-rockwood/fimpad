@@ -8,8 +8,6 @@ FIMpad is a FIM-focused local LLM interface in the form of a tabbed GUI text edi
 
 FIMpad is currently only tested on Linux, using llama.cpp's llama-server to serve LLMs.
 
-**Latest release:** v0.0.7 — First public release (Nov 2025)
-
 If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that makes this possible.
 
 ---
