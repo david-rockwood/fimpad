@@ -42,6 +42,8 @@ Alt+/ - Find & Replace
 
 Alt+. - Regex & Replace
 
+Alt+\ - BOL (Beginning Of Line) Tool
+
 Alt+; - Open Settings Window
 
 ---
