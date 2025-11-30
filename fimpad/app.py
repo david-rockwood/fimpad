@@ -253,7 +253,6 @@ class FIMPad(tk.Tk):
             if normalized in custom_shortcuts:
                 continue
             text.bind(sequence, swallow)
-            text.bind(normalized, swallow)
 
     def _bind_shortcuts_to_text(self, text: tk.Text) -> None:
         for sequence, handler in self._text_shortcut_bindings:
