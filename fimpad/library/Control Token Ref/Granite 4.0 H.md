@@ -324,7 +324,7 @@ Consider the following points to build promts for tool-calling tasks:
 - Granite 4.0 chat template automatically returns tool calls between <tool_call> and </tool_call> tags within the assistant turn. Refer to the Chat Template Design section for examples.
 - The Granite 4.0 chat template converts content from tool role into a user role, where tool responses appear between <tool_response> and </tool_response> tags. This conversion occurs automatically when using libraries that apply the chat template for you. However, users who build prompts directly in Jinja must ensure that tool responses are formatted according to the Granite 4.0 chat template. Please, refer to the Chat Template Design section for examples.
 
-### RAG:
+### RAG
 ```
 <|start_of_role|>system<|end_of_role|>You are a helpful assistant with access to the following documents. You may use one or more documents to assist with the user query.
 
