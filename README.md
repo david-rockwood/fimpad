@@ -54,15 +54,21 @@ https://huggingface.co/bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF/tree/main
 ```
 (The IQ 2 M quantization level of Qwen 3 Next 80B A3B Instruct is surprisingly good, worth a try if you using a computer that can't handle this model at Q 4.)
 
+---
+
 Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
 ```
 https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
 ```
 
+---
+
 IBM Granite 4.0 H Small, a 32B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
 ```
+
+---
 
 IBM Granite 4.0 H Tiny, a 7B MoE, is available at:
 ```
