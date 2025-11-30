@@ -76,7 +76,7 @@ Alt+L - Show Log
 
 ---
 
-## Shorcuts not availble through the menus
+## Shortcuts that do not have menu entries
 
 Alt+(a number key) - Switch To Tab
 
