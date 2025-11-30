@@ -285,7 +285,7 @@ Granite 4.0 introduces a hybrid Mamba-2/transformer architecture, with a Mixture
 | Granite-4.0-350M         | Granite 350M Hybrid | Dense, Traditional          | 350M                       | Alternative option when Mamba2 support is not yet optimized                                    |
 
 ​
-### Inference Examples​
+### Inference examples​
 ```
 <|start_of_role|>user<|end_of_role|>What is the largest ocean on Earth?<|end_of_text|>
 <|start_of_role|>assistant<|end_of_role|>The largest ocean on Earth is the Pacific Ocean. It covers an area of about 63.8 million square miles (165.25 million square kilometers), which is more than twice the size of the second-largest ocean, the Atlantic Ocean. The Pacific Ocean lies between the Americas to the east and Asia and Australia to the west.<|end_of_text|>
