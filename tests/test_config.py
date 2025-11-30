@@ -49,3 +49,41 @@ def test_save_config_restores_on_replace_failure(
         assert json.load(f) == {"original": True}
 
     assert not list(app_dir.glob("config.*.tmp"))
+
+
+def test_load_config_backs_up_corrupt_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app_dir = _use_temp_config(monkeypatch, tmp_path)
+    cfg_path = Path(config.CONFIG_PATH)
+    app_dir.mkdir(parents=True, exist_ok=True)
+    cfg_path.write_text("{not:json", encoding="utf-8")
+
+    loaded = config.load_config()
+
+    assert loaded == config.DEFAULTS
+    backups = sorted(app_dir.glob("config.json.corrupt-*"))
+    assert backups, "corrupt config should be preserved"
+    assert backups[0].read_text(encoding="utf-8") == "{not:json"
+
+    with cfg_path.open(encoding="utf-8") as f:
+        assert json.load(f) == config.DEFAULTS
+
+
+def test_load_config_recovers_non_object(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app_dir = _use_temp_config(monkeypatch, tmp_path)
+    cfg_path = Path(config.CONFIG_PATH)
+    app_dir.mkdir(parents=True, exist_ok=True)
+    cfg_path.write_text("[]", encoding="utf-8")
+
+    loaded = config.load_config()
+
+    assert loaded == config.DEFAULTS
+    backups = sorted(app_dir.glob("config.json.corrupt-*"))
+    assert backups, "non-object config should be backed up"
+    assert backups[0].read_text(encoding="utf-8") == "[]"
+
+    with cfg_path.open(encoding="utf-8") as f:
+        assert json.load(f) == config.DEFAULTS
