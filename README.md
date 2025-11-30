@@ -116,7 +116,7 @@ In the prior example there was no text after the FIM tag, so it was generated as
 
 With FIM tags, text that appears before the FIM tag is *prefix*. Text that appears after the tag is *suffix*.
 
-Let's look at an example that generates a Bash script. It uses a technique that you might call "declare what follows." In the prefix, describe what you want to be generated after the tag. Then optionally give a suffix that is something you would expect to see come after it. See below, before the FIM tag is executed.
+Let's look at an example that generates a Bash script. It uses a technique that you might call "declare what follows." In the prefix, describe what you want to be generated at the tag. Then optionally give a suffix that is something you would expect to see come after it. See below, before the FIM tag is executed.
 
 ```
 #!/bin/bash
