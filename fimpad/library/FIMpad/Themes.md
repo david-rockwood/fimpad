@@ -1,6 +1,6 @@
 # FIMpad Themes
 
-Place your caret within in a config tag below and press Alt+= (or use the menu entry at AI -> Apply Config Tag) to apply it. This will change the colors in your text editor.
+Place your caret within in a config tag below and press Alt+C (or use the menu entry at AI -> Apply Config Tag) to apply it. This will change the colors in your text editor.
 
 ---
 
