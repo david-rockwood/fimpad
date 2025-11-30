@@ -60,11 +60,10 @@ pip install -e ".[dev]"
 
 - Lightweight editor
 
-- FIM generation only. No (system prompt / user prompt / assistant response) chats.
-
 - No heavy dependencies
 
 - Python-only
 
 - Local LLM workflow assumed
+
 
