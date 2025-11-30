@@ -70,7 +70,7 @@ Alt+P - Paste Last FIM Tag
 
 Alt+C - Apply Config Tag
 
-Alt+- - Paste Current Config
+Alt+J - Paste Current Config
 
 Alt+I - Interrupt Stream
 

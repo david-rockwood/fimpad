@@ -215,7 +215,7 @@ class FIMPad(tk.Tk):
         add("<Alt-r>", self.repeat_last_fim)
         add("<Alt-p>", self.paste_last_fim_tag)
         add("<Alt-c>", self.apply_config_tag)
-        add("<Alt-minus>", self.paste_current_config)
+        add("<Alt-j>", self.paste_current_config)
         add("<Alt-i>", self.interrupt_stream)
         add("<Alt-v>", self.validate_tags_current)
         add("<Alt-l>", self.show_fim_log)
@@ -1126,7 +1126,7 @@ class FIMPad(tk.Tk):
         )
         aimenu.add_command(
             label="Paste Current Config",
-            accelerator="Alt+-",
+            accelerator="Alt+J",
             command=self.paste_current_config,
         )
         aimenu.add_command(
