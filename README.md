@@ -47,6 +47,17 @@ Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad 
 
 ---
 
+Qwen 3 Next 80B A3B Instruct, an MoE, is available at:
+(The IQ 2 M quantization level of this one is not bad at all, worth a try if you are generating on CPU.)
+```
+https://huggingface.co/bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF/tree/main
+```
+
+Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
+```
+https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
+```
+
 IBM Granite 4.0 H Small, a 32B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
@@ -55,11 +66,6 @@ https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
 IBM Granite 4.0 H Tiny, a 7B MoE, is available at:
 ```
 https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
-```
-
-Qwen 3 Coder 30B A3B Instruct, an MoE, is available at:
-```
-https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
 ```
 
 ---
