@@ -86,7 +86,7 @@ If you have a model that is capable of FIM, but it uses unusual FIM control toke
 
 If you have a model that does not have FIM control tokens, you can still use FIMpad for completion. To do this, set the FIM tokens in the FIMpad settings window to empty strings. Then only the prefix will be sent to the LLM server. With the FIM tokens set to empty strings, you can also do system/user/assistant chat with instruct models, if you put the chat template role tokens in the prefix text.
 
-If you ever want to check if your suffix is actually being sent to the LLM server, check the log by pressing Alt+, (or use the menu entry at `AI -> Show Log`.) The logged events are one JSON object per generation. Log events have a "mode" name that will have a value of either "completion generation" or "FIM generation". Additionally, completion generation events will not have a "suffix" name or associated value.
+If you ever want to check if your suffix is actually being sent to the LLM server, check the log by pressing Alt+L (or use the menu entry at `AI -> Show Log`.) The logged events are one JSON object per generation. Log events have a "mode" name that will have a value of either "completion generation" or "FIM generation". Additionally, completion generation events will not have a "suffix" name or associated value.
 
 ---
 
@@ -110,7 +110,7 @@ Here, 50 is the max number of tokens that the LLM will be allowed to generate wh
 
 To execute the FIM tag, first place the caret within the FIM tag, or immediately after the last closing bracket. The caret is the blinking marker for the position within the text where you are typing. (Many also call this a cursor, but in FIMpad the term caret is used to disambiguate between the text cursor and the mouse cursor.)
 
-With the caret within or immediately after the FIM tag, execute the tag by pressing Alt+[ (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
+With the caret within or immediately after the FIM tag, execute the tag by pressing Alt+G (or select `AI -> Generate` in the menu.) The FIM tag will be deleted, and FIMpad will send the text before the tag to the LLM server as prefix text, and then the LLM server will respond with 50 or fewer tokens that the LLM deems most likely to appear after the prefix. The response will be streamed into the text editor starting at the location where the FIM tag was before it was deleted. When the response completes, it will look something like this:
 
 > Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
 > 
@@ -239,7 +239,7 @@ then the model will stop at the first stop sequence that the LLM generates, if a
 
 (There is another FIM tag function called `chop()` that does the same thing as `stop()`, except it discards the stop sequence, so that the last thing streamed into the text editor is the last character that was generated before the stop sequence.)
 
-The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+] (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+' (or select `AI -> Paste Last FIM Tag` in the menu) and the last FIM tag that you executed will be pasted at the current position of the caret.
+The other function in the tag is `append()`. This function appends text after the LLM's generation. I'm using it to append two newlines and then the "Fiona: " label, so I won't need to type Fiona's label every turn. I can just click after the "Chauncey: " label, type my message, then click after the "Fiona: " label and press Alt+R (or select `AI -> Repeat Last FIM` in the menu) to repeat the last executed FIM tag at the current position of the caret. If you ever want to modify the last FIM tag before executing it, you can press Alt+P (or select `AI -> Paste Last FIM Tag` in the menu) and the last FIM tag that you executed will be pasted at the current position of the caret.
 
 Anyway, let's see how this example plays out after generation.
 
@@ -339,7 +339,7 @@ after generation:
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer, he could hear the laughter more clearly, and it sounded like it was coming from inside the enclosure.
 
-Keep in mind that when you get a generation that you don't like, you can simply press Alt+U to undo the generation. Then press Alt+[ to generate again. Because of the semi-random variation in LLM responses, you can step through dozens of variations until you land on one that you like.
+Keep in mind that when you get a generation that you don't like, you can simply press Ctrl+Z to undo the generation. Then press Alt+G to generate again. Because of the semi-random variation in LLM responses, you can step through dozens of variations until you land on one that you like.
 
 ---
 

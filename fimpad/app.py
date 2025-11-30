@@ -87,6 +87,8 @@ class FIMPad(tk.Tk):
         self._wrap_menu_var: tk.BooleanVar | None = None
         self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
+        self._text_shortcut_bindings: list[tuple[str, Callable[[tk.Event], str | None]]] = []
+        self._register_shortcuts()
         self._build_menu()
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
@@ -112,36 +114,6 @@ class FIMPad(tk.Tk):
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
-
-        # Keys
-        self.bind_all("<Alt-t>", lambda e: self._new_tab())
-        self.bind_all("<Alt-o>", lambda e: self._open_file_into_current())
-        self.bind_all("<Alt-s>", lambda e: self._save_file_current())
-        self.bind_all("<Alt-a>", lambda e: self._save_file_as_current())
-        self.bind_all("<Alt-q>", lambda e: self._on_close())
-        self.bind_all("<Alt-u>", lambda e: self._event_on_current_text("<<Undo>>"))
-        self.bind_all("<Alt-r>", lambda e: self._event_on_current_text("<<Redo>>"))
-        self.bind_all("<Alt-backslash>", lambda e: self._open_bol_tool())
-        self.bind_all("<Alt-slash>", lambda e: self._open_replace_dialog())
-        self.bind_all("<Alt-period>", lambda e: self._open_regex_replace_dialog())
-        # Tk text widgets already include standard bindings (Ctrl+C/X/V, Ctrl+A, Delete).
-        # Avoid re-binding them here because double bindings cause duplicated actions
-        # (for example, pasting twice). If you want to change those defaults, adjust
-        # the widget configuration rather than adding new global bindings.
-        self.bind_all("<Alt-w>", lambda e: self._toggle_wrap_current())  # wrap toggle
-        self.bind_all("<Alt-m>", lambda e: self._toggle_follow_stream())  # follow toggle
-        self.bind_all("<Alt-p>", lambda e: self._toggle_spellcheck())  # spell toggle
-        self.bind_all("<Alt-l>", lambda e: self._toggle_line_numbers())  # line numbers
-        self.bind_all("<Alt-bracketleft>", self._on_generate_shortcut)
-        self.bind_all("<Alt-equal>", self._on_apply_config_tag_shortcut)
-        self.bind_all("<Alt-minus>", self._on_paste_current_config_shortcut)
-        self.bind_all("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
-        self.bind_all("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
-        self.bind_all("<Alt-Escape>", self._on_interrupt_stream)
-        self.bind_all("<Alt-comma>", self._on_show_fim_log_shortcut)
-        self.bind_all("<Alt-grave>", self._on_validate_tags_shortcut)
-        self.bind_all("<Alt-c>", lambda e: self._close_current_tab())  # close tab
-        self.bind_all("<Alt-semicolon>", lambda e: self._open_settings())
 
         for idx in range(1, 10):
             self.bind_all(
@@ -191,6 +163,100 @@ class FIMPad(tk.Tk):
                     self.state("normal")
                 except tk.TclError:
                     self.attributes("-zoomed", False)
+
+    def _make_shortcut_handler(
+        self, callback: Callable[[], None]
+    ) -> Callable[[tk.Event], str]:
+        def handler(_event: tk.Event | None = None) -> str:
+            callback()
+            return "break"
+
+        return handler
+
+    @staticmethod
+    def _normalize_sequence(seq: str) -> str:
+        return (
+            seq.replace("KeyPress-", "")
+            .replace("KeyRelease-", "")
+            .replace("Key-", "")
+            .lower()
+        )
+
+    def _register_shortcuts(self) -> None:
+        self._text_shortcut_bindings.clear()
+
+        def add(sequence: str, callback: Callable[[], None]) -> None:
+            handler = self._make_shortcut_handler(callback)
+            self.bind_all(sequence, handler, add="+")
+            self._text_shortcut_bindings.append((sequence, handler))
+
+        add("<Control-n>", self._new_tab)
+        add("<Control-o>", self._open_file_into_current)
+        add("<Control-s>", self._save_file_current)
+        add("<Control-Shift-s>", self._save_file_as_current)
+        add("<Control-w>", self._close_current_tab)
+        add("<Control-q>", self._on_close)
+        add("<Control-z>", lambda: self._event_on_current_text("<<Undo>>"))
+        add("<Control-Shift-z>", lambda: self._event_on_current_text("<<Redo>>"))
+        add("<Control-x>", lambda: self._event_on_current_text("<<Cut>>"))
+        add("<Control-c>", lambda: self._event_on_current_text("<<Copy>>"))
+        add("<Control-v>", lambda: self._event_on_current_text("<<Paste>>"))
+        add("<Delete>", lambda: self._event_on_current_text("<<Clear>>"))
+        add("<Control-a>", self._select_all_current)
+        add("<Control-f>", self._open_replace_dialog)
+        add("<Control-r>", self._open_regex_replace_dialog)
+        add("<Control-b>", self._open_bol_tool)
+        add("<Control-g>", self._open_settings)
+        add("<Alt-w>", self._toggle_wrap_current)
+        add("<Alt-f>", self._toggle_follow_stream)
+        add("<Alt-n>", self._toggle_line_numbers)
+        add("<Alt-s>", self._toggle_spellcheck)
+        add("<Alt-g>", self.generate)
+        add("<Alt-r>", self.repeat_last_fim)
+        add("<Alt-p>", self.paste_last_fim_tag)
+        add("<Alt-c>", self.apply_config_tag)
+        add("<Alt-j>", self.paste_current_config)
+        add("<Alt-i>", self.interrupt_stream)
+        add("<Alt-v>", self.validate_tags_current)
+        add("<Alt-l>", self.show_fim_log)
+
+    def _disable_builtin_text_shortcuts(self, text: tk.Text) -> None:
+        allowed = {
+            "<home>",
+            "<end>",
+            "<control-home>",
+            "<control-end>",
+            "<shift-home>",
+            "<shift-end>",
+            "<control-shift-home>",
+            "<control-shift-end>",
+        }
+        custom_shortcuts = {
+            self._normalize_sequence(seq) for seq, _handler in self._text_shortcut_bindings
+        }
+        def swallow(_event: tk.Event | None = None) -> str:
+            return "break"
+        try:
+            class_sequences = text.bind_class("Text") or []
+        except tk.TclError:
+            return
+
+        for sequence in class_sequences:
+            normalized = self._normalize_sequence(sequence)
+            if normalized in allowed:
+                continue
+            if not any(
+                modifier in normalized
+                for modifier in ("<control-", "<alt-", "<meta-", "<command-", "<option-")
+            ):
+                continue
+            if normalized in custom_shortcuts:
+                continue
+            text.bind(sequence, swallow)
+
+    def _bind_shortcuts_to_text(self, text: tk.Text) -> None:
+        for sequence, handler in self._text_shortcut_bindings:
+            text.bind(sequence, handler)
 
     def _lift_if_exists(self, widget: tk.Misc) -> None:
         with contextlib.suppress(tk.TclError):
@@ -596,19 +662,8 @@ class FIMPad(tk.Tk):
         )  # right-click menu
         text.bind("<KeyRelease>", lambda e, fr=frame: self._schedule_spellcheck_for_frame(fr))
         text.bind("<Configure>", lambda e, fr=frame: self._schedule_line_number_update(fr))
-        text.bind("<Alt-bracketleft>", self._on_generate_shortcut)
-        text.bind("<Alt-equal>", self._on_apply_config_tag_shortcut)
-        text.bind("<Alt-minus>", self._on_paste_current_config_shortcut)
-        text.bind("<Alt-bracketright>", self._on_repeat_last_fim_shortcut)
-        text.bind("<Alt-apostrophe>", self._on_paste_last_fim_tag_shortcut)
-        text.bind("<Alt-Escape>", self._on_interrupt_stream)
-        text.bind("<Alt-comma>", self._on_show_fim_log_shortcut)
-        text.bind("<Alt-grave>", self._on_validate_tags_shortcut)
-        def open_bol_from_text(event=None):
-            self._open_bol_tool()
-            return "break"
-
-        text.bind("<Alt-backslash>", open_bol_from_text)
+        self._disable_builtin_text_shortcuts(text)
+        self._bind_shortcuts_to_text(text)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
@@ -945,31 +1000,31 @@ class FIMPad(tk.Tk):
         menubar = tk.Menu(self)
 
         filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New Tab", accelerator="Alt+T", command=self._new_tab)
+        filemenu.add_command(label="New Tab", accelerator="Ctrl+N", command=self._new_tab)
         filemenu.add_command(
-            label="Open…", accelerator="Alt+O", command=self._open_file_into_current
+            label="Open…", accelerator="Ctrl+O", command=self._open_file_into_current
         )
-        filemenu.add_command(label="Save", accelerator="Alt+S", command=self._save_file_current)
+        filemenu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_file_current)
         filemenu.add_command(
-            label="Save As…", accelerator="Alt+A", command=self._save_file_as_current
-        )
-        filemenu.add_separator()
-        filemenu.add_command(
-            label="Close Tab", accelerator="Alt+C", command=self._close_current_tab
+            label="Save As…", accelerator="Ctrl+Shift+S", command=self._save_file_as_current
         )
         filemenu.add_separator()
-        filemenu.add_command(label="Quit", accelerator="Alt+Q", command=self._on_close)
+        filemenu.add_command(
+            label="Close Tab", accelerator="Ctrl+W", command=self._close_current_tab
+        )
+        filemenu.add_separator()
+        filemenu.add_command(label="Quit", accelerator="Ctrl+Q", command=self._on_close)
         menubar.add_cascade(label="File", menu=filemenu)
 
         editmenu = tk.Menu(menubar, tearoff=0)
         editmenu.add_command(
             label="Undo",
-            accelerator="Alt+U",
+            accelerator="Ctrl+Z",
             command=lambda: self._cur_text().event_generate("<<Undo>>"),
         )
         editmenu.add_command(
             label="Redo",
-            accelerator="Alt+R",
+            accelerator="Ctrl+Shift+Z",
             command=lambda: self._cur_text().event_generate("<<Redo>>"),
         )
         editmenu.add_separator()
@@ -995,21 +1050,21 @@ class FIMPad(tk.Tk):
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Select All", accelerator="Ctrl+/", command=self._select_all_current
+            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Find & Replace…", accelerator="Alt+/", command=self._open_replace_dialog
+            label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
         )
         editmenu.add_command(
-            label="Regex & Replace…", accelerator="Alt+.", command=self._open_regex_replace_dialog
+            label="Regex & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
         )
         editmenu.add_command(
-            label="BOL Tool…", accelerator="Alt+\\", command=self._open_bol_tool
+            label="BOL Tool…", accelerator="Ctrl+B", command=self._open_bol_tool
         )
         editmenu.add_separator()
         editmenu.add_command(
-            label="Settings…", accelerator="Alt+;", command=self._open_settings
+            label="Settings…", accelerator="Ctrl+G", command=self._open_settings
         )
         menubar.add_cascade(label="Edit", menu=editmenu)
 
@@ -1026,7 +1081,7 @@ class FIMPad(tk.Tk):
         )
         togglemenu.add_checkbutton(
             label="Follow Stream",
-            accelerator="Alt+M",
+            accelerator="Alt+F",
             variable=self._follow_menu_var,
             command=self._on_follow_menu_toggled,
         )
@@ -1035,14 +1090,14 @@ class FIMPad(tk.Tk):
         )
         togglemenu.add_checkbutton(
             label="Line Numbers",
-            accelerator="Alt+L",
+            accelerator="Alt+N",
             variable=self._line_numbers_menu_var,
             command=self._toggle_line_numbers,
         )
         self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
         togglemenu.add_checkbutton(
             label="Spellcheck",
-            accelerator="Alt+P",
+            accelerator="Alt+S",
             variable=self._spell_menu_var,
             command=self._toggle_spellcheck,
         )
@@ -1051,42 +1106,42 @@ class FIMPad(tk.Tk):
         aimenu = tk.Menu(menubar, tearoff=0)
         aimenu.add_command(
             label="Generate",
-            accelerator="Alt+[",
+            accelerator="Alt+G",
             command=self.generate,
         )
         aimenu.add_command(
             label="Repeat Last FIM",
-            accelerator="Alt+]",
+            accelerator="Alt+R",
             command=self.repeat_last_fim,
         )
         aimenu.add_command(
             label="Paste Last FIM Tag",
-            accelerator="Alt+'",
+            accelerator="Alt+P",
             command=self.paste_last_fim_tag,
         )
         aimenu.add_command(
             label="Apply Config Tag",
-            accelerator="Alt+=",
+            accelerator="Alt+C",
             command=self.apply_config_tag,
         )
         aimenu.add_command(
             label="Paste Current Config",
-            accelerator="Alt+-",
+            accelerator="Alt+J",
             command=self.paste_current_config,
         )
         aimenu.add_command(
             label="Interrupt Stream",
-            accelerator="Alt+Esc",
+            accelerator="Alt+I",
             command=self.interrupt_stream,
         )
         aimenu.add_command(
             label="Validate Tags",
-            accelerator="Alt+`",
+            accelerator="Alt+V",
             command=self.validate_tags_current,
         )
         aimenu.add_command(
             label="Show Log",
-            accelerator="Alt+,",
+            accelerator="Alt+L",
             command=self.show_fim_log,
         )
         menubar.add_cascade(label="AI", menu=aimenu)
@@ -3856,30 +3911,6 @@ class FIMPad(tk.Tk):
             parent=text_widget,
         )
 
-    def _on_generate_shortcut(self, event):
-        self.generate()
-        return "break"
-
-    def _on_apply_config_tag_shortcut(self, event):
-        self.apply_config_tag()
-        return "break"
-
-    def _on_paste_current_config_shortcut(self, event):
-        self.paste_current_config()
-        return "break"
-
-    def _on_interrupt_stream(self, event):
-        self.interrupt_stream()
-        return "break"
-
-    def _on_show_fim_log_shortcut(self, event):
-        self._open_fim_log_tab()
-        return "break"
-
-    def _on_validate_tags_shortcut(self, event):
-        self.validate_tags_current()
-        return "break"
-
     def _interrupt_stream_for_tab(self, frame: tk.Misc | None) -> None:
         if frame is None:
             return
@@ -4029,14 +4060,6 @@ class FIMPad(tk.Tk):
         text_widget.focus_set()
 
         self.generate()
-
-    def _on_repeat_last_fim_shortcut(self, event):
-        self.repeat_last_fim()
-        return "break"
-
-    def _on_paste_last_fim_tag_shortcut(self, event):
-        self.paste_last_fim_tag()
-        return "break"
 
     # ----- FIM/completion streaming -----
 

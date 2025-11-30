@@ -1,6 +1,6 @@
 # FIMpad Model Configs
 
-Place the caret within a config tag below and press Alt+= (or use the menu entry at `AI -> Apply Config Tag`) to apply the settings to your FIMpad configuration.
+Place the caret within a config tag below and press Alt+C (or use the menu entry at `AI -> Apply Config Tag`) to apply the settings to your FIMpad configuration.
 
 ---
 

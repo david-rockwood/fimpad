@@ -248,7 +248,7 @@ Thus: “if it’s in a comment tag, the model does not see it.”
 
 ## 5. Config Tags (Settings Presets)
 
-Config tags apply editor settings. They may be inline or multiline and are triggered when the caret is inside or immediately after a config tag and the user presses Alt+= (or use the menu entry at AI -> Apply Config Tag).
+Config tags apply editor settings. They may be inline or multiline and are triggered when the caret is inside or immediately after a config tag and the user presses Alt+C (or use the menu entry at AI -> Apply Config Tag).
 
 ### 5.1 Syntax
 
