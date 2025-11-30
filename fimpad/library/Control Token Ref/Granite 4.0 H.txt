@@ -1,4 +1,8 @@
-# Granite 4.0 H Control Tokens
+# Granite 4.0 H control token reference
+
+---
+
+## Control tokens
 ```
 {
   "version": "1.0",
