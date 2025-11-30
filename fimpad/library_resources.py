@@ -1,7 +1,7 @@
 """Helpers for discovering bundled library files.
 
 Add new ``.txt`` or ``.md`` files to ``fimpad/library`` (optionally inside a
-single-level subdirectory) to have them bundled and discovered automatically.
+    single-level subdirectory) to have them bundled and discovered automatically.
 """
 
 import contextlib
@@ -20,7 +20,7 @@ def iter_library() -> dict[str | None, list[tuple[str, Traversable]]]:
     ``.txt`` and ``.md`` files. Files placed directly inside ``fimpad/library``
     are grouped under ``None`` (the top-level menu), while files inside a
     single-level subdirectory are grouped under that directory's name. Filenames
-    are normalized to lowercase for sorting, and the returned title omits the
+    are normalized to lowercase for sorting, and the returned title includes the
     file extension.
     """
 
@@ -36,7 +36,7 @@ def iter_library() -> dict[str | None, list[tuple[str, Traversable]]]:
                 return
             if entry.suffix.lower() not in _LIBRARY_EXTS:
                 return
-            results.setdefault(group, []).append((entry.stem, entry))
+            results.setdefault(group, []).append((entry.name, entry))
 
         for entry in library_dir.iterdir():
             if entry.is_dir():
