@@ -52,7 +52,7 @@ Qwen 3 Next 80B A3B Instruct, an MoE, is available at:
 ```
 https://huggingface.co/bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF/tree/main
 ```
-The IQ 2 M quantization level of Qwen 3 Next 80B A3B Instruct is surprisingly good, worth a try if you using a computer that can't handle this model at Q 4.
+The IQ 2 M quantization level of Qwen 3 Next 80B A3B Instruct is surprisingly good, worth a try if you are using a computer that can't handle this model at Q 4.
 
 ---
 
