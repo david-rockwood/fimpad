@@ -378,7 +378,7 @@ Consider the following points to build prompts for FIM coding tasks:
 - End your prompt with the tag <|fim_middle|> to indicate to the model something is missing in the code snippet.
 - Completion of basic programming concepts (e.g., function, method, conditionals, loops) is covered for various programming languages (e.g., python, c/c++, go, java).
 
-​### JSON
+### JSON
 ```
 <|start_of_role|>system<|end_of_role|>You are a helpful assistant that answers in JSON. Here's the json schema you must adhere to:
 <schema>
