@@ -1,0 +1,19 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Explain whether “the universe is finite or infinite” is a well-posed question.
+Analyze using:
+
+linguistic categories,
+
+metaphysical commitments,
+
+and epistemic constraints.
+
+Conclude by stating one alternative framing of the question that avoids the potential category error.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

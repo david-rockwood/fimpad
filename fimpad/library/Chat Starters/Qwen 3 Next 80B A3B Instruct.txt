@@ -1,8 +1,10 @@
 <|im_start|>system
 You are a helpful assistant.
 <|im_end|>
+
 <|im_start|>user
 EDIT USER PROMPT HERE
 <|im_end|>
+
 <|im_start|>assistant
-[[[8000]]]
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

@@ -1,0 +1,18 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Describe a fictional city in no more than 6 sentences, with:
+
+one sensory detail for each of the five senses (sight, sound, smell, touch, taste),
+
+no clichés (e.g., “bustling markets,” “towering spires,” “foggy alleys”),
+
+and at least one piece of technology that does not exist in our world.
+
+The description must imply the culture without naming it.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

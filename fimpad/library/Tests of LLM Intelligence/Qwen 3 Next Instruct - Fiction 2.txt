@@ -1,0 +1,20 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Write a short interior monologue (5–7 sentences) from the perspective of a man who has just realized he accidentally offended his closest friend.
+
+Requirements:
+
+No apology speech yet — only his thoughts.
+
+Include one moment of self-deception, which he notices and corrects.
+
+Keep it grounded and human, not melodramatic.
+
+No dialogue.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

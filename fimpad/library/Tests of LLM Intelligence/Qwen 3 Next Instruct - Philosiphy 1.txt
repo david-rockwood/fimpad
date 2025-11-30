@@ -1,0 +1,28 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Explain whether the Ship of Theseus paradox is fundamentally a question about:
+
+Numerical identity,
+
+Qualitative identity,
+
+Mereological composition,
+
+Or something else entirely.
+
+Write a concise answer (3–5 paragraphs) that:
+
+Defines each term clearly,
+
+Chooses a position,
+
+Defends it consistently,
+
+Anticipates one counterargument.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

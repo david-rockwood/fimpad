@@ -1,0 +1,19 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Consider the statement: “Numbers exist.”
+Give three interpretations of this claim from:
+
+a platonist,
+
+a nominalist,
+
+and a fictionalist.
+
+Evaluate which interpretation avoids ontological inflation under Ockham’s Razor, and defend your answer.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

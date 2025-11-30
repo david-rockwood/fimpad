@@ -1,0 +1,17 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Imagine a world where humans are born with perfect episodic memory but no capacity for imagination.
+Analyze (in 4–6 bullet points):
+
+How moral responsibility would change,
+
+How political persuasion would function,
+
+Whether the idea of “hope” would make sense in such a society.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

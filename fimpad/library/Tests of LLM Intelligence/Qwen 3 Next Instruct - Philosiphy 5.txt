@@ -1,0 +1,20 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Distinguish between:
+
+vicious infinite regresses,
+
+benign infinite regresses,
+
+and virtuous infinite regresses.
+
+Give one example of each that is not from mathematics or cosmology.
+
+Explain why each example fits its category without circular definitions.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

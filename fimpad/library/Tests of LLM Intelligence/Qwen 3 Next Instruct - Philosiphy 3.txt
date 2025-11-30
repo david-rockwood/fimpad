@@ -1,0 +1,22 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Compare and unify these three philosophical claims:
+
+“All truths are contingent” (from pragmatism),
+
+“All truths are eternal” (from Platonism),
+
+“Truth is a function of language” (from Wittgenstein).
+
+Give:
+
+One coherent synthetic viewpoint that makes all three partially correct,
+
+A concrete example illustrating this synthesis.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

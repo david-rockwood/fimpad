@@ -1,0 +1,20 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Write one paragraph of fiction (≤120 words) that begins in the style of Ursula K. Le Guin but ends in the style of Ernest Hemingway.
+
+Requirements:
+
+The transition must be smooth, not abrupt.
+
+No fantasy elements.
+
+No dialogue.
+
+Include a single concrete object that appears in both stylistic halves.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

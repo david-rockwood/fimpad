@@ -1,0 +1,18 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Write a single paragraph of fiction in the voice of Ursula K. Le Guin, but with the following constraints:
+
+No mention of magic, planets, or journeys.
+
+Use one metaphor drawn from weather.
+
+Make the emotional tone quietly hopeful, not melancholy.
+
+The paragraph should be no more than 140 words.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]

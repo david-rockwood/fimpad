@@ -1,0 +1,22 @@
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+
+<|im_start|>user
+Explain whether modal collapse is a real consequence of classical theism in contemporary analytic philosophy.
+
+Address:
+
+the definition of modal collapse,
+
+the contingency of creation,
+
+divine simplicity,
+
+and one competing framework that avoids collapse.
+
+Conclude by stating whether modal collapse should be seen as a reductio or a misunderstanding of divine simplicity.
+<|im_end|>
+
+<|im_start|>assistant
+[[[8000;append("\n<|im_end|>\n\n<|im_start|>user\n")]]]
