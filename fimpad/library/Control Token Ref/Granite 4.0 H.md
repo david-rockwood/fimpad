@@ -272,7 +272,6 @@
 Granite 4.0 introduces a hybrid Mamba-2/transformer architecture, with a Mixture-of-Experts (MoE) strategy in select models, delivering more than 70% lower memory requirements and 2x faster inference speeds compared to similar models, particularly in multi-session and long-context scenarios. The models deliver strong performance across benchmarks, with Granite 4.0 Small achieving industry-leading results in key agentic tasks like instruction following and function calling. These efficiencies make the models well-suited for a wide range of use cases like retrieval-augmented generation (RAG), multi-agent workflows, and edge deployments. Granite 4.0 is released under Apache 2.0, cryptographically signed for authenticity, and the first open model family certified under ISO 42001.
 
 ### Models
-### Models
 
 | Model Name               | Internal Name       | Architecture Type          | Model Size                 | Intended Use                                                                                 |
 |--------------------------|---------------------|-----------------------------|-----------------------------|-----------------------------------------------------------------------------------------------|
