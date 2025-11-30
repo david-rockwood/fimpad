@@ -9,6 +9,7 @@ FIMpad is currently only tested on Linux, using llama.cpp's llama-server to serv
 If you have success or run into problems with an OS other than Linux, let me know. I would like to make FIMpad cross platform in the future and have tried to write the code in a way that makes this possible.
 
 ---
+[![Full Demo Video](https://img.youtube.com/vi/Luq0WvNeXi0/hqdefault.jpg)](https://www.youtube.com/watch?v=Luq0WvNeXi0)
 
 ## Quick start
 
