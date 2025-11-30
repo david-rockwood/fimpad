@@ -1,5 +1,7 @@
 # FIMpad Tag Specification
 
+---
+
 ## 0. Tag Types
 
 All FIMpad tags start with `[[[` and end with `]]]`. The first character **after** `[[[` determines the kind of tag:
@@ -41,7 +43,7 @@ Any other pattern is treated as plain text or a syntax error.
 
 ---
 
-## 2. FIM Tags (Generation Tags)
+## 2. FIM Tags
 
 ### 2.1 Syntax
 
@@ -145,7 +147,7 @@ Newlines in patterns:
 
 ---
 
-## 3. Prefix / Suffix Tags
+## 3. Context Tags
 
 Prefix/suffix tags define context windows for FIM tags. There are **soft** (lowercase) and **hard** (uppercase) variants.
 
@@ -246,7 +248,7 @@ Thus: “if it’s in a comment tag, the model does not see it.”
 
 ---
 
-## 5. Config Tags (Settings Presets)
+## 5. Config Tags
 
 Config tags apply editor settings. They may be inline or multiline and are triggered when the caret is inside or immediately after a config tag and the user presses Alt+C (or use the menu entry at AI -> Apply Config Tag).
 
