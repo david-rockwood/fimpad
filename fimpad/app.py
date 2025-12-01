@@ -93,6 +93,8 @@ class FIMPad(tk.Tk):
         except Exception:
             pass
 
+        self._configure_editor_styles()
+
         self._library = iter_library()
         self._text_shortcut_bindings: list[tuple[str, Callable[[tk.Event], str | None]]] = []
         self._register_shortcuts()
@@ -168,6 +170,23 @@ class FIMPad(tk.Tk):
                     self.state("normal")
                 except tk.TclError:
                     self.attributes("-zoomed", False)
+
+    def _configure_editor_styles(self) -> None:
+        style = getattr(self, "style", None) or ttk.Style(self)
+        style.configure("EditorContent.TFrame", background=self.cfg["bg"])
+        style.configure("EditorPadding.TFrame", background=self.cfg["bg"])
+        style.configure("EditorGutterGap.TFrame", background=self.cfg["bg"])
+        style.configure("LineNumberFrame.TFrame", background=self.cfg["highlight2"])
+
+    def _style_lookup(self, style_name: str, option: str, fallback: str) -> str:
+        style = getattr(self, "style", None)
+        if style is None:
+            return fallback
+        try:
+            value = style.lookup(style_name, option)
+        except tk.TclError:
+            value = None
+        return value or fallback
 
     def _make_shortcut_handler(
         self, callback: Callable[[], None]
@@ -562,46 +581,51 @@ class FIMPad(tk.Tk):
             self._apply_tab_title(target, title)
 
     def _new_tab(self, content: str = "", title: str = "Untitled", *, is_log: bool = False):
+        self._configure_editor_styles()
+
         frame = ttk.Frame(self.nb)
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
         text_frame.grid_rowconfigure(0, weight=1)
         text_frame.grid_columnconfigure(0, weight=1)
 
-        content_frame = tk.Frame(
-            text_frame, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
-        )
+        content_frame = ttk.Frame(text_frame, style="EditorContent.TFrame", padding=0)
         content_frame.grid(row=0, column=0, sticky="nsew")
         content_frame.grid_columnconfigure(3, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
-        left_padding = tk.Frame(
+        left_padding = ttk.Frame(
             content_frame,
             width=self.cfg["editor_padding_px"],
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorPadding.TFrame",
+            padding=0,
         )
         left_padding.grid(row=0, column=0, sticky="ns")
 
+        gutter_frame = ttk.Frame(content_frame, style="LineNumberFrame.TFrame", padding=0)
+        gutter_frame.grid(row=0, column=1, sticky="ns")
+        gutter_frame.grid_rowconfigure(0, weight=1)
+
+        line_number_bg = self._style_lookup(
+            "LineNumberFrame.TFrame", "background", self.cfg["highlight2"]
+        )
         line_numbers = tk.Canvas(
-            content_frame,
+            gutter_frame,
             width=0,
             highlightthickness=0,
             bd=0,
-            bg=self.cfg["highlight2"],
+            bg=line_number_bg,
             takefocus=0,
         )
-        line_numbers.grid(row=0, column=1, sticky="ns")
+        line_numbers.grid(row=0, column=0, sticky="ns")
         for sequence in ("<Button-1>", "<Double-Button-1>", "<B1-Motion>"):
             line_numbers.bind(sequence, lambda e: "break")
 
-        gutter_gap = tk.Frame(
+        gutter_gap = ttk.Frame(
             content_frame,
             width=self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorGutterGap.TFrame",
+            padding=0,
         )
         gutter_gap.grid(row=0, column=2, sticky="ns")
 
@@ -617,12 +641,11 @@ class FIMPad(tk.Tk):
         )
         text.grid(row=0, column=3, sticky="nsew")
 
-        right_padding = tk.Frame(
+        right_padding = ttk.Frame(
             content_frame,
             width=self.cfg["editor_padding_px"],
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorPadding.TFrame",
+            padding=0,
         )
         right_padding.grid(row=0, column=4, sticky="ns")
 
@@ -1043,8 +1066,8 @@ class FIMPad(tk.Tk):
         frame,
         text: tk.Text,
         line_numbers: tk.Canvas,
-        gutter_gap: tk.Frame,
-        content_frame: tk.Frame,
+        gutter_gap: ttk.Frame,
+        content_frame: ttk.Frame,
     ) -> None:
         widgets = (text, line_numbers, gutter_gap, content_frame)
         for widget in widgets:
@@ -1146,9 +1169,13 @@ class FIMPad(tk.Tk):
         number_width = self.app_font.measure("9" * digits)
         gutter_width = number_width + 6
         canvas_width = gutter_width
+        content_bg = self._style_lookup("EditorContent.TFrame", "background", self.cfg["bg"])
+        gutter_bg = self._style_lookup(
+            "LineNumberFrame.TFrame", "background", self.cfg["highlight2"]
+        )
         canvas.configure(
             width=canvas_width,
-            bg=self.cfg["bg"],
+            bg=content_bg,
             highlightthickness=0,
             bd=0,
         )
@@ -1161,7 +1188,7 @@ class FIMPad(tk.Tk):
             canvas_width,
             visible_height,
             outline="",
-            fill=self.cfg["highlight2"],
+            fill=gutter_bg,
         )
         index = text.index("@0,0")
         visited = set()

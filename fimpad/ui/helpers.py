@@ -1,21 +1,32 @@
 import contextlib
 import tkinter as tk
+from tkinter import ttk
 
 
 def apply_editor_padding(st: dict, pad_px: int, bg: str) -> None:
     pad_px = max(0, int(pad_px))
     st["text"].configure(padx=0, pady=0)
+    style: ttk.Style | None = None
     for key in ("left_padding", "right_padding"):
         pad = st.get(key)
         if pad is not None:
-            pad.configure(width=pad_px, bg=bg, highlightthickness=0, bd=0)
+            pad.configure(width=pad_px)
+            if isinstance(pad, ttk.Frame):
+                style = style or ttk.Style(pad)
+                style.configure("EditorPadding.TFrame", background=bg)
+            else:
+                pad.configure(bg=bg, highlightthickness=0, bd=0)
 
 
 def apply_line_number_padding(st: dict, pad_px: int, bg: str) -> None:
     pad_px = max(0, int(pad_px))
     gap = st.get("gutter_gap")
     if gap is not None:
-        gap.configure(width=pad_px, bg=bg, highlightthickness=0, bd=0)
+        gap.configure(width=pad_px)
+        if isinstance(gap, ttk.Frame):
+            ttk.Style(gap).configure("EditorGutterGap.TFrame", background=bg)
+        else:
+            gap.configure(bg=bg, highlightthickness=0, bd=0)
 
 
 def reflow_text_layout(text: tk.Text) -> None:
