@@ -1801,7 +1801,9 @@ class FIMPad(tk.Tk):
         buttons.grid(row=4, column=0, sticky="e")
         buttons.columnconfigure(0, weight=1)
 
-        save_btn = ttk.Button(buttons, text="Save", command=controller.accept_path, state=tk.DISABLED)
+        save_btn = ttk.Button(
+            buttons, text="Save", command=controller.accept_path, state=tk.DISABLED
+        )
         save_btn.grid(row=0, column=0, padx=(0, 8))
         cancel_btn = ttk.Button(buttons, text="Cancel", command=dialog.destroy)
         cancel_btn.grid(row=0, column=1)

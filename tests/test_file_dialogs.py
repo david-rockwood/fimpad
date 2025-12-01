@@ -50,7 +50,7 @@ class FakeAdapter:
         )
 
     def path_for(self, name: str) -> str | None:
-        for item_id, item_name, item_path, _ in self.items:
+        for item_id, item_name, _item_path, _ in self.items:
             if item_name == name:
                 return item_id
         return None
