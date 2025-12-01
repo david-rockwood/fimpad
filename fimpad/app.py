@@ -87,6 +87,7 @@ class FIMPad(tk.Tk):
         self._wrap_menu_var: tk.BooleanVar | None = None
         self._follow_menu_var: tk.BooleanVar | None = None
         self._line_numbers_menu_var: tk.BooleanVar | None = None
+        self._settings_window: tk.Toplevel | None = None
         self._text_shortcut_bindings: list[tuple[str, Callable[[tk.Event], str | None]]] = []
         self._register_shortcuts()
         self._build_menu()
@@ -273,10 +274,13 @@ class FIMPad(tk.Tk):
         for sequence, handler in self._text_shortcut_bindings:
             text.bind(sequence, handler)
 
-    def _lift_if_exists(self, widget: tk.Misc) -> None:
+    def _lift_if_exists(self, widget: tk.Misc, above: tk.Misc | None = None) -> None:
         with contextlib.suppress(tk.TclError):
             if widget.winfo_exists():
-                widget.lift()
+                if above is not None:
+                    widget.lift(above)
+                else:
+                    widget.lift()
 
     def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
@@ -284,7 +288,7 @@ class FIMPad(tk.Tk):
             window.withdraw()
 
         def keep_above_parent(_event: tk.Event | None = None) -> None:
-            self._lift_if_exists(window)
+            self._lift_if_exists(window, parent_widget)
 
         with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
@@ -294,7 +298,9 @@ class FIMPad(tk.Tk):
             parent_widget.bind("<Configure>", keep_above_parent, add="+")
             parent_widget.bind("<ButtonPress>", keep_above_parent, add="+")
 
-        window.bind("<FocusIn>", lambda e: self._lift_if_exists(e.widget), add="+")
+        window.bind(
+            "<FocusIn>", lambda e, p=parent_widget: self._lift_if_exists(e.widget, p), add="+"
+        )
         self._center_window(window, parent_widget)
         with contextlib.suppress(tk.TclError):
             window.deiconify()
@@ -2921,7 +2927,18 @@ class FIMPad(tk.Tk):
 
     def _open_settings(self):
         cfg = self.cfg
+
+        if self._settings_window is not None and self._settings_window.winfo_exists():
+            w = self._settings_window
+            with contextlib.suppress(tk.TclError):
+                w.deiconify()
+                w.focus_set()
+            self._center_window(w, self)
+            self._lift_if_exists(w, self)
+            return
+
         w = tk.Toplevel(self)
+        self._settings_window = w
         w.title("Settings — FIMpad")
         w.resizable(True, True)
         w.geometry("720x780")
@@ -3437,7 +3454,13 @@ Example: when working away from home""",
             row=0, column=1, padx=(8, 0), sticky="e"
         )
 
-        self._prepare_child_window(w)
+        def _clear_settings_ref(event: tk.Event) -> None:
+            if event.widget is w:
+                self._settings_window = None
+
+        w.bind("<Destroy>", _clear_settings_ref, add="+")
+
+        self._prepare_child_window(w, parent=self)
 
     def _apply_config_changes(
         self, new_cfg: dict, *, prev_pad: int, prev_line_pad: int
