@@ -32,6 +32,12 @@ python -m fimpad
 
 ---
 
+## Spellcheck safety for very large files
+
+Spellcheck snapshots are capped at 200,000 characters by default. When a longer region is detected—such as an extremely long single paragraph—FIMpad now falls back to scanning only the visible viewport plus a buffer to avoid crashes. You can adjust the cap via the `spellcheck_max_chars` setting in `config.json` if you routinely work with much larger selections.
+
+---
+
 ## Overview
 
 FIMpad is an AI sandbox and a text editor. The text editor is the interface to the LLM. AI text generation happens in regular text files, and sessions can be saved to and resumed from a text file. You can do completion or FIM (Fill In the Middle) generation at any point in a text file.
