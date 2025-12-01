@@ -282,15 +282,18 @@ class FIMPad(tk.Tk):
         parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
             window.withdraw()
+
+        def keep_above_parent(_event: tk.Event | None = None) -> None:
+            self._lift_if_exists(window)
+
         with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
             window.transient(parent_widget)
             self._lift_if_exists(parent_widget)
-            parent_widget.bind(
-                "<FocusIn>",
-                lambda _e, w=window: self._lift_if_exists(w),
-                add="+",
-            )
+            parent_widget.bind("<FocusIn>", keep_above_parent, add="+")
+            parent_widget.bind("<Configure>", keep_above_parent, add="+")
+            parent_widget.bind("<ButtonPress>", keep_above_parent, add="+")
+
         window.bind("<FocusIn>", lambda e: self._lift_if_exists(e.widget), add="+")
         self._center_window(window, parent_widget)
         with contextlib.suppress(tk.TclError):
@@ -2920,12 +2923,48 @@ class FIMPad(tk.Tk):
         cfg = self.cfg
         w = tk.Toplevel(self)
         w.title("Settings — FIMpad")
-        w.resizable(False, False)
+        w.resizable(True, True)
+        w.geometry("720x780")
+        w.minsize(520, 600)
 
-        container = ttk.Frame(w, padding=12)
-        container.grid(row=0, column=0, sticky="nsew")
-        container.columnconfigure(1, weight=1)
+        outer = ttk.Frame(w)
+        outer.grid(row=0, column=0, sticky="nsew")
         w.columnconfigure(0, weight=1)
+        w.rowconfigure(0, weight=1)
+        outer.columnconfigure(0, weight=1)
+        outer.rowconfigure(0, weight=1)
+
+        scroll_bg = outer.cget("background")
+        canvas = tk.Canvas(outer, highlightthickness=0, background=scroll_bg)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        container = ttk.Frame(canvas, padding=12)
+        container_id = canvas.create_window((0, 0), window=container, anchor="nw")
+        container.columnconfigure(1, weight=1)
+
+        def _sync_scroll_region(_event: tk.Event | None = None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _resize_inner(event: tk.Event) -> None:
+            canvas.itemconfigure(container_id, width=event.width)
+
+        container.bind("<Configure>", _sync_scroll_region, add="+")
+        canvas.bind("<Configure>", _resize_inner, add="+")
+
+        def _on_mousewheel(event: tk.Event) -> None:
+            if event.delta:
+                canvas.yview_scroll(-int(event.delta / 120), "units")
+            elif event.num == 4:
+                canvas.yview_scroll(-3, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(3, "units")
+
+        container.bind("<MouseWheel>", _on_mousewheel, add="+")
+        container.bind("<Button-4>", _on_mousewheel, add="+")
+        container.bind("<Button-5>", _on_mousewheel, add="+")
 
         def add_row(r, label, var, width=42):
             ttk.Label(container, text=label, anchor="w").grid(
