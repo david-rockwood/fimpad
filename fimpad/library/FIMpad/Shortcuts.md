@@ -2,11 +2,7 @@
 
 ---
 
-## Application shortcuts
-
----
-
-### File menu shortcuts
+## File menu shortcuts
 
 Ctrl+N - New Tab
 
@@ -22,7 +18,7 @@ Ctrl+Q - Quit
 
 ---
 
-### Edit menu shortcuts
+## Edit menu shortcuts
 
 Ctrl+Z - Undo
 
@@ -48,7 +44,7 @@ Ctrl+G - Open Settings Window
 
 ---
 
-### Toggle menu shortcuts
+## Toggle menu shortcuts
 
 Alt+W - Toggle Word Wrap
 
@@ -60,7 +56,7 @@ Alt+S - Toggle Spellchecking
 
 ---
 
-### AI menu shortcuts
+## AI menu shortcuts
 
 Alt+G - Generate
 
@@ -80,7 +76,7 @@ Alt+L - Show Log
 
 ---
 
-### Tab switching shortcuts
+## Shortcuts that do not have menu entries
 
 Alt+(a number key) - Switch To Tab
 
@@ -88,9 +84,6 @@ Ctrl+PageUp - Switch Left 1 Tab
 
 Ctrl+PageDown - Switch 1 Tab Right
 
----
-
-## Navigation shortcuts
 Home - Move caret to beginning of line.
 
 End - Move caret to end of line.
@@ -98,13 +91,3 @@ End - Move caret to end of line.
 Ctrl+Home - Move caret to beginning of file.
 
 Ctrl+End - Move caret to end of file.
-
-Ctrl+X - Cut whatever is selected in the text document.
-
----
-
-### Emacs-like unusual operations
-
-Ctrl+O - “Open line”: insert a newline before the cursor without moving the cursor.
-
-Ctrl+T - Transpose the character left of the caret with the character right of the caret.

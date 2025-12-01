@@ -1,3 +1,9 @@
+# Qwen 3 Next and Coder control token reference
+
+---
+
+## Control tokens
+```
 {
   "version": "1.0",
   "truncation": null,
@@ -238,18 +244,20 @@
       "special": false
     }
 }
+```
 
+---
 
-
+## Additional notes
+```
 <|im_start|>system
 {system_prompt}<|im_end|>
 <|im_start|>user
 {prompt}<|im_end|>
 <|im_start|>assistant
+```
 
-
-
-Qwen3-Next-80B-A3B-Instruct has the following features:
+### Qwen3-Next-80B-A3B-Instruct has the following features:
 
 Type: Causal Language Models
 Training Stage: Pretraining (15T tokens) & Post-training
@@ -257,24 +265,22 @@ Number of Parameters: 80B in total and 3B activated
 Number of Paramaters (Non-Embedding): 79B
 Hidden Dimension: 2048
 Number of Layers: 48
-    Hybrid Layout: 12 * (3 * (Gated DeltaNet -> MoE) -> 1 * (Gated Attention -> MoE))
+- Hybrid Layout: 12 * (3 * (Gated DeltaNet -> MoE) -> 1 * (Gated Attention -> MoE))
 Gated Attention:
-    Number of Attention Heads: 16 for Q and 2 for KV
-    Head Dimension: 256
-    Rotary Position Embedding Dimension: 64
+- Number of Attention Heads: 16 for Q and 2 for KV
+- Head Dimension: 256
+- Rotary Position Embedding Dimension: 64
 Gated DeltaNet:
-    Number of Linear Attention Heads: 32 for V and 16 for QK
-    Head Dimension: 128
+- Number of Linear Attention Heads: 32 for V and 16 for QK
+- Head Dimension: 128
 Mixture of Experts:
-    Number of Experts: 512
-    Number of Activated Experts: 10
-    Number of Shared Experts: 1
-    Expert Intermediate Dimension: 512
+- Number of Experts: 512
+- Number of Activated Experts: 10
+- Number of Shared Experts: 1
+- Expert Intermediate Dimension: 512
 Context Length: 262,144 natively and extensible up to 1,010,000 tokens
 
-
-
-To achieve optimal performance, Qwen recommends the following settings:
+### To achieve optimal performance, Qwen recommends the following settings:
 
 We suggest using temperature=0.7, top_p=0.8, top_k=20, and min_p=0.0 presence_penalty between 0 and 2 if the framework supports to reduce endless repetitions.
 
@@ -290,7 +296,7 @@ presence_penalty = 0.0 to 2.0 (llama.cpp default turns it off, but to reduce rep
 
 Supports up to 262,144 context natively but you can set it to 32,768 tokens for less RAM use
 
-✨ Llama.cpp: Run Qwen3-Next-80B-A3B-Instruct Tutorial
+### Llama.cpp: Run Qwen3-Next-80B-A3B-Instruct Tutorial
 
 Obtain the latest llama.cpp on GitHub here. You can follow the build instructions below as well. Change -DGGML_CUDA=ON to -DGGML_CUDA=OFF if you don't have a GPU or just want CPU inference.
 
