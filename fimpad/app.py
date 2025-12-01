@@ -1912,11 +1912,32 @@ class FIMPad(tk.Tk):
             return False
         return text.get("1.0", "end-1c") == ""
 
+    @staticmethod
+    def _is_probably_binary(sample: bytes) -> bool:
+        if not sample:
+            return False
+        if b"\0" in sample:
+            return True
+
+        printable = set(range(32, 127))
+        printable.update({9, 10, 12, 13, 27})
+        printable.update(range(128, 256))
+
+        non_text = sum(1 for b in sample if b not in printable)
+        return non_text / len(sample) > 0.30
+
+    def _read_text_file(self, path: str) -> str:
+        with open(path, "rb") as f:
+            sample = f.read(8192)
+            if self._is_probably_binary(sample):
+                raise ValueError("The file appears to be binary and cannot be opened.")
+            f.seek(0)
+            return f.read().decode("utf-8")
+
     def _load_file_into_tab(self, st: dict, path: str) -> bool:
         normalized = os.path.abspath(os.path.expanduser(path))
         try:
-            with open(normalized, encoding="utf-8") as f:
-                data = f.read()
+            data = self._read_text_file(normalized)
             st["suppress_modified"] = True
             st["text"].delete("1.0", tk.END)
             st["text"].insert("1.0", data)
