@@ -293,6 +293,8 @@ class FIMPad(tk.Tk):
         with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
             window.transient(parent_widget)
+            window.attributes("-topmost", True)
+            window.after(60, lambda: window.attributes("-topmost", False))
             self._lift_if_exists(parent_widget)
             parent_widget.bind("<FocusIn>", keep_above_parent, add="+")
             parent_widget.bind("<Configure>", keep_above_parent, add="+")
@@ -2970,6 +2972,7 @@ class FIMPad(tk.Tk):
 
         container.bind("<Configure>", _sync_scroll_region, add="+")
         canvas.bind("<Configure>", _resize_inner, add="+")
+        w.after_idle(_sync_scroll_region)
 
         def _on_mousewheel(event: tk.Event) -> None:
             if event.delta:
