@@ -51,6 +51,13 @@ from .parser import (
     parse_triple_tokens,
 )
 from .stream_utils import find_stream_match
+from .ui.helpers import (
+    apply_editor_padding,
+    apply_line_number_padding,
+    clear_line_spacing,
+    reflow_text_layout,
+)
+from .ui.menus import AppMenus
 from .utils import offset_to_tkindex
 
 CORE_TK_FONT_NAMES: tuple[str, ...] = (
@@ -86,13 +93,14 @@ class FIMPad(tk.Tk):
             pass
 
         self._library = iter_library()
-        self._spell_menu_var: tk.BooleanVar | None = None
-        self._wrap_menu_var: tk.BooleanVar | None = None
-        self._follow_menu_var: tk.BooleanVar | None = None
-        self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._text_shortcut_bindings: list[tuple[str, Callable[[tk.Event], str | None]]] = []
         self._register_shortcuts()
-        self._build_menu()
+        self._menus = AppMenus(self)
+        self._spell_menu_var = self._menus.spell_menu_var
+        self._wrap_menu_var = self._menus.wrap_menu_var
+        self._follow_menu_var = self._menus.follow_menu_var
+        self._line_numbers_menu_var = self._menus.line_numbers_menu_var
+        self._menus.attach()
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -668,11 +676,13 @@ class FIMPad(tk.Tk):
             "text_tool_type": None,
         }
 
-        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-        self._apply_line_number_padding(
-            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+        apply_line_number_padding(
+            st,
+            self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
+            self.cfg["bg"],
         )
-        self._clear_line_spacing(text)
+        clear_line_spacing(text)
         self._bind_scroll_events(frame, text, line_numbers, gutter_gap, content_frame)
 
         # Spellcheck tag + bindings
@@ -1027,252 +1037,6 @@ class FIMPad(tk.Tk):
         next_index = (cur_index + offset) % len(tabs)
         self.nb.select(tabs[next_index])
 
-    # ---------- Menu / Toolbar ----------
-
-    def _build_menu(self):
-        menubar = tk.Menu(self)
-
-        filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New Tab", accelerator="Ctrl+N", command=self._new_tab)
-        filemenu.add_command(
-            label="Open…", accelerator="Ctrl+O", command=self._open_file_into_current
-        )
-        filemenu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_file_current)
-        filemenu.add_command(
-            label="Save As…", accelerator="Ctrl+Shift+S", command=self._save_file_as_current
-        )
-        filemenu.add_separator()
-        filemenu.add_command(
-            label="Close Tab", accelerator="Ctrl+W", command=self._close_current_tab
-        )
-        filemenu.add_separator()
-        filemenu.add_command(label="Quit", accelerator="Ctrl+Q", command=self._on_close)
-        menubar.add_cascade(label="File", menu=filemenu)
-
-        editmenu = tk.Menu(menubar, tearoff=0)
-        editmenu.add_command(
-            label="Undo",
-            accelerator="Ctrl+Z",
-            command=lambda: self._cur_text().event_generate("<<Undo>>"),
-        )
-        editmenu.add_command(
-            label="Redo",
-            accelerator="Ctrl+Shift+Z",
-            command=lambda: self._cur_text().event_generate("<<Redo>>"),
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Cut",
-            accelerator="Ctrl+X",
-            command=lambda: self._cur_text().event_generate("<<Cut>>"),
-        )
-        editmenu.add_command(
-            label="Copy",
-            accelerator="Ctrl+C",
-            command=lambda: self._cur_text().event_generate("<<Copy>>"),
-        )
-        editmenu.add_command(
-            label="Paste",
-            accelerator="Ctrl+V",
-            command=lambda: self._cur_text().event_generate("<<Paste>>"),
-        )
-        editmenu.add_command(
-            label="Delete",
-            accelerator="Del",
-            command=lambda: self._cur_text().event_generate("<<Clear>>"),
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
-        )
-        editmenu.add_command(
-            label="Regex & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
-        )
-        editmenu.add_command(
-            label="BOL Tool…", accelerator="Ctrl+B", command=self._open_bol_tool
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Settings…", accelerator="Ctrl+G", command=self._open_settings
-        )
-        menubar.add_cascade(label="Edit", menu=editmenu)
-
-        togglemenu = tk.Menu(menubar, tearoff=0)
-        self._wrap_menu_var = tk.BooleanVar(value=True)
-        togglemenu.add_checkbutton(
-            label="Wrap",
-            accelerator="Alt+W",
-            variable=self._wrap_menu_var,
-            command=self._on_wrap_menu_toggled,
-        )
-        self._follow_menu_var = tk.BooleanVar(
-            value=self.cfg.get("follow_stream_enabled", True)
-        )
-        togglemenu.add_checkbutton(
-            label="Follow Stream",
-            accelerator="Alt+F",
-            variable=self._follow_menu_var,
-            command=self._on_follow_menu_toggled,
-        )
-        self._line_numbers_menu_var = tk.BooleanVar(
-            value=self.cfg.get("line_numbers_enabled", False)
-        )
-        togglemenu.add_checkbutton(
-            label="Line Numbers",
-            accelerator="Alt+N",
-            variable=self._line_numbers_menu_var,
-            command=self._toggle_line_numbers,
-        )
-        self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
-        togglemenu.add_checkbutton(
-            label="Spellcheck",
-            accelerator="Alt+S",
-            variable=self._spell_menu_var,
-            command=self._toggle_spellcheck,
-        )
-        menubar.add_cascade(label="Toggle", menu=togglemenu)
-
-        aimenu = tk.Menu(menubar, tearoff=0)
-        aimenu.add_command(
-            label="Generate",
-            accelerator="Alt+G",
-            command=self.generate,
-        )
-        aimenu.add_command(
-            label="Repeat Last FIM",
-            accelerator="Alt+R",
-            command=self.repeat_last_fim,
-        )
-        aimenu.add_command(
-            label="Paste Last FIM Tag",
-            accelerator="Alt+P",
-            command=self.paste_last_fim_tag,
-        )
-        aimenu.add_command(
-            label="Apply Config Tag",
-            accelerator="Alt+C",
-            command=self.apply_config_tag,
-        )
-        aimenu.add_command(
-            label="Paste Current Config",
-            accelerator="Alt+J",
-            command=self.paste_current_config,
-        )
-        aimenu.add_command(
-            label="Interrupt Stream",
-            accelerator="Alt+I",
-            command=self.interrupt_stream,
-        )
-        aimenu.add_command(
-            label="Validate Tags",
-            accelerator="Alt+V",
-            command=self.validate_tags_current,
-        )
-        aimenu.add_command(
-            label="Show Log",
-            accelerator="Alt+L",
-            command=self.show_fim_log,
-        )
-        menubar.add_cascade(label="AI", menu=aimenu)
-
-        library_menu = tk.Menu(menubar, tearoff=0)
-        if not self._library:
-            library_menu.add_command(label="(No library files found)", state="disabled")
-        else:
-            top_level_items = self._library.get(None, [])
-            for title, resource in top_level_items:
-                library_menu.add_command(
-                    label=title,
-                    command=lambda t=title, r=resource: self._open_library_resource(t, r),
-                )
-
-            for group, entries in self._library.items():
-                if group is None:
-                    continue
-                submenu = tk.Menu(library_menu, tearoff=0)
-                for title, resource in entries:
-                    submenu.add_command(
-                        label=title,
-                        command=lambda t=title, r=resource: self._open_library_resource(
-                            t, r
-                        ),
-                    )
-                library_menu.add_cascade(label=group, menu=submenu)
-        menubar.add_cascade(label="Library", menu=library_menu)
-
-        self.config(menu=menubar)
-
-    # ---------- Helpers ----------
-
-    def _apply_editor_padding(self, st: dict, pad_px: int) -> None:
-        pad_px = max(0, int(pad_px))
-        st["text"].configure(padx=0, pady=0)
-        for key in ("left_padding", "right_padding"):
-            pad = st.get(key)
-            if pad is not None:
-                pad.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
-
-    def _apply_line_number_padding(self, st: dict, pad_px: int) -> None:
-        pad_px = max(0, int(pad_px))
-        gap = st.get("gutter_gap")
-        if gap is not None:
-            gap.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
-
-    def _reflow_text_layout(self, st: dict) -> None:
-        text: tk.Text | None = st.get("text")
-        if text is None:
-            return
-
-        try:
-            insert_index = text.index("insert")
-        except tk.TclError:
-            insert_index = None
-
-        try:
-            yview = text.yview()[0]
-        except Exception:
-            yview = None
-
-        wrap_value = text.cget("wrap")
-        temp_wrap = tk.CHAR if wrap_value == tk.WORD else tk.WORD
-
-        try:
-            text.configure(wrap=temp_wrap)
-            text.update_idletasks()
-        finally:
-            text.configure(wrap=wrap_value)
-
-        if insert_index is not None:
-            with contextlib.suppress(tk.TclError):
-                text.mark_set("insert", insert_index)
-
-        if yview is not None:
-            with contextlib.suppress(Exception):
-                text.yview_moveto(yview)
-
-    def _clear_line_spacing(self, text: tk.Text) -> None:
-        text.configure(spacing1=0, spacing2=0, spacing3=0)
-        for tag in text.tag_names():
-            options = {}
-            for opt in ("spacing1", "spacing2", "spacing3"):
-                value = text.tag_cget(tag, opt)
-                if not value:
-                    continue
-                if value == "0":
-                    continue
-                try:
-                    if float(value) == 0:
-                        continue
-                except (TypeError, ValueError):
-                    pass
-                options[opt] = 0
-                if options:
-                    text.tag_configure(tag, **options)
-
     def _bind_scroll_events(
         self,
         frame,
@@ -1526,9 +1290,11 @@ class FIMPad(tk.Tk):
         text = st["text"]
         st["wrap"] = "word" if wrap_word else "none"
         text.config(wrap=tk.WORD if wrap_word else tk.NONE)
-        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-        self._apply_line_number_padding(
-            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+        apply_line_number_padding(
+            st,
+            self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
+            self.cfg["bg"],
         )
         self._schedule_line_number_update(st["frame"], delay_ms=10)
 
@@ -3350,11 +3116,13 @@ class FIMPad(tk.Tk):
             content_frame = st.get("content_frame")
             if content_frame is not None:
                 content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
-            self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-            self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
+            apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+            apply_line_number_padding(
+                st, self.cfg["line_number_padding_px"], self.cfg["bg"]
+            )
             if pad_changed:
-                self._reflow_text_layout(st)
-            self._clear_line_spacing(t)
+                reflow_text_layout(t)
+            clear_line_spacing(t)
             self._render_line_numbers(st)
             self._schedule_line_number_update(frame, delay_ms=15)
             if not spell_enabled:
