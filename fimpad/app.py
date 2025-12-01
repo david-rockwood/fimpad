@@ -51,6 +51,14 @@ from .parser import (
     parse_triple_tokens,
 )
 from .stream_utils import find_stream_match
+from .ui.file_dialogs import FileDialogAdapter, FileDialogController
+from .ui.helpers import (
+    apply_editor_padding,
+    apply_line_number_padding,
+    clear_line_spacing,
+    reflow_text_layout,
+)
+from .ui.menus import AppMenus
 from .utils import offset_to_tkindex
 
 CORE_TK_FONT_NAMES: tuple[str, ...] = (
@@ -85,14 +93,17 @@ class FIMPad(tk.Tk):
         except Exception:
             pass
 
+        self._configure_editor_styles()
+
         self._library = iter_library()
-        self._spell_menu_var: tk.BooleanVar | None = None
-        self._wrap_menu_var: tk.BooleanVar | None = None
-        self._follow_menu_var: tk.BooleanVar | None = None
-        self._line_numbers_menu_var: tk.BooleanVar | None = None
         self._text_shortcut_bindings: list[tuple[str, Callable[[tk.Event], str | None]]] = []
         self._register_shortcuts()
-        self._build_menu()
+        self._menus = AppMenus(self)
+        self._spell_menu_var = self._menus.spell_menu_var
+        self._wrap_menu_var = self._menus.wrap_menu_var
+        self._follow_menu_var = self._menus.follow_menu_var
+        self._line_numbers_menu_var = self._menus.line_numbers_menu_var
+        self._menus.attach()
         self._build_notebook()
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -159,6 +170,23 @@ class FIMPad(tk.Tk):
                     self.state("normal")
                 except tk.TclError:
                     self.attributes("-zoomed", False)
+
+    def _configure_editor_styles(self) -> None:
+        style = getattr(self, "style", None) or ttk.Style(self)
+        style.configure("EditorContent.TFrame", background=self.cfg["bg"])
+        style.configure("EditorPadding.TFrame", background=self.cfg["bg"])
+        style.configure("EditorGutterGap.TFrame", background=self.cfg["bg"])
+        style.configure("LineNumberFrame.TFrame", background=self.cfg["highlight2"])
+
+    def _style_lookup(self, style_name: str, option: str, fallback: str) -> str:
+        style = getattr(self, "style", None)
+        if style is None:
+            return fallback
+        try:
+            value = style.lookup(style_name, option)
+        except tk.TclError:
+            value = None
+        return value or fallback
 
     def _make_shortcut_handler(
         self, callback: Callable[[], None]
@@ -553,48 +581,55 @@ class FIMPad(tk.Tk):
             self._apply_tab_title(target, title)
 
     def _new_tab(self, content: str = "", title: str = "Untitled", *, is_log: bool = False):
+        self._configure_editor_styles()
+
         frame = ttk.Frame(self.nb)
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill=tk.BOTH, expand=True)
         text_frame.grid_rowconfigure(0, weight=1)
         text_frame.grid_columnconfigure(0, weight=1)
 
-        content_frame = tk.Frame(
-            text_frame, bg=self.cfg["bg"], borderwidth=0, highlightthickness=0
-        )
+        content_frame = ttk.Frame(text_frame, style="EditorContent.TFrame", padding=0)
         content_frame.grid(row=0, column=0, sticky="nsew")
         content_frame.grid_columnconfigure(3, weight=1)
         content_frame.grid_rowconfigure(0, weight=1)
 
-        left_padding = tk.Frame(
+        left_padding = ttk.Frame(
             content_frame,
             width=self.cfg["editor_padding_px"],
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorPadding.TFrame",
+            padding=0,
         )
         left_padding.grid(row=0, column=0, sticky="ns")
+        left_padding.grid_propagate(False)
 
+        gutter_frame = ttk.Frame(content_frame, style="LineNumberFrame.TFrame", padding=0)
+        gutter_frame.grid(row=0, column=1, sticky="ns")
+        gutter_frame.grid_rowconfigure(0, weight=1)
+
+        line_number_bg = self._style_lookup(
+            "LineNumberFrame.TFrame", "background", self.cfg["highlight2"]
+        )
         line_numbers = tk.Canvas(
-            content_frame,
+            gutter_frame,
             width=0,
             highlightthickness=0,
             bd=0,
-            bg=self.cfg["highlight2"],
+            bg=line_number_bg,
             takefocus=0,
         )
-        line_numbers.grid(row=0, column=1, sticky="ns")
+        line_numbers.grid(row=0, column=0, sticky="ns")
         for sequence in ("<Button-1>", "<Double-Button-1>", "<B1-Motion>"):
             line_numbers.bind(sequence, lambda e: "break")
 
-        gutter_gap = tk.Frame(
+        gutter_gap = ttk.Frame(
             content_frame,
             width=self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorGutterGap.TFrame",
+            padding=0,
         )
         gutter_gap.grid(row=0, column=2, sticky="ns")
+        gutter_gap.grid_propagate(False)
 
         text = tk.Text(
             content_frame,
@@ -608,14 +643,14 @@ class FIMPad(tk.Tk):
         )
         text.grid(row=0, column=3, sticky="nsew")
 
-        right_padding = tk.Frame(
+        right_padding = ttk.Frame(
             content_frame,
             width=self.cfg["editor_padding_px"],
-            bg=self.cfg["bg"],
-            borderwidth=0,
-            highlightthickness=0,
+            style="EditorPadding.TFrame",
+            padding=0,
         )
         right_padding.grid(row=0, column=4, sticky="ns")
+        right_padding.grid_propagate(False)
 
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
         scrollbar.grid(row=0, column=1, sticky="ns")
@@ -637,6 +672,7 @@ class FIMPad(tk.Tk):
             "path": None,
             "text": text,
             "line_numbers": line_numbers,
+            "gutter_frame": gutter_frame,
             "content_frame": content_frame,
             "left_padding": left_padding,
             "right_padding": right_padding,
@@ -668,11 +704,13 @@ class FIMPad(tk.Tk):
             "text_tool_type": None,
         }
 
-        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-        self._apply_line_number_padding(
-            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+        apply_line_number_padding(
+            st,
+            self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
+            self.cfg["bg"],
         )
-        self._clear_line_spacing(text)
+        clear_line_spacing(text)
         self._bind_scroll_events(frame, text, line_numbers, gutter_gap, content_frame)
 
         # Spellcheck tag + bindings
@@ -1027,259 +1065,13 @@ class FIMPad(tk.Tk):
         next_index = (cur_index + offset) % len(tabs)
         self.nb.select(tabs[next_index])
 
-    # ---------- Menu / Toolbar ----------
-
-    def _build_menu(self):
-        menubar = tk.Menu(self)
-
-        filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New Tab", accelerator="Ctrl+N", command=self._new_tab)
-        filemenu.add_command(
-            label="Open…", accelerator="Ctrl+O", command=self._open_file_into_current
-        )
-        filemenu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_file_current)
-        filemenu.add_command(
-            label="Save As…", accelerator="Ctrl+Shift+S", command=self._save_file_as_current
-        )
-        filemenu.add_separator()
-        filemenu.add_command(
-            label="Close Tab", accelerator="Ctrl+W", command=self._close_current_tab
-        )
-        filemenu.add_separator()
-        filemenu.add_command(label="Quit", accelerator="Ctrl+Q", command=self._on_close)
-        menubar.add_cascade(label="File", menu=filemenu)
-
-        editmenu = tk.Menu(menubar, tearoff=0)
-        editmenu.add_command(
-            label="Undo",
-            accelerator="Ctrl+Z",
-            command=lambda: self._cur_text().event_generate("<<Undo>>"),
-        )
-        editmenu.add_command(
-            label="Redo",
-            accelerator="Ctrl+Shift+Z",
-            command=lambda: self._cur_text().event_generate("<<Redo>>"),
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Cut",
-            accelerator="Ctrl+X",
-            command=lambda: self._cur_text().event_generate("<<Cut>>"),
-        )
-        editmenu.add_command(
-            label="Copy",
-            accelerator="Ctrl+C",
-            command=lambda: self._cur_text().event_generate("<<Copy>>"),
-        )
-        editmenu.add_command(
-            label="Paste",
-            accelerator="Ctrl+V",
-            command=lambda: self._cur_text().event_generate("<<Paste>>"),
-        )
-        editmenu.add_command(
-            label="Delete",
-            accelerator="Del",
-            command=lambda: self._cur_text().event_generate("<<Clear>>"),
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Select All", accelerator="Ctrl+A", command=self._select_all_current
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Find & Replace…", accelerator="Ctrl+F", command=self._open_replace_dialog
-        )
-        editmenu.add_command(
-            label="Regex & Replace…", accelerator="Ctrl+R", command=self._open_regex_replace_dialog
-        )
-        editmenu.add_command(
-            label="BOL Tool…", accelerator="Ctrl+B", command=self._open_bol_tool
-        )
-        editmenu.add_separator()
-        editmenu.add_command(
-            label="Settings…", accelerator="Ctrl+G", command=self._open_settings
-        )
-        menubar.add_cascade(label="Edit", menu=editmenu)
-
-        togglemenu = tk.Menu(menubar, tearoff=0)
-        self._wrap_menu_var = tk.BooleanVar(value=True)
-        togglemenu.add_checkbutton(
-            label="Wrap",
-            accelerator="Alt+W",
-            variable=self._wrap_menu_var,
-            command=self._on_wrap_menu_toggled,
-        )
-        self._follow_menu_var = tk.BooleanVar(
-            value=self.cfg.get("follow_stream_enabled", True)
-        )
-        togglemenu.add_checkbutton(
-            label="Follow Stream",
-            accelerator="Alt+F",
-            variable=self._follow_menu_var,
-            command=self._on_follow_menu_toggled,
-        )
-        self._line_numbers_menu_var = tk.BooleanVar(
-            value=self.cfg.get("line_numbers_enabled", False)
-        )
-        togglemenu.add_checkbutton(
-            label="Line Numbers",
-            accelerator="Alt+N",
-            variable=self._line_numbers_menu_var,
-            command=self._toggle_line_numbers,
-        )
-        self._spell_menu_var = tk.BooleanVar(value=self.cfg.get("spellcheck_enabled", True))
-        togglemenu.add_checkbutton(
-            label="Spellcheck",
-            accelerator="Alt+S",
-            variable=self._spell_menu_var,
-            command=self._toggle_spellcheck,
-        )
-        menubar.add_cascade(label="Toggle", menu=togglemenu)
-
-        aimenu = tk.Menu(menubar, tearoff=0)
-        aimenu.add_command(
-            label="Generate",
-            accelerator="Alt+G",
-            command=self.generate,
-        )
-        aimenu.add_command(
-            label="Repeat Last FIM",
-            accelerator="Alt+R",
-            command=self.repeat_last_fim,
-        )
-        aimenu.add_command(
-            label="Paste Last FIM Tag",
-            accelerator="Alt+P",
-            command=self.paste_last_fim_tag,
-        )
-        aimenu.add_command(
-            label="Apply Config Tag",
-            accelerator="Alt+C",
-            command=self.apply_config_tag,
-        )
-        aimenu.add_command(
-            label="Paste Current Config",
-            accelerator="Alt+J",
-            command=self.paste_current_config,
-        )
-        aimenu.add_command(
-            label="Interrupt Stream",
-            accelerator="Alt+I",
-            command=self.interrupt_stream,
-        )
-        aimenu.add_command(
-            label="Validate Tags",
-            accelerator="Alt+V",
-            command=self.validate_tags_current,
-        )
-        aimenu.add_command(
-            label="Show Log",
-            accelerator="Alt+L",
-            command=self.show_fim_log,
-        )
-        menubar.add_cascade(label="AI", menu=aimenu)
-
-        library_menu = tk.Menu(menubar, tearoff=0)
-        if not self._library:
-            library_menu.add_command(label="(No library files found)", state="disabled")
-        else:
-            top_level_items = self._library.get(None, [])
-            for title, resource in top_level_items:
-                library_menu.add_command(
-                    label=title,
-                    command=lambda t=title, r=resource: self._open_library_resource(t, r),
-                )
-
-            for group, entries in self._library.items():
-                if group is None:
-                    continue
-                submenu = tk.Menu(library_menu, tearoff=0)
-                for title, resource in entries:
-                    submenu.add_command(
-                        label=title,
-                        command=lambda t=title, r=resource: self._open_library_resource(
-                            t, r
-                        ),
-                    )
-                library_menu.add_cascade(label=group, menu=submenu)
-        menubar.add_cascade(label="Library", menu=library_menu)
-
-        self.config(menu=menubar)
-
-    # ---------- Helpers ----------
-
-    def _apply_editor_padding(self, st: dict, pad_px: int) -> None:
-        pad_px = max(0, int(pad_px))
-        st["text"].configure(padx=0, pady=0)
-        for key in ("left_padding", "right_padding"):
-            pad = st.get(key)
-            if pad is not None:
-                pad.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
-
-    def _apply_line_number_padding(self, st: dict, pad_px: int) -> None:
-        pad_px = max(0, int(pad_px))
-        gap = st.get("gutter_gap")
-        if gap is not None:
-            gap.configure(width=pad_px, bg=self.cfg["bg"], highlightthickness=0, bd=0)
-
-    def _reflow_text_layout(self, st: dict) -> None:
-        text: tk.Text | None = st.get("text")
-        if text is None:
-            return
-
-        try:
-            insert_index = text.index("insert")
-        except tk.TclError:
-            insert_index = None
-
-        try:
-            yview = text.yview()[0]
-        except Exception:
-            yview = None
-
-        wrap_value = text.cget("wrap")
-        temp_wrap = tk.CHAR if wrap_value == tk.WORD else tk.WORD
-
-        try:
-            text.configure(wrap=temp_wrap)
-            text.update_idletasks()
-        finally:
-            text.configure(wrap=wrap_value)
-
-        if insert_index is not None:
-            with contextlib.suppress(tk.TclError):
-                text.mark_set("insert", insert_index)
-
-        if yview is not None:
-            with contextlib.suppress(Exception):
-                text.yview_moveto(yview)
-
-    def _clear_line_spacing(self, text: tk.Text) -> None:
-        text.configure(spacing1=0, spacing2=0, spacing3=0)
-        for tag in text.tag_names():
-            options = {}
-            for opt in ("spacing1", "spacing2", "spacing3"):
-                value = text.tag_cget(tag, opt)
-                if not value:
-                    continue
-                if value == "0":
-                    continue
-                try:
-                    if float(value) == 0:
-                        continue
-                except (TypeError, ValueError):
-                    pass
-                options[opt] = 0
-                if options:
-                    text.tag_configure(tag, **options)
-
     def _bind_scroll_events(
         self,
         frame,
         text: tk.Text,
         line_numbers: tk.Canvas,
-        gutter_gap: tk.Frame,
-        content_frame: tk.Frame,
+        gutter_gap: ttk.Frame,
+        content_frame: ttk.Frame,
     ) -> None:
         widgets = (text, line_numbers, gutter_gap, content_frame)
         for widget in widgets:
@@ -1365,12 +1157,17 @@ class FIMPad(tk.Tk):
     def _render_line_numbers(self, st: dict) -> None:
         text: tk.Text = st["text"]
         canvas: tk.Canvas = st["line_numbers"]
+        gutter_frame: ttk.Frame | None = st.get("gutter_frame")
         if not st.get("line_numbers_enabled", False):
             canvas.configure(width=0)
             canvas.grid_remove()
             canvas.delete("all")
+            if gutter_frame is not None:
+                gutter_frame.grid_remove()
             return
 
+        if gutter_frame is not None:
+            gutter_frame.grid()
         canvas.grid()
 
         if not text.winfo_ismapped():
@@ -1381,9 +1178,13 @@ class FIMPad(tk.Tk):
         number_width = self.app_font.measure("9" * digits)
         gutter_width = number_width + 6
         canvas_width = gutter_width
+        content_bg = self._style_lookup("EditorContent.TFrame", "background", self.cfg["bg"])
+        gutter_bg = self._style_lookup(
+            "LineNumberFrame.TFrame", "background", self.cfg["highlight2"]
+        )
         canvas.configure(
             width=canvas_width,
-            bg=self.cfg["bg"],
+            bg=content_bg,
             highlightthickness=0,
             bd=0,
         )
@@ -1396,7 +1197,7 @@ class FIMPad(tk.Tk):
             canvas_width,
             visible_height,
             outline="",
-            fill=self.cfg["highlight2"],
+            fill=gutter_bg,
         )
         index = text.index("@0,0")
         visited = set()
@@ -1526,9 +1327,11 @@ class FIMPad(tk.Tk):
         text = st["text"]
         st["wrap"] = "word" if wrap_word else "none"
         text.config(wrap=tk.WORD if wrap_word else tk.NONE)
-        self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-        self._apply_line_number_padding(
-            st, self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"])
+        apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+        apply_line_number_padding(
+            st,
+            self.cfg.get("line_number_padding_px", DEFAULTS["line_number_padding_px"]),
+            self.cfg["bg"],
         )
         self._schedule_line_number_update(st["frame"], delay_ms=10)
 
@@ -1717,6 +1520,15 @@ class FIMPad(tk.Tk):
             reuse_target = self._new_tab()
         self._load_file_into_tab(reuse_target, path)
 
+    @staticmethod
+    def _insert_dialog_item(
+        tree: ttk.Treeview, name: str, path: str, is_dir: bool
+    ) -> str:
+        item_id = tree.insert("", tk.END, text=name)
+        if is_dir:
+            tree.item(item_id, values=("dir",))
+        return item_id
+
     def _open_file_dialog(self, initial_dir: str | None = None) -> str | None:
         dialog = tk.Toplevel(self)
         dialog.title("Open File")
@@ -1727,95 +1539,8 @@ class FIMPad(tk.Tk):
         current_dir = os.path.abspath(initial_dir or os.getcwd())
         show_hidden = tk.BooleanVar(value=False)
         selected_path: str | None = None
-        open_btn: ttk.Button | None = None
 
         path_var = tk.StringVar(value=current_dir)
-
-        def refresh_dir(path: str) -> None:
-            nonlocal current_dir, selected_path
-            try:
-                entries = list(os.scandir(path))
-            except OSError as exc:
-                self._show_error("Open Error", "Could not list directory.", detail=str(exc))
-                return
-
-            current_dir = os.path.abspath(path)
-            path_var.set(current_dir)
-            tree.delete(*tree.get_children())
-            item_paths.clear()
-            selected_path = None
-            if open_btn:
-                open_btn.config(state=tk.DISABLED)
-
-            visible_entries: list[os.DirEntry[str]] = []
-            for entry in entries:
-                if not show_hidden.get() and entry.name.startswith("."):
-                    continue
-                visible_entries.append(entry)
-
-            def sort_key(ent: os.DirEntry[str]) -> tuple[int, str]:
-                return (0 if ent.is_dir(follow_symlinks=False) else 1, ent.name.lower())
-
-            for entry in sorted(visible_entries, key=sort_key):
-                item_id = tree.insert("", tk.END, text=entry.name)
-                item_paths[item_id] = entry.path
-                if entry.is_dir(follow_symlinks=False):
-                    tree.item(item_id, values=("dir",))
-
-            tree.yview_moveto(0)
-
-        def on_select(_event=None) -> None:
-            nonlocal selected_path
-            selection = tree.selection()
-            item = selection[0] if selection else tree.focus()
-            selected_path = item_paths.get(item)
-            open_btn_state = (
-                tk.NORMAL if selected_path and os.path.isfile(selected_path) else tk.DISABLED
-            )
-            open_btn.config(state=open_btn_state)
-
-        def open_selection(_event=None) -> None:
-            nonlocal selected_path
-            selection = tree.selection()
-            item = selection[0] if selection else tree.focus()
-            chosen = item_paths.get(item)
-            if not chosen:
-                return
-            if os.path.isdir(chosen):
-                refresh_dir(chosen)
-                return
-            selected_path = chosen
-            dialog.destroy()
-
-        def go_parent() -> None:
-            refresh_dir(os.path.dirname(current_dir) or current_dir)
-
-        def toggle_hidden() -> None:
-            refresh_dir(current_dir)
-
-        def create_directory() -> None:
-            name = simpledialog.askstring("Create Directory", "Directory name:", parent=dialog)
-            if not name:
-                return
-            new_path = os.path.join(current_dir, name)
-            try:
-                os.makedirs(new_path, exist_ok=False)
-            except OSError as exc:
-                self._show_error(
-                    "Create Directory Error",
-                    "Could not create directory.",
-                    detail=str(exc),
-                )
-                return
-            refresh_dir(new_path)
-            try:
-                for item_id, path in item_paths.items():
-                    if path == new_path:
-                        tree.focus(item_id)
-                        tree.selection_set(item_id)
-                        break
-            except tk.TclError:
-                pass
 
         header = ttk.Frame(dialog, padding=(12, 12, 12, 6))
         header.grid(row=0, column=0, sticky="ew")
@@ -1824,21 +1549,10 @@ class FIMPad(tk.Tk):
         ttk.Label(header, text="Current directory:").grid(row=0, column=0, sticky="w")
         path_entry = ttk.Entry(header, textvariable=path_var, state="readonly")
         path_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
-            row=0, column=2, sticky="e"
-        )
 
         controls = ttk.Frame(dialog, padding=(12, 0, 12, 6))
         controls.grid(row=1, column=0, sticky="ew")
         controls.columnconfigure(0, weight=1)
-
-        hidden_btn = ttk.Checkbutton(
-            controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
-        )
-        hidden_btn.grid(row=0, column=0, sticky="w")
-        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
-            row=0, column=1, sticky="e", padx=(8, 0)
-        )
 
         list_frame = ttk.Frame(dialog, padding=(12, 0, 12, 12))
         list_frame.grid(row=2, column=0, sticky="nsew")
@@ -1850,9 +1564,7 @@ class FIMPad(tk.Tk):
         tree_style = ttk.Style(dialog)
         dialog_font = tkfont.nametofont("TkDefaultFont")
         row_height = max(dialog_font.metrics("linespace") + 6, 22)
-        tree_style.configure(
-            "OpenDialog.Treeview", font=dialog_font, rowheight=row_height
-        )
+        tree_style.configure("OpenDialog.Treeview", font=dialog_font, rowheight=row_height)
 
         tree = ttk.Treeview(
             list_frame,
@@ -1865,8 +1577,6 @@ class FIMPad(tk.Tk):
         tree.configure(yscrollcommand=scrollbar.set)
         tree.grid(row=0, column=0, sticky="nsew")
         scrollbar.grid(row=0, column=1, sticky="ns")
-
-        item_paths: dict[str, str] = {}
 
         def on_mousewheel(event: tk.Event) -> None:
             delta = 0
@@ -1883,9 +1593,68 @@ class FIMPad(tk.Tk):
         tree.bind("<MouseWheel>", on_mousewheel)
         tree.bind("<Button-4>", on_mousewheel)
         tree.bind("<Button-5>", on_mousewheel)
-        tree.bind("<Double-1>", open_selection)
-        tree.bind("<Return>", open_selection)
-        tree.bind("<<TreeviewSelect>>", on_select)
+
+        def get_selection() -> str | None:
+            selection = tree.selection()
+            return selection[0] if selection else (tree.focus() or None)
+
+        def focus_item(item_id: str) -> None:
+            try:
+                tree.focus(item_id)
+                tree.selection_set(item_id)
+            except tk.TclError:
+                pass
+
+        adapter = FileDialogAdapter(
+            set_path=path_var.set,
+            clear_items=lambda: tree.delete(*tree.get_children()),
+            add_item=lambda name, path, is_dir: self._insert_dialog_item(
+                tree, name, path, is_dir
+            ),
+            set_action_enabled=lambda enabled: open_btn.config(
+                state=tk.NORMAL if enabled else tk.DISABLED
+            ),
+            focus_item=focus_item,
+            reset_scroll=lambda: tree.yview_moveto(0),
+        )
+
+        def capture_accept(path: str) -> None:
+            nonlocal selected_path
+            selected_path = os.path.abspath(path)
+            dialog.destroy()
+
+        controller = FileDialogController(
+            mode="open",
+            initial_dir=current_dir,
+            show_hidden=show_hidden.get(),
+            adapter=adapter,
+            on_error=self._show_error,
+            on_accept=capture_accept,
+            prompt_directory_name=lambda: simpledialog.askstring(
+                "Create Directory", "Directory name:", parent=dialog
+            ),
+        )
+
+        def go_parent() -> None:
+            controller.go_parent()
+
+        def toggle_hidden() -> None:
+            controller.set_show_hidden(show_hidden.get())
+
+        def create_directory() -> None:
+            controller.create_directory()
+
+        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
+            row=0, column=2, sticky="e"
+        )
+
+        hidden_btn = ttk.Checkbutton(
+            controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
+        )
+        hidden_btn.grid(row=0, column=0, sticky="w")
+        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
+            row=0, column=1, sticky="e", padx=(8, 0)
+        )
 
         buttons = ttk.Frame(dialog, padding=(12, 0, 12, 12))
         buttons.grid(row=3, column=0, sticky="e")
@@ -1896,14 +1665,27 @@ class FIMPad(tk.Tk):
             selected_path = None
             dialog.destroy()
 
-        open_btn = ttk.Button(buttons, text="Open", command=open_selection, state=tk.DISABLED)
+        open_btn = ttk.Button(
+            buttons, text="Open", command=lambda: controller.accept_path(), state=tk.DISABLED
+        )
         open_btn.grid(row=0, column=0, padx=(0, 8))
         cancel_btn = ttk.Button(buttons, text="Cancel", command=cancel_dialog)
         cancel_btn.grid(row=0, column=1)
 
-        refresh_dir(current_dir)
-        tree.focus_set()
+        def on_select(_event=None) -> None:
+            controller.on_selection(get_selection())
+
+        def open_selection(_event=None) -> None:
+            controller.activate_selection(get_selection())
+
+        tree.bind("<Double-1>", open_selection)
+        tree.bind("<Return>", open_selection)
+        tree.bind("<<TreeviewSelect>>", on_select)
+
         dialog.protocol("WM_DELETE_WINDOW", cancel_dialog)
+
+        controller.refresh_dir(current_dir)
+        tree.focus_set()
         self.wait_window(dialog)
 
         if selected_path and os.path.isfile(selected_path):
@@ -1922,106 +1704,8 @@ class FIMPad(tk.Tk):
         current_dir = os.path.abspath(initial_dir or os.getcwd())
         show_hidden = tk.BooleanVar(value=False)
         filename_var = tk.StringVar(value=default_name or "")
-        save_btn: ttk.Button | None = None
 
         path_var = tk.StringVar(value=current_dir)
-
-        item_paths: dict[str, str] = {}
-
-        def update_save_state(*_args: object) -> None:
-            if not save_btn:
-                return
-            name = filename_var.get().strip()
-            save_btn_state = tk.NORMAL if name else tk.DISABLED
-            save_btn.config(state=save_btn_state)
-
-        def refresh_dir(path: str) -> None:
-            nonlocal current_dir
-            try:
-                entries = list(os.scandir(path))
-            except OSError as exc:
-                self._show_error("Save Error", "Could not list directory.", detail=str(exc))
-                return
-
-            current_dir = os.path.abspath(path)
-            path_var.set(current_dir)
-            tree.delete(*tree.get_children())
-            item_paths.clear()
-            update_save_state()
-
-            visible_entries: list[os.DirEntry[str]] = []
-            for entry in entries:
-                if not show_hidden.get() and entry.name.startswith("."):
-                    continue
-                visible_entries.append(entry)
-
-            def sort_key(ent: os.DirEntry[str]) -> tuple[int, str]:
-                return (0 if ent.is_dir(follow_symlinks=False) else 1, ent.name.lower())
-
-            for entry in sorted(visible_entries, key=sort_key):
-                item_id = tree.insert("", tk.END, text=entry.name)
-                item_paths[item_id] = entry.path
-                if entry.is_dir(follow_symlinks=False):
-                    tree.item(item_id, values=("dir",))
-
-            tree.yview_moveto(0)
-
-        def on_select(_event=None) -> None:
-            selection = tree.selection()
-            item = selection[0] if selection else tree.focus()
-            chosen = item_paths.get(item)
-            if chosen and os.path.isfile(chosen):
-                filename_var.set(os.path.basename(chosen))
-            update_save_state()
-
-        def open_selection(_event=None) -> None:
-            selection = tree.selection()
-            item = selection[0] if selection else tree.focus()
-            chosen = item_paths.get(item)
-            if not chosen:
-                return
-            if os.path.isdir(chosen):
-                refresh_dir(chosen)
-                return
-            filename_var.set(os.path.basename(chosen))
-            save_selection()
-
-        def go_parent() -> None:
-            refresh_dir(os.path.dirname(current_dir) or current_dir)
-
-        def toggle_hidden() -> None:
-            refresh_dir(current_dir)
-
-        def create_directory() -> None:
-            name = simpledialog.askstring("Create Directory", "Directory name:", parent=dialog)
-            if not name:
-                return
-            new_path = os.path.join(current_dir, name)
-            try:
-                os.makedirs(new_path, exist_ok=False)
-            except OSError as exc:
-                self._show_error(
-                    "Create Directory Error",
-                    "Could not create directory.",
-                    detail=str(exc),
-                )
-                return
-            refresh_dir(new_path)
-            try:
-                for item_id, path in item_paths.items():
-                    if path == new_path:
-                        tree.focus(item_id)
-                        tree.selection_set(item_id)
-                        break
-            except tk.TclError:
-                pass
-
-        def save_selection(_event=None) -> None:
-            name = filename_var.get().strip()
-            if not name:
-                return
-            dialog.selected_path = os.path.join(current_dir, name)  # type: ignore[attr-defined]
-            dialog.destroy()
 
         header = ttk.Frame(dialog, padding=(12, 12, 12, 6))
         header.grid(row=0, column=0, sticky="ew")
@@ -2030,21 +1714,10 @@ class FIMPad(tk.Tk):
         ttk.Label(header, text="Current directory:").grid(row=0, column=0, sticky="w")
         path_entry = ttk.Entry(header, textvariable=path_var, state="readonly")
         path_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
-            row=0, column=2, sticky="e"
-        )
 
         controls = ttk.Frame(dialog, padding=(12, 0, 12, 6))
         controls.grid(row=1, column=0, sticky="ew")
         controls.columnconfigure(0, weight=1)
-
-        hidden_btn = ttk.Checkbutton(
-            controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
-        )
-        hidden_btn.grid(row=0, column=0, sticky="w")
-        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
-            row=0, column=1, sticky="e", padx=(8, 0)
-        )
 
         name_frame = ttk.Frame(dialog, padding=(12, 0, 12, 6))
         name_frame.grid(row=2, column=0, sticky="ew")
@@ -2053,7 +1726,6 @@ class FIMPad(tk.Tk):
         ttk.Label(name_frame, text="File name:").grid(row=0, column=0, sticky="w")
         name_entry = ttk.Entry(name_frame, textvariable=filename_var)
         name_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0))
-        name_entry.bind("<Return>", save_selection)
 
         list_frame = ttk.Frame(dialog, padding=(12, 0, 12, 12))
         list_frame.grid(row=3, column=0, sticky="nsew")
@@ -2065,9 +1737,7 @@ class FIMPad(tk.Tk):
         tree_style = ttk.Style(dialog)
         dialog_font = tkfont.nametofont("TkDefaultFont")
         row_height = max(dialog_font.metrics("linespace") + 6, 22)
-        tree_style.configure(
-            "SaveDialog.Treeview", font=dialog_font, rowheight=row_height
-        )
+        tree_style.configure("SaveDialog.Treeview", font=dialog_font, rowheight=row_height)
 
         tree = ttk.Treeview(
             list_frame,
@@ -2096,27 +1766,100 @@ class FIMPad(tk.Tk):
         tree.bind("<MouseWheel>", on_mousewheel)
         tree.bind("<Button-4>", on_mousewheel)
         tree.bind("<Button-5>", on_mousewheel)
-        tree.bind("<Double-1>", open_selection)
-        tree.bind("<Return>", open_selection)
-        tree.bind("<<TreeviewSelect>>", on_select)
+
+        def get_selection() -> str | None:
+            selection = tree.selection()
+            return selection[0] if selection else (tree.focus() or None)
+
+        def focus_item(item_id: str) -> None:
+            try:
+                tree.focus(item_id)
+                tree.selection_set(item_id)
+            except tk.TclError:
+                pass
+
+        adapter = FileDialogAdapter(
+            set_path=path_var.set,
+            clear_items=lambda: tree.delete(*tree.get_children()),
+            add_item=lambda name, path, is_dir: self._insert_dialog_item(tree, name, path, is_dir),
+            set_action_enabled=lambda enabled: save_btn.config(
+                state=tk.NORMAL if enabled else tk.DISABLED
+            ),
+            set_filename=filename_var.set,
+            focus_item=focus_item,
+            reset_scroll=lambda: tree.yview_moveto(0),
+        )
+
+        selected_path: str | None = None
+
+        def capture_accept(path: str) -> None:
+            nonlocal selected_path
+            selected_path = os.path.abspath(path)
+            dialog.destroy()
+
+        controller = FileDialogController(
+            mode="save",
+            initial_dir=current_dir,
+            show_hidden=show_hidden.get(),
+            adapter=adapter,
+            on_error=self._show_error,
+            on_accept=capture_accept,
+            prompt_directory_name=lambda: simpledialog.askstring(
+                "Create Directory", "Directory name:", parent=dialog
+            ),
+            filename_getter=filename_var.get,
+        )
+
+        def go_parent() -> None:
+            controller.go_parent()
+
+        def toggle_hidden() -> None:
+            controller.set_show_hidden(show_hidden.get())
+
+        def create_directory() -> None:
+            controller.create_directory()
+
+        ttk.Button(header, text="Go To Parent Dir", command=go_parent).grid(
+            row=0, column=2, sticky="e"
+        )
+
+        hidden_btn = ttk.Checkbutton(
+            controls, text="Show hidden files", variable=show_hidden, command=toggle_hidden
+        )
+        hidden_btn.grid(row=0, column=0, sticky="w")
+        ttk.Button(controls, text="Create New Dir", command=create_directory).grid(
+            row=0, column=1, sticky="e", padx=(8, 0)
+        )
+
+        name_entry.bind("<Return>", lambda _event: controller.accept_path())
 
         buttons = ttk.Frame(dialog, padding=(12, 0, 12, 12))
         buttons.grid(row=4, column=0, sticky="e")
         buttons.columnconfigure(0, weight=1)
 
-        save_btn = ttk.Button(buttons, text="Save", command=save_selection, state=tk.DISABLED)
+        save_btn = ttk.Button(
+            buttons, text="Save", command=controller.accept_path, state=tk.DISABLED
+        )
         save_btn.grid(row=0, column=0, padx=(0, 8))
         cancel_btn = ttk.Button(buttons, text="Cancel", command=dialog.destroy)
         cancel_btn.grid(row=0, column=1)
 
-        filename_var.trace_add("write", update_save_state)
-        refresh_dir(current_dir)
-        update_save_state()
+        def on_select(_event=None) -> None:
+            controller.on_selection(get_selection())
+
+        def open_selection(_event=None) -> None:
+            controller.activate_selection(get_selection())
+
+        tree.bind("<Double-1>", open_selection)
+        tree.bind("<Return>", open_selection)
+        tree.bind("<<TreeviewSelect>>", on_select)
+
+        filename_var.trace_add("write", lambda *_args: controller.on_filename_change())
+        controller.refresh_dir(current_dir)
         name_entry.focus_set()
         dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
         self.wait_window(dialog)
 
-        selected_path: str | None = getattr(dialog, "selected_path", None)
         if selected_path:
             return os.path.abspath(selected_path)
         return None
@@ -3303,6 +3046,7 @@ class FIMPad(tk.Tk):
         )
 
         self.cfg = new_cfg
+        self._configure_editor_styles()
         log_changed = self._apply_log_retention()
         self._persist_config()
         self._apply_open_maximized(self.cfg.get("open_maximized", False))
@@ -3349,12 +3093,16 @@ class FIMPad(tk.Tk):
             )
             content_frame = st.get("content_frame")
             if content_frame is not None:
-                content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
-            self._apply_editor_padding(st, self.cfg["editor_padding_px"])
-            self._apply_line_number_padding(st, self.cfg["line_number_padding_px"])
+                ttk.Style(content_frame).configure(
+                    "EditorContent.TFrame", background=self.cfg["bg"]
+                )
+            apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
+            apply_line_number_padding(
+                st, self.cfg["line_number_padding_px"], self.cfg["bg"]
+            )
             if pad_changed:
-                self._reflow_text_layout(st)
-            self._clear_line_spacing(t)
+                reflow_text_layout(t)
+            clear_line_spacing(t)
             self._render_line_numbers(st)
             self._schedule_line_number_update(frame, delay_ms=15)
             if not spell_enabled:
