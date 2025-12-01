@@ -19,6 +19,7 @@ from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, messagebox, simpledialog, ttk
+from tkinter import TclError
 
 import enchant
 
@@ -2246,12 +2247,28 @@ class FIMPad(tk.Tk):
             status_var.set(message)
 
         def update_buttons():
+            # If the widgets are gone (window closing), just bail out
+            # winfo_exists() returns 0 if the underlying Tk widget is destroyed
+            if not text.winfo_exists():
+                return
+            if not replace_btn.winfo_exists() or not replace_all_btn.winfo_exists():
+                return
+
             has_match = bool(text.tag_ranges(match_tag))
             state = "!disabled" if has_match else "disabled"
-            replace_btn.state((state,))
-            replace_all_btn.state((state,))
+
+            try:
+                replace_btn.state((state,))
+                replace_all_btn.state((state,))
+            except TclError:
+                # In case destruction races with this call, ignore during teardown
+                pass
 
         def clear_highlight(reset_status: bool = True):
+            # If the text widget is already gone, do nothing
+            if not text.winfo_exists():
+                return
+
             text.tag_remove("sel", "1.0", tk.END)
             text.tag_remove(match_tag, "1.0", tk.END)
             update_buttons()
