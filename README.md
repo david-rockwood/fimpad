@@ -290,8 +290,10 @@ After generation:
 > That night, as Jake was sitting in the break room eating his dinner and scrolling through his phone, he heard a strange noise coming from the gorilla enclosure. At first, he thought it was just the wind, but then he heard it again, and it sounded like someone was laughing.
 >
 > Jake's heart started to race as he stood up and walked towards the enclosure. As he got closer,
+>
+> Because of that, Jake started to get very nervous.
 
-Notice the generation was cut off. Let’s finish the paragraph cleanly by using `stop()` with sentence-ending delimiters:
+Notice the generation was cut off. Let’s delete the suffix and finish the paragraph cleanly by using `stop()` with sentence-ending delimiters:
 
 > One night, a new night shift employee named Jake was on duty. Jake was a young man in his early twenties, who had just started working at the zoo to make some extra money while he finished his degree in biology. Jake was a bit of a nervous wreck, and he was always on edge when he was on duty.
 >
