@@ -725,6 +725,7 @@ class FIMPad(tk.Tk):
         self._disable_builtin_text_shortcuts(text)
         self._bind_shortcuts_to_text(text)
         text.bind("<<Paste>>", self._on_text_paste, add="+")
+        text.bind("<BackSpace>", self._on_backspace_key, add="+")
         text.bind("<Home>", self._on_home_key)
         text.bind("<End>", self._on_end_key)
         text.bind("<Control-Home>", self._on_ctrl_home_key)
@@ -1288,6 +1289,25 @@ class FIMPad(tk.Tk):
 
         widget.mark_set(tk.INSERT, sel_first)
         widget.delete(sel_first, sel_last)
+
+    def _on_backspace_key(self, event: tk.Event) -> str | None:
+        widget = getattr(event, "widget", None)
+        if not isinstance(widget, tk.Text):
+            return None
+
+        if str(widget.cget("state")) == tk.DISABLED:
+            return "break"
+
+        try:
+            sel_first = widget.index("sel.first")
+            sel_last = widget.index("sel.last")
+        except tk.TclError:
+            return None
+
+        if sel_first and sel_last:
+            widget.delete(sel_first, sel_last)
+            return "break"
+        return None
 
     def _on_home_key(self, event: tk.Event) -> str | None:
         widget = getattr(event, "widget", None)
