@@ -4566,10 +4566,10 @@ class FIMPad(tk.Tk):
         else:
             tab_id = None
             with contextlib.suppress(Exception):
-                tab_id = self.nb.select(frame)
-            if not tab_id:
-                with contextlib.suppress(Exception):
-                    tab_id = self.nb.select()
+                for candidate in self.nb.tabs():
+                    if self.nametowidget(candidate) is frame:
+                        tab_id = candidate
+                        break
             tab_id = tab_id or str(frame)
 
         threading.Thread(
