@@ -5,7 +5,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
-
 DialogMode = Literal["open", "save"]
 
 
