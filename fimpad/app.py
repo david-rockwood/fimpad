@@ -2953,7 +2953,8 @@ class FIMPad(tk.Tk):
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(0, weight=1)
 
-        scroll_bg = outer.cget("background")
+        style = getattr(self, "style", None) or ttk.Style(w)
+        scroll_bg = style.lookup("TFrame", "background") or w.cget("background")
         canvas = tk.Canvas(outer, highlightthickness=0, background=scroll_bg)
         canvas.grid(row=0, column=0, sticky="nsew")
         scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
