@@ -108,8 +108,8 @@ Here’s how a FIM tag looks before execution:
 Here, `50` is the maximum number of tokens the LLM is allowed to generate.
 
 To execute the tag:
-1. Place the cursor (caret) **within** the FIM tag or **immediately after** the last closing bracket.
-   *(In FIMpad, we use “caret” to distinguish the text cursor from the mouse cursor.)*
+1. Place the caret (cursor) **within** the FIM tag or **immediately after** the last closing bracket.
+   *(In FIMpad, we use the term “caret” to distinguish the text cursor from the mouse cursor.)*
 2. Press `Alt+G` (or select `AI → Generate` from the menu).
 
 The FIM tag will be deleted, and FIMpad will send the text before the tag as prefix text to the server. The server will respond with up to 50 tokens deemed most likely to follow. The response is streamed into the editor at the former tag location.
