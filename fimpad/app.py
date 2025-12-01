@@ -20,7 +20,10 @@ from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, messagebox, simpledialog, ttk
 
-import enchant
+try:
+    import enchant
+except ImportError:  # pragma: no cover - handled by runtime stubs in tests
+    enchant = None
 
 from .bol_utils import (
     _deindent_block,
@@ -2979,13 +2982,15 @@ class FIMPad(tk.Tk):
         w.resizable(False, False)
 
         def add_row(r, label, var, width=42):
-            tk.Label(w, text=label, anchor="w").grid(row=r, column=0, sticky="w", padx=8, pady=4)
-            e = tk.Entry(w, textvariable=var, width=width)
+            ttk.Label(w, text=label, anchor="w").grid(
+                row=r, column=0, sticky="w", padx=8, pady=4
+            )
+            e = ttk.Entry(w, textvariable=var, width=width)
             e.grid(row=r, column=1, padx=8, pady=4)
             return e
 
         def add_combobox_row(r, label, var, values, width=40):
-            tk.Label(w, text=label, anchor="w").grid(
+            ttk.Label(w, text=label, anchor="w").grid(
                 row=r, column=0, sticky="w", padx=8, pady=4
             )
             cb = ttk.Combobox(w, textvariable=var, values=values, width=width)
@@ -3057,7 +3062,7 @@ class FIMPad(tk.Tk):
         add_row(row, "Top-p:", top_p_var)
         row += 1
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             w,
             text="Open maximized on startup",
             variable=open_maximized_var,
@@ -3066,7 +3071,7 @@ class FIMPad(tk.Tk):
         ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
         row += 1
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             w,
             text="Reverse text color when selected",
             variable=reverse_selection_fg_var,
@@ -3098,7 +3103,7 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
+        ttk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
@@ -3109,7 +3114,7 @@ class FIMPad(tk.Tk):
         add_row(row, "fim_middle:", fim_mid_var)
         row += 1
 
-        tk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
+        ttk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
@@ -3148,44 +3153,46 @@ class FIMPad(tk.Tk):
             if c and c[1]:
                 highlight2_var.set(c[1])
 
-        tk.Label(w, text="Text color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=fg_var, width=20).grid(
+        ttk.Label(w, text="Text color (hex):").grid(
+            row=row, column=0, padx=8, pady=4, sticky="w"
+        )
+        ttk.Entry(w, textvariable=fg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_fg).grid(
+        ttk.Button(w, text="Pick…", command=pick_fg).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(
+        ttk.Label(
             w, text="Background color (hex):"
         ).grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=bg_var, width=20).grid(
+        ttk.Entry(w, textvariable=bg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_bg).grid(
+        ttk.Button(w, text="Pick…", command=pick_bg).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(w, text="Caret color (hex):").grid(
+        ttk.Label(w, text="Caret color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
-        tk.Entry(w, textvariable=highlight1_var, width=20).grid(
+        ttk.Entry(w, textvariable=highlight1_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_highlight1).grid(
+        ttk.Button(w, text="Pick…", command=pick_highlight1).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(w, text="Selection color (hex):").grid(
+        ttk.Label(w, text="Selection color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
-        tk.Entry(w, textvariable=highlight2_var, width=20).grid(
+        ttk.Entry(w, textvariable=highlight2_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_highlight2).grid(
+        ttk.Button(w, text="Pick…", command=pick_highlight2).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
@@ -3277,10 +3284,10 @@ class FIMPad(tk.Tk):
             )
             w.destroy()
 
-        tk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
+        ttk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
             row=row, column=0, padx=8, pady=12, sticky="w"
         )
-        tk.Button(w, text="Save", command=apply_and_close).grid(
+        ttk.Button(w, text="Save", command=apply_and_close).grid(
             row=row, column=1, padx=8, pady=12, sticky="e"
         )
 
@@ -4465,6 +4472,8 @@ class FIMPad(tk.Tk):
     # ---------- Spellcheck (enchant) ----------
 
     def _list_spell_languages(self) -> list[str]:
+        if enchant is None:
+            return []
         try:
             langs = enchant.list_languages()
         except Exception:
@@ -4512,6 +4521,11 @@ class FIMPad(tk.Tk):
 
     def _load_dictionary(self, lang: str):
         lang_code = lang or "en_US"
+        if enchant is None:
+            self._spell_notice_msg = "Spellcheck unavailable: enchant is not installed."
+            self._spell_notice_last = None
+            self._notify_spell_unavailable()
+            return None
         try:
             self._spell_notice_msg = None
             self._spell_notice_last = None
