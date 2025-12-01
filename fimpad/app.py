@@ -2228,14 +2228,20 @@ class FIMPad(tk.Tk):
         w = tk.Toplevel(self)
         w.title("Find & Replace")
         w.resizable(False, False)
-        tk.Label(w, text="Find:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
-        tk.Label(w, text="Replace:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+        container = ttk.Frame(w, padding=8)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(1, weight=1)
+
+        ttk.Label(container, text="Find:").grid(row=0, column=0, padx=0, pady=8, sticky="e")
+        ttk.Label(container, text="Replace:").grid(
+            row=1, column=0, padx=0, pady=8, sticky="e"
+        )
         find_var = tk.StringVar()
         repl_var = tk.StringVar()
-        e1 = tk.Entry(w, width=42, textvariable=find_var)
-        e2 = tk.Entry(w, width=42, textvariable=repl_var)
-        e1.grid(row=0, column=1, padx=8, pady=8)
-        e2.grid(row=1, column=1, padx=8, pady=8)
+        e1 = ttk.Entry(container, width=42, textvariable=find_var)
+        e2 = ttk.Entry(container, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=(8, 0), pady=8, sticky="ew")
+        e2.grid(row=1, column=1, padx=(8, 0), pady=8, sticky="ew")
         e1.focus_set()
 
         match_tag = "find_replace_match"
@@ -2354,8 +2360,8 @@ class FIMPad(tk.Tk):
 
         find_var.trace_add("write", on_find_change)
 
-        btn_frame = ttk.Frame(w)
-        btn_frame.grid(row=2, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame = ttk.Frame(container)
+        btn_frame.grid(row=2, column=1, padx=(8, 0), pady=6, sticky="ew")
         btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         ttk.Button(btn_frame, text="Find Previous", command=find_previous).grid(
@@ -2370,8 +2376,10 @@ class FIMPad(tk.Tk):
         replace_all_btn.grid(row=0, column=3, padx=(4, 0), sticky="e")
         update_buttons()
 
-        status = ttk.Label(w, textvariable=status_var, anchor="w")
-        status.grid(row=3, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+        status = ttk.Label(container, textvariable=status_var, anchor="w")
+        status.grid(
+            row=3, column=0, columnspan=2, padx=0, pady=(0, 8), sticky="ew"
+        )
 
         def close_dialog() -> None:
             clear_highlight()
@@ -2398,23 +2406,30 @@ class FIMPad(tk.Tk):
         w = tk.Toplevel(self)
         w.title("Regex Find & Replace")
         w.resizable(False, False)
-        tk.Label(w, text="Pattern (Python regex):").grid(
-            row=0, column=0, padx=8, pady=8, sticky="e"
+
+        container = ttk.Frame(w, padding=8)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(1, weight=1)
+
+        ttk.Label(container, text="Pattern (Python regex):").grid(
+            row=0, column=0, padx=0, pady=8, sticky="e"
         )
-        tk.Label(w, text="Replacement:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+        ttk.Label(container, text="Replacement:").grid(
+            row=1, column=0, padx=0, pady=8, sticky="e"
+        )
         find_var = tk.StringVar()
         repl_var = tk.StringVar()
         ignorecase_var = tk.BooleanVar(value=False)
         multiline_var = tk.BooleanVar(value=False)
         dotall_var = tk.BooleanVar(value=False)
-        e1 = tk.Entry(w, width=42, textvariable=find_var)
-        e2 = tk.Entry(w, width=42, textvariable=repl_var)
-        e1.grid(row=0, column=1, padx=8, pady=8)
-        e2.grid(row=1, column=1, padx=8, pady=8)
+        e1 = ttk.Entry(container, width=42, textvariable=find_var)
+        e2 = ttk.Entry(container, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=(8, 0), pady=8, sticky="ew")
+        e2.grid(row=1, column=1, padx=(8, 0), pady=8, sticky="ew")
         e1.focus_set()
 
-        flag_frame = ttk.Frame(w)
-        flag_frame.grid(row=2, column=0, columnspan=2, padx=8, sticky="w")
+        flag_frame = ttk.Frame(container)
+        flag_frame.grid(row=2, column=0, columnspan=2, padx=0, sticky="w")
         ttk.Checkbutton(
             flag_frame, text="IGNORECASE", variable=ignorecase_var, onvalue=True, offvalue=False
         ).grid(row=0, column=0, padx=(0, 8))
@@ -2605,8 +2620,8 @@ class FIMPad(tk.Tk):
         multiline_var.trace_add("write", on_find_change)
         dotall_var.trace_add("write", on_find_change)
 
-        btn_frame = ttk.Frame(w)
-        btn_frame.grid(row=3, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame = ttk.Frame(container)
+        btn_frame.grid(row=3, column=1, padx=(8, 0), pady=6, sticky="ew")
         btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         ttk.Button(btn_frame, text="Find previous", command=find_previous).grid(
@@ -2621,8 +2636,8 @@ class FIMPad(tk.Tk):
         replace_all_btn.grid(row=0, column=3)
         update_buttons()
 
-        status = ttk.Label(w, textvariable=status_var, anchor="w")
-        status.grid(row=4, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+        status = ttk.Label(container, textvariable=status_var, anchor="w")
+        status.grid(row=4, column=0, columnspan=2, padx=0, pady=(0, 8), sticky="ew")
 
         def on_close() -> None:
             clear_highlight()
@@ -2907,18 +2922,25 @@ class FIMPad(tk.Tk):
         w.title("Settings — FIMpad")
         w.resizable(False, False)
 
+        container = ttk.Frame(w, padding=12)
+        container.grid(row=0, column=0, sticky="nsew")
+        container.columnconfigure(1, weight=1)
+        w.columnconfigure(0, weight=1)
+
         def add_row(r, label, var, width=42):
-            tk.Label(w, text=label, anchor="w").grid(row=r, column=0, sticky="w", padx=8, pady=4)
-            e = tk.Entry(w, textvariable=var, width=width)
-            e.grid(row=r, column=1, padx=8, pady=4)
+            ttk.Label(container, text=label, anchor="w").grid(
+                row=r, column=0, sticky="w", padx=0, pady=4
+            )
+            e = ttk.Entry(container, textvariable=var, width=width)
+            e.grid(row=r, column=1, padx=(8, 0), pady=4, sticky="ew")
             return e
 
         def add_combobox_row(r, label, var, values, width=40):
-            tk.Label(w, text=label, anchor="w").grid(
-                row=r, column=0, sticky="w", padx=8, pady=4
+            ttk.Label(container, text=label, anchor="w").grid(
+                row=r, column=0, sticky="w", padx=0, pady=4
             )
-            cb = ttk.Combobox(w, textvariable=var, values=values, width=width)
-            cb.grid(row=r, column=1, padx=8, pady=4)
+            cb = ttk.Combobox(container, textvariable=var, values=values, width=width)
+            cb.grid(row=r, column=1, padx=(8, 0), pady=4, sticky="w")
             cb.bind("<<ComboboxSelected>>", lambda e: var.set(cb.get()))
             return cb
 
@@ -2986,22 +3008,22 @@ class FIMPad(tk.Tk):
         add_row(row, "Top-p:", top_p_var)
         row += 1
 
-        tk.Checkbutton(
-            w,
+        ttk.Checkbutton(
+            container,
             text="Open maximized on startup",
             variable=open_maximized_var,
             onvalue=True,
             offvalue=False,
-        ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
+        ).grid(row=row, column=0, columnspan=2, padx=0, pady=4, sticky="w")
         row += 1
 
-        tk.Checkbutton(
-            w,
+        ttk.Checkbutton(
+            container,
             text="Reverse text color when selected",
             variable=reverse_selection_fg_var,
             onvalue=True,
             offvalue=False,
-        ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
+        ).grid(row=row, column=0, columnspan=2, padx=0, pady=4, sticky="w")
         row += 1
 
         add_combobox_row(
@@ -3027,95 +3049,253 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
-            row=row, column=0, padx=8, pady=(10, 4), sticky="w"
+        add_row(row, "Editor padding (px):", pad_var, width=8)
+        row += 1
+
+        add_row(row, "Line number padding (px):", line_pad_var, width=8)
+        row += 1
+
+        add_row(row, "Font family:", fontfam_var)
+        row += 1
+
+        add_row(row, "Font size (6–72):", fontsize_var, width=8)
+        row += 1
+
+        add_row(row, "FIM prefix:", fim_pref_var)
+        row += 1
+        add_row(row, "FIM suffix:", fim_suf_var)
+        row += 1
+        add_row(row, "FIM middle:", fim_mid_var)
+        row += 1
+
+        pad_var.trace_add("write", lambda *_: None)
+
+        def update_line_numbers():
+            self._toggle_line_numbers(line_numbers_var.get())
+
+        def update_follow_stream():
+            self._toggle_stream_follow(follow_stream_var.get())
+
+        def update_show_button_labels():
+            self._toggle_button_labels(show_btn_labels_var.get())
+
+        def update_spellcheck():
+            self._toggle_spellcheck(spellcheck_enabled_var.get())
+
+        line_numbers_var = tk.BooleanVar(
+            value=cfg.get("line_numbers_enabled", DEFAULTS["line_numbers_enabled"])
+        )
+        spellcheck_enabled_var = tk.BooleanVar(
+            value=cfg.get("spellcheck_enabled", DEFAULTS["spellcheck_enabled"])
+        )
+        follow_stream_var = tk.BooleanVar(
+            value=cfg.get("follow_stream_enabled", DEFAULTS["follow_stream_enabled"])
+        )
+        show_btn_labels_var = tk.BooleanVar(
+            value=cfg.get("show_button_labels", DEFAULTS["show_button_labels"])
+        )
+
+        ttk.Checkbutton(
+            container,
+            text="Follow AI streaming output",
+            variable=follow_stream_var,
+            onvalue=True,
+            offvalue=False,
+            command=update_follow_stream,
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=4)
+        row += 1
+
+        ttk.Checkbutton(
+            container,
+            text="Enable spellcheck",
+            variable=spellcheck_enabled_var,
+            onvalue=True,
+            offvalue=False,
+            command=update_spellcheck,
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=4)
+        row += 1
+
+        ttk.Checkbutton(
+            container,
+            text="Show line numbers",
+            variable=line_numbers_var,
+            onvalue=True,
+            offvalue=False,
+            command=update_line_numbers,
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=4)
+        row += 1
+
+        ttk.Checkbutton(
+            container,
+            text="Show button labels",
+            variable=show_btn_labels_var,
+            onvalue=True,
+            offvalue=False,
+            command=update_show_button_labels,
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=4)
+        row += 1
+
+        width_for_lines = 64
+        otd_actions_var = tk.StringVar(
+            value=cfg.get(
+                "over_the_line_actions",
+                ",".join(DEFAULTS.get("over_the_line_actions", [])),
+            )
+        )
+        line_actions_var = tk.StringVar(
+            value=cfg.get(
+                "line_actions",
+                ",".join(DEFAULTS.get("line_actions", [])),
+            )
+        )
+        stack_actions_var = tk.StringVar(
+            value=cfg.get(
+                "stack_actions",
+                ",".join(DEFAULTS.get("stack_actions", [])),
+            )
+        )
+        base_prompt_var = tk.StringVar(value=cfg.get("base_prompt", ""))
+        follow_prompt_var = tk.StringVar(value=cfg.get("follow_prompt", ""))
+        config_tags_var = tk.StringVar(value=cfg.get("config_tags", ""))
+        config_tag_assignment_var = tk.StringVar(
+            value=cfg.get("config_tag_assignment", "")
+        )
+        config_tag_auto_assign_var = tk.StringVar(
+            value=cfg.get("config_tag_auto_assign", "")
+        )
+        config_tag_default_var = tk.StringVar(value=cfg.get("config_tag_default", ""))
+
+        ttk.Label(
+            container, text="""Default over the line actions order (comma separated):"""
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=4)
+        row += 1
+        ttk.Entry(container, textvariable=otd_actions_var, width=width_for_lines).grid(
+            row=row, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we"
         )
         row += 1
-        add_row(row, "fim_prefix:", fim_pref_var)
-        row += 1
-        add_row(row, "fim_suffix:", fim_suf_var)
-        row += 1
-        add_row(row, "fim_middle:", fim_mid_var)
-        row += 1
-
-        tk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
-            row=row, column=0, padx=8, pady=(10, 4), sticky="w"
+        ttk.Label(container, text="Line actions order").grid(
+            row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(12, 4)
+        )
+        ttk.Entry(container, textvariable=line_actions_var, width=width_for_lines).grid(
+            row=row, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we"
         )
         row += 1
-        available_fonts = self._available_font_families()
-        add_combobox_row(row, "Font family:", fontfam_var, available_fonts)
+        ttk.Label(container, text="Stack actions order").grid(
+            row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(12, 4)
+        )
+        ttk.Entry(container, textvariable=stack_actions_var, width=width_for_lines).grid(
+            row=row, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we"
+        )
         row += 1
-        add_row(row, "Font size:", fontsize_var)
+        ttk.Label(container, text="Base prompt:").grid(
+            row=row, column=0, sticky="w", padx=0, pady=(12, 4)
+        )
+        ttk.Entry(container, textvariable=base_prompt_var, width=width_for_lines).grid(
+            row=row, column=1, padx=(8, 0), pady=(12, 4), sticky="we"
+        )
         row += 1
-        add_row(row, "Editor padding (px):", pad_var)
-        row += 1
-        add_row(row, "Line number padding (px):", line_pad_var)
+        ttk.Label(container, text="Follow prompt:").grid(
+            row=row, column=0, sticky="w", padx=0, pady=(0, 4)
+        )
+        ttk.Entry(container, textvariable=follow_prompt_var, width=width_for_lines).grid(
+            row=row, column=1, padx=(8, 0), pady=(0, 4), sticky="we"
+        )
         row += 1
 
-        def pick_color(initial: str, title: str) -> tuple | None:
-            c = colorchooser.askcolor(color=initial, title=title, parent=w)
-            w.lift()
-            return c
-
-        def pick_fg():
-            c = pick_color(fg_var.get(), "Pick text color")
+        def pick_color(variable: tk.StringVar, title: str):
+            c = colorchooser.askcolor(parent=w, title=title)
             if c and c[1]:
-                fg_var.set(c[1])
+                variable.set(c[1])
 
-        def pick_bg():
-            c = pick_color(bg_var.get(), "Pick background color")
-            if c and c[1]:
-                bg_var.set(c[1])
+        def pick_fg() -> None:
+            pick_color(fg_var, "Pick text color")
 
-        def pick_highlight1():
-            c = pick_color(highlight1_var.get(), "Pick caret/highlight color")
-            if c and c[1]:
-                highlight1_var.set(c[1])
+        def pick_bg() -> None:
+            pick_color(bg_var, "Pick background color")
 
-        def pick_highlight2():
-            c = pick_color(highlight2_var.get(), "Pick selection color")
-            if c and c[1]:
-                highlight2_var.set(c[1])
+        def pick_highlight1() -> None:
+            pick_color(highlight1_var, "Pick caret color")
 
-        tk.Label(w, text="Text color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=fg_var, width=20).grid(
-            row=row, column=1, padx=8, pady=4, sticky="w"
+        def pick_highlight2() -> None:
+            pick_color(highlight2_var, "Pick selection color")
+
+        ttk.Label(
+            container,
+            text="""Config tags (comma-separated words such as 'work', 'relax')""",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(8, 4))
+        ttk.Entry(container, textvariable=config_tags_var, width=width_for_lines).grid(
+            row=row + 1, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we"
         )
-        tk.Button(w, text="Pick…", command=pick_fg).grid(
-            row=row, column=1, padx=8, pady=4, sticky="e"
+        row += 2
+        ttk.Label(
+            container,
+            text="""Config tag assignment (e.g. 19:relax -> 7pm:relax)""",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(8, 4))
+        ttk.Entry(
+            container, textvariable=config_tag_assignment_var, width=width_for_lines
+        ).grid(row=row + 1, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we")
+        row += 2
+        ttk.Label(
+            container,
+            text="""Config tags to apply automatically (comma-separated)
+Example: work/7am, 12pm-1pm,
+Checks system local time. Empty to disable.""",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(8, 4))
+        ttk.Entry(
+            container, textvariable=config_tag_auto_assign_var, width=width_for_lines
+        ).grid(row=row + 1, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we")
+        row += 2
+        ttk.Label(
+            container,
+            text="""Config tags to apply when auto assign is empty (comma-separated)
+Example: when working away from home""",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=0, pady=(8, 4))
+        ttk.Entry(container, textvariable=config_tag_default_var, width=width_for_lines).grid(
+            row=row + 1, column=0, columnspan=2, padx=0, pady=(0, 4), sticky="we"
+        )
+        row += 2
+
+        ttk.Label(container, text="Text color (hex):").grid(
+            row=row, column=0, padx=0, pady=4, sticky="w"
+        )
+        ttk.Entry(container, textvariable=fg_var, width=20).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="w"
+        )
+        ttk.Button(container, text="Pick…", command=pick_fg).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(
-            w, text="Background color (hex):"
-        ).grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=bg_var, width=20).grid(
-            row=row, column=1, padx=8, pady=4, sticky="w"
+        ttk.Label(
+            container, text="Background color (hex):"
+        ).grid(row=row, column=0, padx=0, pady=4, sticky="w")
+        ttk.Entry(container, textvariable=bg_var, width=20).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_bg).grid(
-            row=row, column=1, padx=8, pady=4, sticky="e"
-        )
-        row += 1
-
-        tk.Label(w, text="Caret color (hex):").grid(
-            row=row, column=0, padx=8, pady=4, sticky="w"
-        )
-        tk.Entry(w, textvariable=highlight1_var, width=20).grid(
-            row=row, column=1, padx=8, pady=4, sticky="w"
-        )
-        tk.Button(w, text="Pick…", command=pick_highlight1).grid(
-            row=row, column=1, padx=8, pady=4, sticky="e"
+        ttk.Button(container, text="Pick…", command=pick_bg).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(w, text="Selection color (hex):").grid(
-            row=row, column=0, padx=8, pady=4, sticky="w"
+        ttk.Label(container, text="Caret color (hex):").grid(
+            row=row, column=0, padx=0, pady=4, sticky="w"
         )
-        tk.Entry(w, textvariable=highlight2_var, width=20).grid(
-            row=row, column=1, padx=8, pady=4, sticky="w"
+        ttk.Entry(container, textvariable=highlight1_var, width=20).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_highlight2).grid(
-            row=row, column=1, padx=8, pady=4, sticky="e"
+        ttk.Button(container, text="Pick…", command=pick_highlight1).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="e"
+        )
+        row += 1
+
+        ttk.Label(container, text="Selection color (hex):").grid(
+            row=row, column=0, padx=0, pady=4, sticky="w"
+        )
+        ttk.Entry(container, textvariable=highlight2_var, width=20).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="w"
+        )
+        ttk.Button(container, text="Pick…", command=pick_highlight2).grid(
+            row=row, column=1, padx=(8, 0), pady=4, sticky="e"
         )
         row += 1
 
@@ -3206,11 +3386,16 @@ class FIMPad(tk.Tk):
             )
             w.destroy()
 
-        tk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
-            row=row, column=0, padx=8, pady=12, sticky="w"
+        actions = ttk.Frame(container)
+        actions.grid(row=row, column=0, columnspan=2, pady=12, sticky="ew")
+        actions.columnconfigure(0, weight=1)
+        actions.columnconfigure(1, weight=1)
+
+        ttk.Button(actions, text="Restore Default Config", command=restore_defaults).grid(
+            row=0, column=0, padx=(0, 8), sticky="w"
         )
-        tk.Button(w, text="Save", command=apply_and_close).grid(
-            row=row, column=1, padx=8, pady=12, sticky="e"
+        ttk.Button(actions, text="Save", command=apply_and_close).grid(
+            row=0, column=1, padx=(8, 0), sticky="e"
         )
 
         self._prepare_child_window(w)
