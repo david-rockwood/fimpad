@@ -241,7 +241,7 @@ class FIMPad(tk.Tk):
         add("<Control-x>", lambda: self._event_on_current_text("<<Cut>>"))
         add("<Control-c>", lambda: self._event_on_current_text("<<Copy>>"))
         add("<Control-v>", lambda: self._event_on_current_text("<<Paste>>"))
-        add("<Delete>", lambda: self._event_on_current_text("<<Clear>>"))
+        add("<Delete>", self._delete_on_current_text)
         add("<Control-a>", self._select_all_current)
         add("<Control-f>", self._open_replace_dialog)
         add("<Control-r>", self._open_regex_replace_dialog)
@@ -1246,6 +1246,26 @@ class FIMPad(tk.Tk):
     def _cur_text(self) -> tk.Text:
         st = self._current_tab_state()
         return st["text"]
+
+    def _delete_on_current_text(self) -> None:
+        st = self._current_tab_state()
+        if not st:
+            return
+
+        text = st.get("text")
+        if not isinstance(text, tk.Text):
+            return
+
+        try:
+            sel_first = text.index("sel.first")
+            sel_last = text.index("sel.last")
+        except tk.TclError:
+            sel_first = sel_last = None
+
+        if sel_first and sel_last:
+            text.delete(sel_first, sel_last)
+        else:
+            text.delete("insert")
 
     def _event_on_current_text(self, sequence: str) -> None:
         st = self._current_tab_state()
