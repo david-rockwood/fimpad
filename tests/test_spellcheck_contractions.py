@@ -33,6 +33,75 @@ class DummyText:
         return self._text
 
 
+class DummyScrollableText:
+    def __init__(self, text, visible_lines=1):
+        self._text = text
+        self.visible_lines = visible_lines
+        self._lines = text.split("\n") or [""]
+
+    def _split_index(self, index_str):
+        line_str, col_str = index_str.split(".")
+        return int(line_str), int(col_str)
+
+    def _index_to_offset(self, index_str):
+        line, col = self._split_index(index_str)
+        line = max(1, min(line, len(self._lines)))
+        col = max(0, col)
+        offset = 0
+        for idx, ln in enumerate(self._lines, start=1):
+            if idx < line:
+                offset += len(ln) + 1  # include newline
+            elif idx == line:
+                offset += min(col, len(ln))
+                break
+        return min(offset, len(self._text))
+
+    def _offset_to_index(self, offset):
+        remaining = max(0, min(offset, len(self._text)))
+        for idx, ln in enumerate(self._lines, start=1):
+            line_len = len(ln)
+            if remaining <= line_len:
+                return f"{idx}.{remaining}"
+            remaining -= line_len
+            if remaining == 0:
+                return f"{idx}.{line_len}"
+            remaining -= 1  # newline
+        last_line = len(self._lines)
+        last_col = len(self._lines[-1])
+        return f"{last_line}.{last_col}"
+
+    def index(self, spec):
+        if spec == "end-1c":
+            return self._offset_to_index(len(self._text))
+        if spec.endswith(".end"):
+            line = int(spec.split(".")[0])
+            line = max(1, min(line, len(self._lines)))
+            return f"{line}.{len(self._lines[line - 1])}"
+        if spec.startswith("@0,"):
+            visible_line = min(len(self._lines), self.visible_lines)
+            return f"{visible_line}.0"
+        if "+" in spec and spec.endswith("c"):
+            base, inc = spec.split("+")
+            base_idx = self.index(base)
+            offset = self._index_to_offset(base_idx) + int(inc[:-1])
+            return self._offset_to_index(offset)
+        if "." in spec:
+            return spec
+        raise AssertionError(f"Unhandled index spec: {spec}")
+
+    def count(self, start, end, *_):
+        return (self._index_to_offset(end) - self._index_to_offset(start),)
+
+    def get(self, start, end):
+        return self._text[self._index_to_offset(start) : self._index_to_offset(end)]
+
+    def winfo_height(self):
+        return self.visible_lines
+
+    def tag_remove(self, *args, **kwargs):
+        self.removed = (args, kwargs)
+
+
 class ImmediateThread:
     def __init__(self, target=None, args=(), kwargs=None, daemon=None):
         self._target = target
@@ -127,3 +196,31 @@ def test_dictionary_init_failure_disables_spellcheck(monkeypatch):
     dummy_app._dictionary = None
     FIMPad._schedule_spellcheck_for_frame(dummy_app, dummy_frame)
     assert dummy_app.tabs[dummy_frame]["_spell_timer"] is None
+
+
+def test_spell_region_respects_char_budget():
+    long_line = "a" * 500
+    dummy_app = SimpleNamespace(
+        cfg={
+            "spellcheck_full_document_line_threshold": 10,
+            "spellcheck_view_buffer_lines": 0,
+            "spellcheck_max_chars": 100,
+        }
+    )
+    dummy_app._clamp_region_to_budget = FIMPad._clamp_region_to_budget.__get__(
+        dummy_app, FIMPad
+    )
+    dummy_app._spell_viewport_region = FIMPad._spell_viewport_region.__get__(
+        dummy_app, FIMPad
+    )
+    dummy_app._count_text_chars = FIMPad._count_text_chars
+    text = DummyScrollableText(long_line, visible_lines=1)
+
+    start_idx, end_idx, base_line, base_col = FIMPad._spell_region_for_text(
+        dummy_app, text
+    )
+
+    assert start_idx == "1.0"
+    assert end_idx == "1.100"
+    assert base_line == 1
+    assert base_col == 0

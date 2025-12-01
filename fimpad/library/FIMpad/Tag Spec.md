@@ -283,7 +283,7 @@ Each entry mirrors a Settings window field or a `config.json` value (values are 
 * `open_maximized`
 * `scroll_speed_multiplier`, `log_entries_kept`
 * `line_numbers_enabled`, `follow_stream_enabled`
-* `spellcheck_enabled`, `spellcheck_view_buffer_lines`, `spellcheck_scroll_debounce_ms`, `spellcheck_full_document_line_threshold`, `spell_lang`
+* `spellcheck_enabled`, `spellcheck_view_buffer_lines`, `spellcheck_scroll_debounce_ms`, `spellcheck_full_document_line_threshold`, `spellcheck_max_chars`, `spell_lang`
 
 ### 5.3 Semantics
 

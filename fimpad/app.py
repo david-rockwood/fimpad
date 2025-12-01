@@ -3198,6 +3198,7 @@ class FIMPad(tk.Tk):
             "spellcheck_view_buffer_lines": "spellcheck_view_buffer_lines",
             "spellcheck_scroll_debounce_ms": "spellcheck_scroll_debounce_ms",
             "spellcheck_full_document_line_threshold": "spellcheck_full_document_line_threshold",
+            "spellcheck_max_chars": "spellcheck_max_chars",
             "spell_lang": "spell_lang",
             "follow_stream_enabled": "follow_stream_enabled",
             "stream_follow_debounce_ms": "stream_follow_debounce_ms",
@@ -3268,6 +3269,7 @@ class FIMPad(tk.Tk):
                 elif canonical in {
                     "spellcheck_view_buffer_lines",
                     "spellcheck_scroll_debounce_ms",
+                    "spellcheck_max_chars",
                     "stream_follow_debounce_ms",
                 }:
                     updates[cfg_key] = max(0, int(raw_value))
@@ -4400,6 +4402,55 @@ class FIMPad(tk.Tk):
         abs_col = rel_col + (base_col if rel_line == 1 else 0)
         return f"{abs_line}.{abs_col}"
 
+    @staticmethod
+    def _count_text_chars(text: tk.Text, start: str, end: str) -> int | None:
+        with contextlib.suppress(Exception):
+            counts = text.count(start, end, "chars")
+            if counts:
+                return int(counts[0])
+        with contextlib.suppress(Exception):
+            return len(text.get(start, end))
+        return None
+
+    def _spell_viewport_region(
+        self, text: tk.Text, total_lines: int, max_chars: int
+    ) -> tuple[str, str, int, int]:
+        buffer_lines = int(
+            self.cfg.get(
+                "spellcheck_view_buffer_lines",
+                DEFAULTS["spellcheck_view_buffer_lines"],
+            )
+        )
+        try:
+            first_visible = text.index("@0,0")
+            last_visible = text.index(f"@0,{text.winfo_height()}")
+        except tk.TclError:
+            first_visible = "1.0"
+            last_visible = "1.0"
+
+        start_line = max(1, int(first_visible.split(".")[0]) - buffer_lines)
+        end_line = min(total_lines, int(last_visible.split(".")[0]) + buffer_lines)
+
+        start_idx = f"{start_line}.0"
+        try:
+            end_idx = text.index(f"{end_line}.end")
+        except tk.TclError:
+            end_idx = text.index("end-1c")
+
+        end_idx = self._clamp_region_to_budget(text, start_idx, end_idx, max_chars)
+
+        base_line_str, base_col_str = start_idx.split(".")
+        return start_idx, end_idx, int(base_line_str), int(base_col_str)
+
+    def _clamp_region_to_budget(
+        self, text: tk.Text, start_idx: str, end_idx: str, max_chars: int
+    ) -> str:
+        char_count = self._count_text_chars(text, start_idx, end_idx)
+        if char_count is None or char_count > max_chars:
+            with contextlib.suppress(Exception):
+                return text.index(f"{start_idx}+{max_chars}c")
+        return end_idx
+
     def _spell_region_for_text(self, text: tk.Text) -> tuple[str, str, int, int]:
         try:
             total_lines = int(text.index("end-1c").split(".")[0])
@@ -4411,34 +4462,22 @@ class FIMPad(tk.Tk):
                 DEFAULTS["spellcheck_full_document_line_threshold"],
             )
         )
+        max_chars = int(
+            self.cfg.get("spellcheck_max_chars", DEFAULTS["spellcheck_max_chars"])
+        )
+
         if total_lines <= threshold:
-            start_idx = "1.0"
-            end_idx = "end-1c"
-        else:
-            buffer_lines = int(
-                self.cfg.get(
-                    "spellcheck_view_buffer_lines",
-                    DEFAULTS["spellcheck_view_buffer_lines"],
-                )
+            region_char_count = self._count_text_chars(text, "1.0", "end-1c")
+            region_too_large = (region_char_count is None) or (
+                region_char_count > max_chars
             )
-            try:
-                first_visible = text.index("@0,0")
-                last_visible = text.index(f"@0,{text.winfo_height()}")
-            except tk.TclError:
-                first_visible = "1.0"
-                last_visible = "1.0"
+            if not region_too_large:
+                return "1.0", "end-1c", 1, 0
 
-            start_line = max(1, int(first_visible.split(".")[0]) - buffer_lines)
-            end_line = min(total_lines, int(last_visible.split(".")[0]) + buffer_lines)
-
-            start_idx = f"{start_line}.0"
-            try:
-                end_idx = text.index(f"{end_line}.end")
-            except tk.TclError:
-                end_idx = text.index("end-1c")
-
-        base_line_str, base_col_str = start_idx.split(".")
-        return start_idx, end_idx, int(base_line_str), int(base_col_str)
+        start_idx, end_idx, base_line, base_col = self._spell_viewport_region(
+            text, total_lines, max_chars
+        )
+        return start_idx, end_idx, base_line, base_col
 
     def _spawn_spellcheck(self, frame):
         dictionary = getattr(self, "_dictionary", None)
