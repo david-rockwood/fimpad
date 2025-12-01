@@ -19,7 +19,6 @@ from datetime import datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, messagebox, simpledialog, ttk
-from tkinter import TclError
 
 import enchant
 
@@ -2260,7 +2259,7 @@ class FIMPad(tk.Tk):
             try:
                 replace_btn.state((state,))
                 replace_all_btn.state((state,))
-            except TclError:
+            except tk.TclError:
                 # In case destruction races with this call, ignore during teardown
                 pass
 
