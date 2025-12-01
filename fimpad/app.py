@@ -4119,7 +4119,10 @@ class FIMPad(tk.Tk):
 
                     kind = item.get("kind")
                     tab_id = item.get("tab")
-                    frame = self.nametowidget(tab_id) if tab_id else None
+                    frame = None
+                    if tab_id:
+                        with contextlib.suppress(tk.TclError):
+                            frame = self.nametowidget(tab_id)
                     if not frame or frame not in self.tabs:
                         if kind == "stream_done":
                             self._fim_generation_active = False
@@ -4231,13 +4234,14 @@ class FIMPad(tk.Tk):
                     elif kind == "spell_result":
                         # Apply tag updates
                         region = item.get("region")
-                        if region:
-                            start_region, end_region = region
-                            text.tag_remove("misspelled", start_region, end_region)
-                        else:
-                            text.tag_remove("misspelled", "1.0", "end")
-                        for sidx, eidx in item.get("spans", []):
-                            text.tag_add("misspelled", sidx, eidx)
+                        with contextlib.suppress(tk.TclError):
+                            if region:
+                                start_region, end_region = region
+                                text.tag_remove("misspelled", start_region, end_region)
+                            else:
+                                text.tag_remove("misspelled", "1.0", "end")
+                            for sidx, eidx in item.get("spans", []):
+                                text.tag_add("misspelled", sidx, eidx)
 
                 except Exception as exc:  # noqa: BLE001
                     self._fim_generation_active = False
@@ -4557,10 +4561,21 @@ class FIMPad(tk.Tk):
                 # swallow spell errors silently
                 emit([])
 
+        if isinstance(frame, str):
+            tab_id = frame
+        else:
+            tab_id = None
+            with contextlib.suppress(Exception):
+                tab_id = self.nb.select(frame)
+            if not tab_id:
+                with contextlib.suppress(Exception):
+                    tab_id = self.nb.select()
+            tab_id = tab_id or str(frame)
+
         threading.Thread(
             target=worker,
             args=(
-                self.nb.select(),
+                tab_id,
                 txt,
                 ignore,
                 dictionary,
