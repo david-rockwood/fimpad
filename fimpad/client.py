@@ -8,7 +8,7 @@ from collections.abc import Iterable
 import requests
 
 CONNECT_TIMEOUT = 10
-READ_TIMEOUT = 300
+READ_TIMEOUT = 7200
 
 
 def _sse_chunks(resp, stop_event: threading.Event | None = None) -> Iterable[str]:
