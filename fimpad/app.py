@@ -601,6 +601,7 @@ class FIMPad(tk.Tk):
             padding=0,
         )
         left_padding.grid(row=0, column=0, sticky="ns")
+        left_padding.grid_propagate(False)
 
         gutter_frame = ttk.Frame(content_frame, style="LineNumberFrame.TFrame", padding=0)
         gutter_frame.grid(row=0, column=1, sticky="ns")
@@ -628,6 +629,7 @@ class FIMPad(tk.Tk):
             padding=0,
         )
         gutter_gap.grid(row=0, column=2, sticky="ns")
+        gutter_gap.grid_propagate(False)
 
         text = tk.Text(
             content_frame,
@@ -648,6 +650,7 @@ class FIMPad(tk.Tk):
             padding=0,
         )
         right_padding.grid(row=0, column=4, sticky="ns")
+        right_padding.grid_propagate(False)
 
         scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
         scrollbar.grid(row=0, column=1, sticky="ns")
@@ -669,6 +672,7 @@ class FIMPad(tk.Tk):
             "path": None,
             "text": text,
             "line_numbers": line_numbers,
+            "gutter_frame": gutter_frame,
             "content_frame": content_frame,
             "left_padding": left_padding,
             "right_padding": right_padding,
@@ -1153,12 +1157,17 @@ class FIMPad(tk.Tk):
     def _render_line_numbers(self, st: dict) -> None:
         text: tk.Text = st["text"]
         canvas: tk.Canvas = st["line_numbers"]
+        gutter_frame: ttk.Frame | None = st.get("gutter_frame")
         if not st.get("line_numbers_enabled", False):
             canvas.configure(width=0)
             canvas.grid_remove()
             canvas.delete("all")
+            if gutter_frame is not None:
+                gutter_frame.grid_remove()
             return
 
+        if gutter_frame is not None:
+            gutter_frame.grid()
         canvas.grid()
 
         if not text.winfo_ismapped():
@@ -3037,6 +3046,7 @@ class FIMPad(tk.Tk):
         )
 
         self.cfg = new_cfg
+        self._configure_editor_styles()
         log_changed = self._apply_log_retention()
         self._persist_config()
         self._apply_open_maximized(self.cfg.get("open_maximized", False))
@@ -3083,7 +3093,9 @@ class FIMPad(tk.Tk):
             )
             content_frame = st.get("content_frame")
             if content_frame is not None:
-                content_frame.configure(bg=self.cfg["bg"], highlightthickness=0, bd=0)
+                ttk.Style(content_frame).configure(
+                    "EditorContent.TFrame", background=self.cfg["bg"]
+                )
             apply_editor_padding(st, self.cfg["editor_padding_px"], self.cfg["bg"])
             apply_line_number_padding(
                 st, self.cfg["line_number_padding_px"], self.cfg["bg"]
