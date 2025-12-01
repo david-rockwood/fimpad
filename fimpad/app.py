@@ -136,8 +136,8 @@ class FIMPad(tk.Tk):
             parent_y = parent_widget.winfo_rooty()
             parent_w = parent_widget.winfo_width()
             parent_h = parent_widget.winfo_height()
-            win_w = window.winfo_width()
-            win_h = window.winfo_height()
+            win_w = max(window.winfo_width(), window.winfo_reqwidth())
+            win_h = max(window.winfo_height(), window.winfo_reqheight())
             x = parent_x + max(0, (parent_w - win_w) // 2)
             y = parent_y + max(0, (parent_h - win_h) // 2)
             window.geometry(f"+{x}+{y}")
@@ -281,9 +281,10 @@ class FIMPad(tk.Tk):
     def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
+            window.withdraw()
+        with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
             window.transient(parent_widget)
-            window.lift(parent_widget)
             self._lift_if_exists(parent_widget)
             parent_widget.bind(
                 "<FocusIn>",
@@ -292,6 +293,9 @@ class FIMPad(tk.Tk):
             )
         window.bind("<FocusIn>", lambda e: self._lift_if_exists(e.widget), add="+")
         self._center_window(window, parent_widget)
+        with contextlib.suppress(tk.TclError):
+            window.deiconify()
+            window.lift(parent_widget)
 
     def _configure_find_highlight(self, text: tk.Text, tag: str = "find_replace_match") -> None:
         selection_fg = (
