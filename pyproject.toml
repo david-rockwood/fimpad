@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fimpad"
-version = "0.0.10"
+version = "0.0.11"
 description = "FIMpad is a FIM-focused local LLM interface in the form of a tabbed GUI text editor. "
 readme = "README.md"
 requires-python = ">=3.10"

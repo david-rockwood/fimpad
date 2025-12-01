@@ -20,7 +20,10 @@ from importlib import resources
 from importlib.resources.abc import Traversable
 from tkinter import colorchooser, messagebox, simpledialog, ttk
 
-import enchant
+try:
+    import enchant
+except ImportError:  # pragma: no cover - handled by runtime stubs in tests
+    enchant = None
 
 from .bol_utils import (
     _deindent_block,
@@ -66,7 +69,7 @@ CORE_TK_FONT_NAMES: tuple[str, ...] = (
 class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("FIMpad 0.0.10")
+        self.title("FIMpad 0.0.11")
         set_app_icon(self)
         self.geometry("1100x750")
 
@@ -136,8 +139,8 @@ class FIMPad(tk.Tk):
             parent_y = parent_widget.winfo_rooty()
             parent_w = parent_widget.winfo_width()
             parent_h = parent_widget.winfo_height()
-            win_w = window.winfo_width()
-            win_h = window.winfo_height()
+            win_w = max(window.winfo_width(), window.winfo_reqwidth())
+            win_h = max(window.winfo_height(), window.winfo_reqheight())
             x = parent_x + max(0, (parent_w - win_w) // 2)
             y = parent_y + max(0, (parent_h - win_h) // 2)
             window.geometry(f"+{x}+{y}")
@@ -175,13 +178,29 @@ class FIMPad(tk.Tk):
             .lower()
         )
 
+    @staticmethod
+    def _uppercase_keysym_sequence(seq: str) -> str | None:
+        match = re.fullmatch(r"<(.+)-([a-z])>", seq)
+        if not match:
+            return None
+        prefix, key = match.groups()
+        return f"<{prefix}-{key.upper()}>"
+
+    def _shortcut_variants(self, sequence: str) -> list[str]:
+        variants = [sequence]
+        uppercase = self._uppercase_keysym_sequence(sequence)
+        if uppercase and uppercase not in variants:
+            variants.append(uppercase)
+        return variants
+
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
         def add(sequence: str, callback: Callable[[], None]) -> None:
             handler = self._make_shortcut_handler(callback)
-            self.bind_all(sequence, handler, add="+")
-            self._text_shortcut_bindings.append((sequence, handler))
+            for seq in self._shortcut_variants(sequence):
+                self.bind_all(seq, handler, add="+")
+                self._text_shortcut_bindings.append((seq, handler))
 
         add("<Control-n>", self._new_tab)
         add("<Control-o>", self._open_file_into_current)
@@ -265,9 +284,10 @@ class FIMPad(tk.Tk):
     def _prepare_child_window(self, window: tk.Toplevel, parent: tk.Misc | None = None) -> None:
         parent_widget = parent or window.master or self
         with contextlib.suppress(tk.TclError):
+            window.withdraw()
+        with contextlib.suppress(tk.TclError):
             parent_widget = parent_widget.winfo_toplevel()
             window.transient(parent_widget)
-            window.lift(parent_widget)
             self._lift_if_exists(parent_widget)
             parent_widget.bind(
                 "<FocusIn>",
@@ -276,6 +296,9 @@ class FIMPad(tk.Tk):
             )
         window.bind("<FocusIn>", lambda e: self._lift_if_exists(e.widget), add="+")
         self._center_window(window, parent_widget)
+        with contextlib.suppress(tk.TclError):
+            window.deiconify()
+            window.lift(parent_widget)
 
     def _configure_find_highlight(self, text: tk.Text, tag: str = "find_replace_match") -> None:
         selection_fg = (
@@ -2208,14 +2231,24 @@ class FIMPad(tk.Tk):
         w = tk.Toplevel(self)
         w.title("Find & Replace")
         w.resizable(False, False)
-        tk.Label(w, text="Find:").grid(row=0, column=0, padx=8, pady=8, sticky="e")
-        tk.Label(w, text="Replace:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+
+        # Main content frame (themed, with padding)
+        content = ttk.Frame(w, padding=8)
+        content.grid(row=0, column=0, sticky="nsew")
+        w.columnconfigure(0, weight=1)
+        w.rowconfigure(0, weight=1)
+
+        ttk.Label(content, text="Find:").grid(row=0, column=0, pady=(0, 8), sticky="e")
+        ttk.Label(content, text="Replace:").grid(row=1, column=0, pady=(0, 8), sticky="e")
+
         find_var = tk.StringVar()
         repl_var = tk.StringVar()
-        e1 = tk.Entry(w, width=42, textvariable=find_var)
-        e2 = tk.Entry(w, width=42, textvariable=repl_var)
-        e1.grid(row=0, column=1, padx=8, pady=8)
-        e2.grid(row=1, column=1, padx=8, pady=8)
+
+        e1 = ttk.Entry(content, width=42, textvariable=find_var)
+        e2 = ttk.Entry(content, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=(8, 0), pady=(0, 8), sticky="ew")
+        e2.grid(row=1, column=1, padx=(8, 0), pady=(0, 8), sticky="ew")
+        content.columnconfigure(1, weight=1)
         e1.focus_set()
 
         match_tag = "find_replace_match"
@@ -2225,13 +2258,24 @@ class FIMPad(tk.Tk):
         def set_status(message: str) -> None:
             status_var.set(message)
 
-        def update_buttons():
+        def update_buttons() -> None:
+            # Defensive: during teardown these widgets may already be gone
+            if not text.winfo_exists():
+                return
+            if not replace_btn.winfo_exists() or not replace_all_btn.winfo_exists():
+                return
             has_match = bool(text.tag_ranges(match_tag))
             state = "!disabled" if has_match else "disabled"
-            replace_btn.state((state,))
-            replace_all_btn.state((state,))
+            try:
+                replace_btn.state((state,))
+                replace_all_btn.state((state,))
+            except tk.TclError:
+                # Widget is being destroyed; ignore during shutdown
+                pass
 
-        def clear_highlight(reset_status: bool = True):
+        def clear_highlight(reset_status: bool = True) -> None:
+            if not text.winfo_exists():
+                return
             text.tag_remove("sel", "1.0", tk.END)
             text.tag_remove(match_tag, "1.0", tk.END)
             update_buttons()
@@ -2239,12 +2283,14 @@ class FIMPad(tk.Tk):
                 set_status("")
 
         def select_match(start: str, end: str) -> None:
+            if not text.winfo_exists():
+                return
             text.tag_remove("sel", "1.0", tk.END)
             text.tag_remove(match_tag, "1.0", tk.END)
             text.tag_add("sel", start, end)
             text.tag_add(match_tag, start, end)
 
-        def find_previous():
+        def find_previous() -> None:
             patt = find_var.get()
             if not patt:
                 clear_highlight()
@@ -2269,7 +2315,7 @@ class FIMPad(tk.Tk):
             set_status("")
             update_buttons()
 
-        def find_next():
+        def find_next() -> None:
             patt = find_var.get()
             if not patt:
                 clear_highlight()
@@ -2290,7 +2336,7 @@ class FIMPad(tk.Tk):
             set_status("")
             update_buttons()
 
-        def replace_current():
+        def replace_current() -> None:
             patt = find_var.get()
             repl = repl_var.get()
             ranges = text.tag_ranges(match_tag)
@@ -2308,7 +2354,7 @@ class FIMPad(tk.Tk):
             update_buttons()
             find_next()
 
-        def replace_all():
+        def replace_all() -> None:
             patt = find_var.get()
             repl = repl_var.get()
             if not patt or not text.tag_ranges(match_tag):
@@ -2328,14 +2374,14 @@ class FIMPad(tk.Tk):
             set_status(f"Replaced {count} occurrences.")
             clear_highlight(reset_status=False)
 
-        def on_find_change(*_):
+        def on_find_change(*_: object) -> None:
             clear_highlight()
             set_status("")
 
         find_var.trace_add("write", on_find_change)
 
-        btn_frame = ttk.Frame(w)
-        btn_frame.grid(row=2, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame = ttk.Frame(content)
+        btn_frame.grid(row=2, column=1, pady=(0, 6), sticky="ew")
         btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         ttk.Button(btn_frame, text="Find Previous", command=find_previous).grid(
@@ -2346,12 +2392,16 @@ class FIMPad(tk.Tk):
         )
         replace_btn = ttk.Button(btn_frame, text="Replace", command=replace_current)
         replace_btn.grid(row=0, column=2)
-        replace_all_btn = ttk.Button(btn_frame, text="Replace All", command=replace_all)
+        replace_all_btn = ttk.Button(
+            btn_frame,
+            text="Replace All",
+            command=replace_all,
+        )
         replace_all_btn.grid(row=0, column=3, padx=(4, 0), sticky="e")
         update_buttons()
 
-        status = ttk.Label(w, textvariable=status_var, anchor="w")
-        status.grid(row=3, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+        status = ttk.Label(content, textvariable=status_var, anchor="w")
+        status.grid(row=3, column=0, columnspan=2, sticky="ew")
 
         def close_dialog() -> None:
             clear_highlight()
@@ -2378,31 +2428,55 @@ class FIMPad(tk.Tk):
         w = tk.Toplevel(self)
         w.title("Regex Find & Replace")
         w.resizable(False, False)
-        tk.Label(w, text="Pattern (Python regex):").grid(
-            row=0, column=0, padx=8, pady=8, sticky="e"
+
+        # Main content frame (themed, with padding)
+        content = ttk.Frame(w, padding=8)
+        content.grid(row=0, column=0, sticky="nsew")
+        w.columnconfigure(0, weight=1)
+        w.rowconfigure(0, weight=1)
+
+        ttk.Label(content, text="Pattern (Python regex):").grid(
+            row=0, column=0, pady=(0, 8), sticky="e"
         )
-        tk.Label(w, text="Replacement:").grid(row=1, column=0, padx=8, pady=8, sticky="e")
+        ttk.Label(content, text="Replacement:").grid(
+            row=1, column=0, pady=(0, 8), sticky="e"
+        )
+
         find_var = tk.StringVar()
         repl_var = tk.StringVar()
         ignorecase_var = tk.BooleanVar(value=False)
         multiline_var = tk.BooleanVar(value=False)
         dotall_var = tk.BooleanVar(value=False)
-        e1 = tk.Entry(w, width=42, textvariable=find_var)
-        e2 = tk.Entry(w, width=42, textvariable=repl_var)
-        e1.grid(row=0, column=1, padx=8, pady=8)
-        e2.grid(row=1, column=1, padx=8, pady=8)
+
+        e1 = ttk.Entry(content, width=42, textvariable=find_var)
+        e2 = ttk.Entry(content, width=42, textvariable=repl_var)
+        e1.grid(row=0, column=1, padx=(8, 0), pady=(0, 8), sticky="ew")
+        e2.grid(row=1, column=1, padx=(8, 0), pady=(0, 8), sticky="ew")
+        content.columnconfigure(1, weight=1)
         e1.focus_set()
 
-        flag_frame = ttk.Frame(w)
-        flag_frame.grid(row=2, column=0, columnspan=2, padx=8, sticky="w")
+        flag_frame = ttk.Frame(content)
+        flag_frame.grid(row=2, column=0, columnspan=2, sticky="w")
         ttk.Checkbutton(
-            flag_frame, text="IGNORECASE", variable=ignorecase_var, onvalue=True, offvalue=False
+            flag_frame,
+            text="IGNORECASE",
+            variable=ignorecase_var,
+            onvalue=True,
+            offvalue=False,
         ).grid(row=0, column=0, padx=(0, 8))
         ttk.Checkbutton(
-            flag_frame, text="MULTILINE", variable=multiline_var, onvalue=True, offvalue=False
+            flag_frame,
+            text="MULTILINE",
+            variable=multiline_var,
+            onvalue=True,
+            offvalue=False,
         ).grid(row=0, column=1, padx=(0, 8))
         ttk.Checkbutton(
-            flag_frame, text="DOTALL", variable=dotall_var, onvalue=True, offvalue=False
+            flag_frame,
+            text="DOTALL",
+            variable=dotall_var,
+            onvalue=True,
+            offvalue=False,
         ).grid(row=0, column=2, padx=(0, 8))
 
         match_tag = "regex_replace_match"
@@ -2413,16 +2487,26 @@ class FIMPad(tk.Tk):
             status_var.set(message)
 
         def clear_highlight(reset_status: bool = True) -> None:
+            if not text.winfo_exists():
+                return
             text.tag_remove("sel", "1.0", tk.END)
             text.tag_remove(match_tag, "1.0", tk.END)
             if reset_status:
                 set_status("")
 
         def update_buttons() -> None:
+            if not text.winfo_exists():
+                return
+            if not replace_btn.winfo_exists() or not replace_all_btn.winfo_exists():
+                return
             has_match = bool(text.tag_ranges(match_tag))
             state = "!disabled" if has_match else "disabled"
-            replace_btn.state((state,))
-            replace_all_btn.state((state,))
+            try:
+                replace_btn.state((state,))
+                replace_all_btn.state((state,))
+            except tk.TclError:
+                # During teardown, buttons may already be gone
+                pass
 
         def get_pattern() -> re.Pattern[str] | None:
             patt = find_var.get()
@@ -2442,7 +2526,10 @@ class FIMPad(tk.Tk):
                 clear_highlight(reset_status=False)
                 set_status(f"Invalid regex: {exc}")
                 self._show_error(
-                    "Regex Error", "Invalid regex.", detail=str(exc), parent=w
+                    "Regex Error",
+                    "Invalid regex.",
+                    detail=str(exc),
+                    parent=w,
                 )
                 update_buttons()
                 return None
@@ -2472,7 +2559,7 @@ class FIMPad(tk.Tk):
                 set_status("")
             update_buttons()
 
-        def find_next():
+        def find_next() -> None:
             pattern = get_pattern()
             if not pattern:
                 return
@@ -2491,7 +2578,7 @@ class FIMPad(tk.Tk):
 
             highlight_match(content, match, wrapped)
 
-        def find_previous():
+        def find_previous() -> None:
             pattern = get_pattern()
             if not pattern:
                 return
@@ -2520,7 +2607,7 @@ class FIMPad(tk.Tk):
             status_msg = "Wrapped to the end; continuing search." if wrapped else ""
             highlight_match(content, prev_match, wrapped, status_msg=status_msg)
 
-        def replace_current():
+        def replace_current() -> None:
             pattern = get_pattern()
             if not pattern:
                 return
@@ -2534,7 +2621,10 @@ class FIMPad(tk.Tk):
                 replacement = pattern.sub(repl_var.get(), match_text, count=1)
             except re.error as exc:
                 self._show_error(
-                    "Regex Error", "Replacement failed.", detail=str(exc), parent=w
+                    "Regex Error",
+                    "Replacement failed.",
+                    detail=str(exc),
+                    parent=w,
                 )
                 set_status(f"Replacement error: {exc}")
                 return
@@ -2549,7 +2639,7 @@ class FIMPad(tk.Tk):
             update_buttons()
             find_next()
 
-        def replace_all():
+        def replace_all() -> None:
             pattern = get_pattern()
             if not pattern:
                 return
@@ -2558,7 +2648,10 @@ class FIMPad(tk.Tk):
                 replaced_text, count = pattern.subn(repl_var.get(), content)
             except re.error as exc:
                 self._show_error(
-                    "Regex Error", "Replacement failed.", detail=str(exc), parent=w
+                    "Regex Error",
+                    "Replacement failed.",
+                    detail=str(exc),
+                    parent=w,
                 )
                 set_status(f"Replacement error: {exc}")
                 return
@@ -2575,7 +2668,7 @@ class FIMPad(tk.Tk):
             set_status(f"Replaced {count} occurrence(s).")
             update_buttons()
 
-        def on_find_change(*_):
+        def on_find_change(*_: object) -> None:
             clear_highlight()
             set_status("")
             update_buttons()
@@ -2585,8 +2678,8 @@ class FIMPad(tk.Tk):
         multiline_var.trace_add("write", on_find_change)
         dotall_var.trace_add("write", on_find_change)
 
-        btn_frame = ttk.Frame(w)
-        btn_frame.grid(row=3, column=1, padx=8, pady=6, sticky="ew")
+        btn_frame = ttk.Frame(content)
+        btn_frame.grid(row=3, column=1, pady=(6, 6), sticky="ew")
         btn_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         ttk.Button(btn_frame, text="Find previous", command=find_previous).grid(
@@ -2601,8 +2694,8 @@ class FIMPad(tk.Tk):
         replace_all_btn.grid(row=0, column=3)
         update_buttons()
 
-        status = ttk.Label(w, textvariable=status_var, anchor="w")
-        status.grid(row=4, column=0, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
+        status = ttk.Label(content, textvariable=status_var, anchor="w")
+        status.grid(row=4, column=0, columnspan=2, sticky="ew")
 
         def on_close() -> None:
             clear_highlight()
@@ -2617,6 +2710,7 @@ class FIMPad(tk.Tk):
         w.bind("<Destroy>", on_destroy, add="+")
         self._prepare_child_window(w)
         self._track_text_tool_window(st, w, "regex_replace")
+
 
     def _open_bol_tool(self, event=None):
         st = self._current_tab_state()
@@ -2888,13 +2982,15 @@ class FIMPad(tk.Tk):
         w.resizable(False, False)
 
         def add_row(r, label, var, width=42):
-            tk.Label(w, text=label, anchor="w").grid(row=r, column=0, sticky="w", padx=8, pady=4)
-            e = tk.Entry(w, textvariable=var, width=width)
+            ttk.Label(w, text=label, anchor="w").grid(
+                row=r, column=0, sticky="w", padx=8, pady=4
+            )
+            e = ttk.Entry(w, textvariable=var, width=width)
             e.grid(row=r, column=1, padx=8, pady=4)
             return e
 
         def add_combobox_row(r, label, var, values, width=40):
-            tk.Label(w, text=label, anchor="w").grid(
+            ttk.Label(w, text=label, anchor="w").grid(
                 row=r, column=0, sticky="w", padx=8, pady=4
             )
             cb = ttk.Combobox(w, textvariable=var, values=values, width=width)
@@ -2966,7 +3062,7 @@ class FIMPad(tk.Tk):
         add_row(row, "Top-p:", top_p_var)
         row += 1
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             w,
             text="Open maximized on startup",
             variable=open_maximized_var,
@@ -2975,7 +3071,7 @@ class FIMPad(tk.Tk):
         ).grid(row=row, column=0, columnspan=2, padx=8, pady=4, sticky="w")
         row += 1
 
-        tk.Checkbutton(
+        ttk.Checkbutton(
             w,
             text="Reverse text color when selected",
             variable=reverse_selection_fg_var,
@@ -3007,7 +3103,7 @@ class FIMPad(tk.Tk):
         )
         row += 1
 
-        tk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
+        ttk.Label(w, text="FIM Tokens", font=("TkDefaultFont", 10, "bold")).grid(
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
@@ -3018,7 +3114,7 @@ class FIMPad(tk.Tk):
         add_row(row, "fim_middle:", fim_mid_var)
         row += 1
 
-        tk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
+        ttk.Label(w, text="Theme", font=("TkDefaultFont", 10, "bold")).grid(
             row=row, column=0, padx=8, pady=(10, 4), sticky="w"
         )
         row += 1
@@ -3057,44 +3153,46 @@ class FIMPad(tk.Tk):
             if c and c[1]:
                 highlight2_var.set(c[1])
 
-        tk.Label(w, text="Text color (hex):").grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=fg_var, width=20).grid(
+        ttk.Label(w, text="Text color (hex):").grid(
+            row=row, column=0, padx=8, pady=4, sticky="w"
+        )
+        ttk.Entry(w, textvariable=fg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_fg).grid(
+        ttk.Button(w, text="Pick…", command=pick_fg).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(
+        ttk.Label(
             w, text="Background color (hex):"
         ).grid(row=row, column=0, padx=8, pady=4, sticky="w")
-        tk.Entry(w, textvariable=bg_var, width=20).grid(
+        ttk.Entry(w, textvariable=bg_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_bg).grid(
+        ttk.Button(w, text="Pick…", command=pick_bg).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(w, text="Caret color (hex):").grid(
+        ttk.Label(w, text="Caret color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
-        tk.Entry(w, textvariable=highlight1_var, width=20).grid(
+        ttk.Entry(w, textvariable=highlight1_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_highlight1).grid(
+        ttk.Button(w, text="Pick…", command=pick_highlight1).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
 
-        tk.Label(w, text="Selection color (hex):").grid(
+        ttk.Label(w, text="Selection color (hex):").grid(
             row=row, column=0, padx=8, pady=4, sticky="w"
         )
-        tk.Entry(w, textvariable=highlight2_var, width=20).grid(
+        ttk.Entry(w, textvariable=highlight2_var, width=20).grid(
             row=row, column=1, padx=8, pady=4, sticky="w"
         )
-        tk.Button(w, text="Pick…", command=pick_highlight2).grid(
+        ttk.Button(w, text="Pick…", command=pick_highlight2).grid(
             row=row, column=1, padx=8, pady=4, sticky="e"
         )
         row += 1
@@ -3186,10 +3284,10 @@ class FIMPad(tk.Tk):
             )
             w.destroy()
 
-        tk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
+        ttk.Button(w, text="Restore Default Config", command=restore_defaults).grid(
             row=row, column=0, padx=8, pady=12, sticky="w"
         )
-        tk.Button(w, text="Save", command=apply_and_close).grid(
+        ttk.Button(w, text="Save", command=apply_and_close).grid(
             row=row, column=1, padx=8, pady=12, sticky="e"
         )
 
@@ -4374,6 +4472,8 @@ class FIMPad(tk.Tk):
     # ---------- Spellcheck (enchant) ----------
 
     def _list_spell_languages(self) -> list[str]:
+        if enchant is None:
+            return []
         try:
             langs = enchant.list_languages()
         except Exception:
@@ -4421,6 +4521,11 @@ class FIMPad(tk.Tk):
 
     def _load_dictionary(self, lang: str):
         lang_code = lang or "en_US"
+        if enchant is None:
+            self._spell_notice_msg = "Spellcheck unavailable: enchant is not installed."
+            self._spell_notice_last = None
+            self._notify_spell_unavailable()
+            return None
         try:
             self._spell_notice_msg = None
             self._spell_notice_last = None
