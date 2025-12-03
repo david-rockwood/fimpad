@@ -14,12 +14,6 @@ If you’ve had success, or encountered issues, on other operating systems, plea
 
 ---
 
-## YouTube Demo
-
-[![Full Demo Video](https://img.youtube.com/vi/Luq0WvNeXi0/hqdefault.jpg)](https://www.youtube.com/watch?v=Luq0WvNeXi0)
-
----
-
 ## Overview
 
 FIMpad is both an AI sandbox and a text editor. The editor is your interface to the LLM: AI text generation happens directly within regular text files, and sessions can be saved and resumed from those files. You can perform either completion or FIM (Fill-In-the-Middle) generation at any point in the text.
