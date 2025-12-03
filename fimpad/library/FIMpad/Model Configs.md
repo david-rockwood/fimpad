@@ -6,7 +6,7 @@ Place the caret within a config tag below and press Alt+C (or use the menu entry
 
 ## Default FIM control Tokens
 
-These are known to work for Qwen 3 Next 80B A3B, Qwen 3 Coder 30B A3B, IBM Granite 4.0 H.
+These are known to work for Qwen 3 and IBM Granite 4.0 H LLMs.
 
 ```
 [[[{
