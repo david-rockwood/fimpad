@@ -82,7 +82,7 @@ python3 -m fimpad
 
 FIMpad requires a connection to an LLM server that provides an OpenAI-compatible endpoint. By default, FIMpad expects this endpoint at `http://localhost:8080`. This base URL can be changed in the FIMpad settings window.
 
-Currently, FIMpad is known to work best with `llama.cpp`’s `llama-server`. A recent build of `llama.cpp` is recommended, available at:
+Currently, FIMpad is only tested with `llama.cpp`’s `llama-server`. A recent build of `llama.cpp` is recommended, available at:
 ```
 https://github.com/ggml-org/llama.cpp
 ```
