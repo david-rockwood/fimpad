@@ -47,7 +47,7 @@ Currently, FIMpad is known to work best with `llama.cpp`’s `llama-server`. A r
 https://github.com/ggml-org/llama.cpp
 ```
 
-When starting `llama-server`, use a context size larger than the default 4096. Start with 16,000 or higher.
+When starting `llama-server`, use a context size larger than the default 4096. Try 32768.
 
 ---
 
