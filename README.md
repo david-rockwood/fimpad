@@ -90,7 +90,7 @@ To verify whether your suffix is being sent to the server, open the log via `Alt
 
 ## The Library menu
 
-The rightmost menu in FIMpad is the **Library** menu. It contains documentation, chat starters, public-domain books, and all examples included in this README. Selecting any item opens it as a new tab in FIMpad. All library items are bundled `.txt` and `.md` files.
+The rightmost menu in FIMpad is the **Library** menu. It contains documentation, chat starters, and all examples included in this README. Selecting any item opens it as a new tab in FIMpad. All library items are bundled `.txt` and `.md` files.
 
 You’ll likely find it easier to load examples from the Library menu than copying them directly from this web page, since web formatting often introduces unwanted leading spaces. Find the examples under:  
 **Library → README Examples**
