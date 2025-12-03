@@ -22,11 +22,57 @@ If you’ve had success, or encountered issues, on other operating systems, plea
 
 ## Quick start
 
-```bash
-git clone https://github.com/david-rockwood/fimpad
+### Option 1 – Linux standalone binary (recommended on Linux)
+
+1. Go to the **Releases** page on the FIMpad GitHub repo.
+
+2. Download the latest Linux archive, for example:
+
+```
+fimpad-linux-v0.0.17.tar.gz
+```
+
+3. Extract it:
+
+```
+tar -xzf fimpad-linux-v0.0.17.tar.gz
+```
+
+This will give you a single executable file named `fimpad` in the current directory.
+
+4. Make sure it’s executable (it usually is, but this won’t hurt):
+
+```
+chmod +x fimpad
+```
+
+5. Run FIMpad:
+
+```
+./fimpad
+```
+
+---
+
+### Option 2 – Run from source (minimal Python install)
+
+Requires **Python 3.10+** and a working C toolchain (your usual Python build environment).
+
+```
+git clone https://github.com/david-rockwood/fimpad.git
 cd fimpad
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+
+# (Recommended) create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate    # On Windows: .venv\Scripts\activate
+
+# Install FIMpad with minimal runtime dependencies
+pip install .
+```
+
+Then launch:
+
+```
 python -m fimpad
 ```
 
