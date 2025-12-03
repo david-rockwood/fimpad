@@ -20,6 +20,12 @@ If you’ve had success, or encountered issues, on other operating systems, plea
 
 ---
 
+## Overview
+
+FIMpad is both an AI sandbox and a text editor. The editor is your interface to the LLM: AI text generation happens directly within regular text files, and sessions can be saved and resumed from those files. You can perform either completion or FIM (Fill-In-the-Middle) generation at any point in the text.
+
+---
+
 ## Quick start
 
 ### Option 1 – Linux standalone binary (recommended on Linux)
@@ -63,7 +69,7 @@ git clone https://github.com/david-rockwood/fimpad.git
 cd fimpad
 
 # (Recommended) create and activate a virtual environment
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate    # On Windows: .venv\Scripts\activate
 
 # Install FIMpad with minimal runtime dependencies
@@ -73,14 +79,8 @@ pip install .
 Then launch:
 
 ```
-python -m fimpad
+python3 -m fimpad
 ```
-
----
-
-## Overview
-
-FIMpad is both an AI sandbox and a text editor. The editor is your interface to the LLM: AI text generation happens directly within regular text files, and sessions can be saved and resumed from those files. You can perform either completion or FIM (Fill-In-the-Middle) generation at any point in the text.
 
 ---
 
