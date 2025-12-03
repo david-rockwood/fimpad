@@ -38,8 +38,6 @@ fimpad-linux-v0.0.17.tar.gz
 tar -xzf fimpad-linux-v0.0.17.tar.gz
 ```
 
-This will give you a single executable file named `fimpad` in the current directory.
-
 4. Make sure it’s executable (it usually is, but this won’t hurt):
 
 ```
