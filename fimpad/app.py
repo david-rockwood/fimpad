@@ -77,7 +77,7 @@ CORE_TK_FONT_NAMES: tuple[str, ...] = (
 class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("FIMpad 0.0.21")
+        self.title("FIMpad 0.0.22")
         set_app_icon(self)
         self.geometry("1100x750")
 
