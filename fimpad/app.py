@@ -793,11 +793,16 @@ class FIMPad(tk.Tk):
 
         current = self.nb.select()
         if current:
+            self._configure_editor_styles()
             try:
                 frame = self.nametowidget(current)
             except Exception:
                 frame = None
             st = self.tabs.get(frame) if frame else None
+            if st:
+                apply_editor_padding(
+                    st, self.cfg["editor_padding_px"], self.cfg["bg"]
+                )
             if st and self._is_log_tab(st):
                 self._scroll_log_tab_to_end(st)
             else:
