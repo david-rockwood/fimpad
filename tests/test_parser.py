@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 
 from fimpad.parser import (
@@ -391,3 +393,64 @@ def test_cursor_within_span_accepts_immediate_after():
     start, end = 5, 10
     assert cursor_within_span(start, end, end)
     assert not cursor_within_span(start, end, end + 1)
+
+
+def test_treasure_island_sample_has_single_valid_fim_tag():
+    content = textwrap.dedent(
+        """I'm reading Treasure Island. Who do you think S.L.O. is, referred to here?
+
+        ```
+        TREASURE ISLAND
+
+        by Robert Louis Stevenson
+
+
+
+        To S.L.O., an American gentleman in accordance with whose classic taste the
+        following narrative has been designed, it is now, in return for numerous
+        delightful hours, and with the kindest wishes, dedicated by his affectionate
+        friend, the author.
+        ```
+
+        The initials **S.L.O.** in the dedication of *Treasure Island* by Robert Louis
+        Stevenson most likely refer to **Samuel L. Osgood**, an American publisher and
+        friend of Stevenson.
+
+        Samuel L. Osgood was the publisher of the *St. Nicholas* magazine, a prominent
+        children's periodical in the United States. Stevenson had a close relationship
+        with Osgood and other American literary figures. The dedication reflects
+        Stevenson's gratitude for Osgood's support and taste in literature,
+        particularly in promoting stories suitable for young readers.
+
+        While some sources have speculated about other possible identities for S.L.O.,
+        the most widely accepted and well-supported identification is **Samuel L.
+        Osgood**, an American gentleman who helped promote Stevenson’s work in the
+        U.S. and whose influence shaped the narrative's presentation for an American
+        audience. The phrase *"in accordance with whose classic taste the following
+        narrative has been designed"* suggests the dedication is honoring someone whose
+        literary judgment Stevenson admired—consistent with Osgood’s role as a
+        publisher of high-quality children's literature.
+
+        Thus, **S.L.O. = Samuel L. Osgood**.
+
+
+        What is the difference between "shipwrecked" and "marooned"?
+
+        Great question! While **"shipwrecked"** and **"marooned"** both involve being
+        stranded in a dangerous or isolated situation at sea, they describe
+        **different circumstances** and have distinct meanings:
+
+        I was just reading about the Ben Gunn guy, apparently marooned.
+
+        [[[1000]]]
+        ```
+        """
+    )
+
+    tokens = list(parse_triple_tokens(content))
+    marker = next(t for t in tokens if isinstance(t, TagToken))
+
+    assert isinstance(marker.tag, FIMTag)
+
+    fim_request = parse_fim_request(content, marker.start + 1, tokens=tokens)
+    assert isinstance(fim_request, FIMRequest)

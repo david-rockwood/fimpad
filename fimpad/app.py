@@ -74,6 +74,26 @@ CORE_TK_FONT_NAMES: tuple[str, ...] = (
 )
 
 
+def _cursor_offset_from_text_widget(text_widget) -> int | None:
+    """Return a Python string offset for the current cursor position.
+
+    Tk's ``count(..., "chars")`` can treat some astral-plane emoji as two
+    characters on certain builds. That inflates the offset and can make the
+    caret appear outside a tag even when it is inside. Reading the text up to
+    ``INSERT`` and measuring its length in Python avoids that discrepancy.
+    """
+
+    try:
+        content_upto_cursor = text_widget.get("1.0", tk.INSERT)
+    except Exception:
+        return None
+
+    try:
+        return len(content_upto_cursor)
+    except Exception:
+        return None
+
+
 class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -3396,13 +3416,8 @@ class FIMPad(tk.Tk):
         if text_widget is None:
             return
 
-        try:
-            cursor_index = text_widget.index(tk.INSERT)
-            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-        except Exception:
-            cursor_offset = None
-
         content = text_widget.get("1.0", tk.END)
+        cursor_offset = _cursor_offset_from_text_widget(text_widget)
         if cursor_offset is None:
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
@@ -3451,13 +3466,8 @@ class FIMPad(tk.Tk):
         if text_widget is None:
             return
 
-        try:
-            cursor_index = text_widget.index(tk.INSERT)
-            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-        except Exception:
-            cursor_offset = None
-
         content = text_widget.get("1.0", tk.END)
+        cursor_offset = _cursor_offset_from_text_widget(text_widget)
         if cursor_offset is None:
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
@@ -3795,13 +3805,8 @@ class FIMPad(tk.Tk):
             return
 
         text_widget = st["text"]
-        cursor_index = text_widget.index(tk.INSERT)
-        try:
-            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-        except Exception:
-            cursor_offset = None
-
         content = text_widget.get("1.0", tk.END)
+        cursor_offset = _cursor_offset_from_text_widget(text_widget)
         if cursor_offset is None:
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
@@ -3906,13 +3911,8 @@ class FIMPad(tk.Tk):
 
         marker = self._last_fim_marker or "[[[20]]]"
 
-        try:
-            cursor_index = text_widget.index(tk.INSERT)
-            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-        except Exception:
-            cursor_offset = None
-
         content = text_widget.get("1.0", tk.END)
+        cursor_offset = _cursor_offset_from_text_widget(text_widget)
         if cursor_offset is None:
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
@@ -3962,13 +3962,8 @@ class FIMPad(tk.Tk):
 
         marker = self._last_fim_marker or "[[[20]]]"
 
-        try:
-            cursor_index = text_widget.index(tk.INSERT)
-            cursor_offset = int(text_widget.count("1.0", cursor_index, "chars")[0])
-        except Exception:
-            cursor_offset = None
-
         content = text_widget.get("1.0", tk.END)
+        cursor_offset = _cursor_offset_from_text_widget(text_widget)
         if cursor_offset is None:
             cursor_offset = len(content)
         cursor_offset = max(0, min(len(content), cursor_offset))
