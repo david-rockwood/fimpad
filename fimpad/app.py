@@ -1269,11 +1269,15 @@ class FIMPad(tk.Tk):
             text.delete("insert")
 
     def _event_on_current_text(self, sequence: str) -> None:
+        focus_widget = self.focus_get()
+        if not isinstance(focus_widget, tk.Text):
+            return
+
         st = self._current_tab_state()
         if not st:
             return
         text = st.get("text")
-        if text is not None:
+        if text is focus_widget:
             text.event_generate(sequence)
 
     def _on_text_paste(self, event: tk.Event) -> None:
