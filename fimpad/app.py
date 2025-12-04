@@ -711,7 +711,15 @@ class FIMPad(tk.Tk):
             self.cfg["bg"],
         )
         clear_line_spacing(text)
-        self._bind_scroll_events(frame, text, line_numbers, gutter_gap, content_frame)
+        self._bind_scroll_events(
+            frame,
+            text,
+            line_numbers,
+            gutter_gap,
+            content_frame,
+            left_padding,
+            right_padding,
+        )
 
         # Spellcheck tag + bindings
         text.tag_configure(
@@ -785,11 +793,16 @@ class FIMPad(tk.Tk):
 
         current = self.nb.select()
         if current:
+            self._configure_editor_styles()
             try:
                 frame = self.nametowidget(current)
             except Exception:
                 frame = None
             st = self.tabs.get(frame) if frame else None
+            if st:
+                apply_editor_padding(
+                    st, self.cfg["editor_padding_px"], self.cfg["bg"]
+                )
             if st and self._is_log_tab(st):
                 self._scroll_log_tab_to_end(st)
             else:
@@ -1073,8 +1086,17 @@ class FIMPad(tk.Tk):
         line_numbers: tk.Canvas,
         gutter_gap: ttk.Frame,
         content_frame: ttk.Frame,
+        left_padding: ttk.Frame,
+        right_padding: ttk.Frame,
     ) -> None:
-        widgets = (text, line_numbers, gutter_gap, content_frame)
+        widgets = (
+            text,
+            line_numbers,
+            gutter_gap,
+            content_frame,
+            left_padding,
+            right_padding,
+        )
         for widget in widgets:
             widget.bind(
                 "<MouseWheel>",
