@@ -711,7 +711,15 @@ class FIMPad(tk.Tk):
             self.cfg["bg"],
         )
         clear_line_spacing(text)
-        self._bind_scroll_events(frame, text, line_numbers, gutter_gap, content_frame)
+        self._bind_scroll_events(
+            frame,
+            text,
+            line_numbers,
+            gutter_gap,
+            content_frame,
+            left_padding,
+            right_padding,
+        )
 
         # Spellcheck tag + bindings
         text.tag_configure(
@@ -1073,8 +1081,17 @@ class FIMPad(tk.Tk):
         line_numbers: tk.Canvas,
         gutter_gap: ttk.Frame,
         content_frame: ttk.Frame,
+        left_padding: ttk.Frame,
+        right_padding: ttk.Frame,
     ) -> None:
-        widgets = (text, line_numbers, gutter_gap, content_frame)
+        widgets = (
+            text,
+            line_numbers,
+            gutter_gap,
+            content_frame,
+            left_padding,
+            right_padding,
+        )
         for widget in widgets:
             widget.bind(
                 "<MouseWheel>",
