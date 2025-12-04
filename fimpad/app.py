@@ -1266,7 +1266,11 @@ class FIMPad(tk.Tk):
         if sel_first and sel_last:
             text.delete(sel_first, sel_last)
         else:
-            text.delete("insert")
+            next_index = text.index("insert +1c")
+            if text.compare(next_index, ">", "end-1c"):
+                return
+
+            text.delete("insert", next_index)
 
     def _event_on_current_text(self, sequence: str) -> None:
         focus_widget = self.focus_get()
