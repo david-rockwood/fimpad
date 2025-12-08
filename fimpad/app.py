@@ -22,8 +22,28 @@ from tkinter import colorchooser, messagebox, simpledialog, ttk
 
 try:
     import enchant
+    _ENCHANT_AVAILABLE = True
 except ImportError:  # pragma: no cover - handled by runtime stubs in tests
-    enchant = None
+    _ENCHANT_AVAILABLE = False
+
+    class _EnchantStub:
+        class errors:  # type: ignore[too-many-nested-blocks]
+            class DictNotFoundError(Exception):
+                pass
+
+        @staticmethod
+        def list_languages() -> list[str]:
+            return []
+
+        @staticmethod
+        def dict_exists(_lang: str) -> bool:
+            return False
+
+        @staticmethod
+        def Dict(_lang: str):
+            raise RuntimeError("enchant C library not available")
+
+    enchant = _EnchantStub()
 
 from .bol_utils import (
     _deindent_block,
@@ -208,10 +228,41 @@ class FIMPad(tk.Tk):
             value = None
         return value or fallback
 
+    def _current_text_widget(self) -> tk.Text | None:
+        try:
+            st = self._current_tab_state()
+        except AttributeError:
+            return None
+        if not st:
+            return None
+
+        text = st.get("text")
+        if isinstance(text, tk.Text):
+            return text
+
+        return None
+
+    def _text_has_focus(self) -> bool:
+        text_widget = self._current_text_widget()
+        if text_widget is None:
+            return False
+
+        focus_getter = getattr(self, "focus_get", None)
+        if focus_getter is None:
+            return False
+
+        with contextlib.suppress(tk.TclError):
+            return focus_getter() is text_widget
+
+        return False
+
     def _make_shortcut_handler(
-        self, callback: Callable[[], None]
-    ) -> Callable[[tk.Event], str]:
-        def handler(_event: tk.Event | None = None) -> str:
+        self, callback: Callable[[], None], *, require_text_focus: bool = False
+    ) -> Callable[[tk.Event], str | None]:
+        def handler(_event: tk.Event | None = None) -> str | None:
+            if require_text_focus and not self._text_has_focus():
+                return None
+
             callback()
             return "break"
 
@@ -244,8 +295,15 @@ class FIMPad(tk.Tk):
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
-        def add(sequence: str, callback: Callable[[], None]) -> None:
-            handler = self._make_shortcut_handler(callback)
+        def add(
+            sequence: str,
+            callback: Callable[[], None],
+            *,
+            require_text_focus: bool = False,
+        ) -> None:
+            handler = self._make_shortcut_handler(
+                callback, require_text_focus=require_text_focus
+            )
             for seq in self._shortcut_variants(sequence):
                 self.bind_all(seq, handler, add="+")
                 self._text_shortcut_bindings.append((seq, handler))
@@ -261,7 +319,7 @@ class FIMPad(tk.Tk):
         add("<Control-x>", lambda: self._event_on_current_text("<<Cut>>"))
         add("<Control-c>", lambda: self._event_on_current_text("<<Copy>>"))
         add("<Control-v>", lambda: self._event_on_current_text("<<Paste>>"))
-        add("<Delete>", self._delete_on_current_text)
+        add("<Delete>", self._delete_on_current_text, require_text_focus=True)
         add("<Control-a>", self._select_all_current)
         add("<Control-f>", self._open_replace_dialog)
         add("<Control-r>", self._open_regex_replace_dialog)
@@ -4312,7 +4370,7 @@ class FIMPad(tk.Tk):
     # ---------- Spellcheck (enchant) ----------
 
     def _list_spell_languages(self) -> list[str]:
-        if enchant is None:
+        if not _ENCHANT_AVAILABLE and not hasattr(enchant, "list_languages"):
             return []
         try:
             langs = enchant.list_languages()
@@ -4361,7 +4419,7 @@ class FIMPad(tk.Tk):
 
     def _load_dictionary(self, lang: str):
         lang_code = lang or "en_US"
-        if enchant is None:
+        if not _ENCHANT_AVAILABLE and not hasattr(enchant, "Dict"):
             self._spell_notice_msg = "Spellcheck unavailable: enchant is not installed."
             self._spell_notice_last = None
             self._notify_spell_unavailable()
