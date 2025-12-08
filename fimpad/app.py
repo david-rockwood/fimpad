@@ -117,7 +117,7 @@ def _cursor_offset_from_text_widget(text_widget) -> int | None:
 class FIMPad(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("FIMpad 0.0.23")
+        self.title("FIMpad 0.0.24")
         set_app_icon(self)
         self.geometry("1100x750")
 
