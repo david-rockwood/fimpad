@@ -91,6 +91,10 @@ When starting `llama-server`, use a context size larger than the default 4096. T
 
 ## FIM-capable LLMs
 
+---
+
+### Using default FIM control tokens
+
 Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad is configured to use by default.
 
 ---
@@ -118,7 +122,18 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 
 ---
 
-If you’re using a model with non-standard FIM control tokens, you can configure them manually in the FIMpad settings window.
+### Using other FIM control tokens
+
+If you’re using a model with non-standard FIM control tokens, you can configure them manually in the FIMpad settings window. Below is a list of models that have the correct control tokens listed in **Library → FIMpad → Model Configs.md**
+
+---
+
+zai-org GLM 4.6 V Flash is available at:
+```
+https://huggingface.co/bartowski/zai-org_GLM-4.6V-Flash-GGUF/tree/main
+```
+
+---
 
 If your model does not support FIM tokens at all, you can still use FIMpad for standard completion. To do so, set the FIM tokens in the settings to empty strings. This will cause FIMpad to send only the prefix text to the server. In this mode, you can also use instruction-tuned models with chat templates by typing role tokens (`<|im_start|>`, etc.) directly into your prefix. FIMpad has templates with role tokens already prepared at `Library → Chat Starters`.
 
