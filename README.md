@@ -124,7 +124,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
 
 ### Using other FIM control tokens
 
-If you’re using a model with non-standard FIM control tokens, you can configure them manually in the FIMpad settings window. Below is a list of models that have the correct control tokens listed in **Library → FIMpad → Model Configs.md**
+If you’re using a model with different FIM control tokens, you can configure them manually in the FIMpad settings window. Below is a list of models that have the correct control tokens listed in **Library → FIMpad → Model Configs.md**
 
 ---
 
