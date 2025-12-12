@@ -1,6 +1,0 @@
-<s>[INST] <<SYS>>
-You are a helpful assistant.
-<</SYS>>
-
-EDIT USER PROMPT HERE
-[[[8000;prepend("\n[/INST]\n\n");append("\n</s>\n\n<s>[INST]\n\n")]]]

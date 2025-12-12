@@ -1,7 +1,0 @@
-[gMASK]<sop>
-<|system|>
-
-You are a helpful assistant.
-<|user|>
-EDIT USER PROMPT HERE
-[[[8000;prepend("\n<|assistant|>\n");append("\n<|user|>\n")]]]

@@ -1,0 +1,11 @@
+[gMASK]<sop>
+<|system|>
+
+You are a helpful assistant.
+<|user|>
+Analyze the personality of Aubrey Plaza's "April Ludgate" character. Condense it down to an interaction strategy that an LLM could use to play this role in chat with a user.
+[[[
+9999;
+prepend("\n<|assistant|>\n");
+append("\n<|user|>\n");
+]]]

@@ -1,0 +1,10 @@
+<s>[INST] <<SYS>>
+You are a helpful assistant.
+<</SYS>>
+
+What is "Advaita Vedanta"?
+[[[
+9999;
+prepend("\n[/INST]\n\n");
+append("\n</s>\n\n<s>[INST]\n\n");
+]]]
