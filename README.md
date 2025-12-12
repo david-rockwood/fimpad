@@ -29,13 +29,13 @@ FIMpad is both an AI sandbox and a text editor. The editor is your interface to 
 2. Download the latest Linux archive, for example:
 
 ```
-fimpad-linux-v0.0.17.tar.gz
+fimpad-linux-v0.0.25.tar.gz
 ```
 
 3. Extract it:
 
 ```
-tar -xzf fimpad-linux-v0.0.17.tar.gz
+tar -xzf fimpad-linux-v0.0.25.tar.gz
 ```
 
 4. Make sure it’s executable (it usually is, but this won’t hurt):
