@@ -3,7 +3,7 @@
 
 You are a helpful assistant.
 <|user|>
-Analyze the personality of Aubrey Plaza's "April Ludgate" character. Condense it down to an interaction strategy that an LLM could use to play this role in chat with a user.
+What is a new programming language that might be worth learning?
 [[[
 9999;
 prepend("\n<|assistant|>\n");
