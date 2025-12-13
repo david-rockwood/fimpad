@@ -143,7 +143,7 @@ https://huggingface.co/bartowski/mistralai_Devstral-Small-2-24B-Instruct-2512-GG
 ---
 ### Using models that aren't set up for FIM
 
-If your model does not support FIM tokens at all, you can still use FIMpad for standard completion. To do so, set the FIM tokens in the settings to empty strings. This will cause FIMpad to send only the prefix text to the server. In this mode, you can also use instruction-tuned models with chat templates by typing role tokens (`<|im_start|>`, etc.) directly into your prefix. FIMpad has templates with role tokens already prepared at **Library → Chat Starters**.
+If your model does not support FIM tokens at all, you can still use FIMpad for standard completion. To do so, set the FIM tokens in the settings to empty strings. This will cause FIMpad to send only the prefix text to the server. In this mode, you can also use instruction-tuned models with chat templates by typing role tokens (`<|im_start|>`, etc.) directly into your prefix. FIMpad has templates with role tokens already prepared at **Library → Instruct Chat Starters**.
 
 To verify whether your suffix is being sent to the server, open the log via `Alt+L` (or `AI → Show Log`). Each generation event is logged as a JSON object with a `"mode"` field: either `"completion generation"` or `"FIM generation"`. Completion generations will not include a `"suffix"` field.
 
