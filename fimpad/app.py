@@ -12,7 +12,13 @@ import re
 import subprocess
 import sys
 import threading
-import tkinter as tk
+try:
+    import tkinter as tk
+except ModuleNotFoundError:
+    raise RuntimeError(
+        "tkinter is not installed.\n"
+        "On Ubuntu/Mint: sudo apt install python3-tk"
+    )
 import tkinter.font as tkfont
 from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
