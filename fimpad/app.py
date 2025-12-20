@@ -18,7 +18,7 @@ except ModuleNotFoundError:
     raise RuntimeError(
         "tkinter is not installed.\n"
         "On Ubuntu/Mint: sudo apt install python3-tk"
-    )
+    ) from None
 import tkinter.font as tkfont
 from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
