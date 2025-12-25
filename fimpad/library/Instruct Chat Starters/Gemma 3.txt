@@ -1,0 +1,11 @@
+<start_of_turn>system
+You are a helpful assistant.
+<end_of_turn>
+
+<start_of_turn>user
+Who are some Romanticist composers?
+[[[
+9999;
+prepend("\n<end_of_turn>\n\n<start_of_turn>model\n");
+append("\n<end_of_turn>\n\n<start_of_turn>user\n");
+]]]
