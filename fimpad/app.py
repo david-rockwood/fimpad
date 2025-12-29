@@ -284,21 +284,6 @@ class FIMPad(tk.Tk):
             .lower()
         )
 
-    @staticmethod
-    def _uppercase_keysym_sequence(seq: str) -> str | None:
-        match = re.fullmatch(r"<(.+)-([a-z])>", seq)
-        if not match:
-            return None
-        prefix, key = match.groups()
-        return f"<{prefix}-{key.upper()}>"
-
-    def _shortcut_variants(self, sequence: str) -> list[str]:
-        variants = [sequence]
-        uppercase = self._uppercase_keysym_sequence(sequence)
-        if uppercase and uppercase not in variants:
-            variants.append(uppercase)
-        return variants
-
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
@@ -311,9 +296,8 @@ class FIMPad(tk.Tk):
             handler = self._make_shortcut_handler(
                 callback, require_text_focus=require_text_focus
             )
-            for seq in self._shortcut_variants(sequence):
-                self.bind_all(seq, handler, add="+")
-                self._text_shortcut_bindings.append((seq, handler))
+            self.bind_all(sequence, handler, add="+")
+            self._text_shortcut_bindings.append((sequence, handler))
 
         add("<Control-n>", self._new_tab)
         add("<Control-o>", self._open_file_into_current)
