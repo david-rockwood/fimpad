@@ -292,13 +292,6 @@ class FIMPad(tk.Tk):
         prefix, key = match.groups()
         return f"<{prefix}-{key.upper()}>"
 
-    def _shortcut_variants(self, sequence: str) -> list[str]:
-        variants = [sequence]
-        uppercase = self._uppercase_keysym_sequence(sequence)
-        if uppercase and uppercase not in variants:
-            variants.append(uppercase)
-        return variants
-
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
@@ -307,22 +300,31 @@ class FIMPad(tk.Tk):
             callback: Callable[[], None],
             *,
             require_text_focus: bool = False,
+            add_uppercase: bool = False,
         ) -> None:
             handler = self._make_shortcut_handler(
                 callback, require_text_focus=require_text_focus
             )
-            for seq in self._shortcut_variants(sequence):
-                self.bind_all(seq, handler, add="+")
-                self._text_shortcut_bindings.append((seq, handler))
+            self.bind_all(sequence, handler, add="+")
+            self._text_shortcut_bindings.append((sequence, handler))
+            if add_uppercase:
+                uppercase = self._uppercase_keysym_sequence(sequence)
+                if uppercase:
+                    self.bind_all(uppercase, handler, add="+")
+                    self._text_shortcut_bindings.append((uppercase, handler))
 
         add("<Control-n>", self._new_tab)
         add("<Control-o>", self._open_file_into_current)
         add("<Control-s>", self._save_file_current)
-        add("<Control-Shift-s>", self._save_file_as_current)
+        add("<Control-Shift-s>", self._save_file_as_current, add_uppercase=True)
         add("<Control-w>", self._close_current_tab)
         add("<Control-q>", self._on_close)
         add("<Control-z>", lambda: self._event_on_current_text("<<Undo>>"))
-        add("<Control-Shift-z>", lambda: self._event_on_current_text("<<Redo>>"))
+        add(
+            "<Control-Shift-z>",
+            lambda: self._event_on_current_text("<<Redo>>"),
+            add_uppercase=True,
+        )
         add("<Control-x>", lambda: self._event_on_current_text("<<Cut>>"))
         add("<Control-c>", lambda: self._event_on_current_text("<<Copy>>"))
         add("<Control-v>", lambda: self._event_on_current_text("<<Paste>>"))
@@ -362,9 +364,7 @@ class FIMPad(tk.Tk):
             "<control-shift-home>",
             "<control-shift-end>",
         }
-        custom_shortcuts = {
-            self._normalize_sequence(seq) for seq, _handler in self._text_shortcut_bindings
-        }
+
         def swallow(_event: tk.Event | None = None) -> str:
             return "break"
         try:
@@ -380,8 +380,6 @@ class FIMPad(tk.Tk):
                 modifier in normalized
                 for modifier in ("<control-", "<alt-", "<meta-", "<command-", "<option-")
             ):
-                continue
-            if normalized in custom_shortcuts:
                 continue
             text.bind(sequence, swallow)
 
