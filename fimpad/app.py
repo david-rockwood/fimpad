@@ -172,6 +172,7 @@ class FIMPad(tk.Tk):
         self._last_fim_marker: str | None = None
         self._last_tab: str | None = None
         self._fim_generation_active: bool = False
+        self._active_stream_tab_id: str | None = None
 
         self._new_tab()
         self.after_idle(lambda: self._schedule_spellcheck_for_frame(self.nb.select(), delay_ms=50))
@@ -3965,12 +3966,19 @@ class FIMPad(tk.Tk):
         if not self._fim_generation_active:
             return
 
-        tab_id = self.nb.select()
-        if not tab_id:
+        tab_id = self._active_stream_tab_id
+        frame = None
+        if tab_id:
+            with contextlib.suppress(tk.TclError):
+                frame = self.nametowidget(tab_id)
+        if frame in self.tabs:
+            self._interrupt_stream_for_tab(frame)
             return
 
-        frame = self.nametowidget(tab_id)
-        self._interrupt_stream_for_tab(frame)
+        for candidate_frame, st in self.tabs.items():
+            if st.get("stream_stop_event") is not None or st.get("stream_active"):
+                self._interrupt_stream_for_tab(candidate_frame)
+                return
 
     def paste_last_fim_tag(self):
         st = self._current_tab_state()
@@ -4085,6 +4093,7 @@ class FIMPad(tk.Tk):
         cfg = self.cfg
         self._last_fim_marker = fim_request.marker.raw
         st["active_fim_request"] = fim_request
+        self._active_stream_tab_id = self.nb.select()
 
         request_cfg = {
             "temperature": cfg["temperature"],
@@ -4197,7 +4206,7 @@ class FIMPad(tk.Tk):
 
             threading.Thread(
                 target=worker,
-                args=(self.nb.select(), st["stream_stop_event"]),
+                args=(self._active_stream_tab_id, st["stream_stop_event"]),
                 daemon=True,
             ).start()
         except Exception as exc:
@@ -4249,6 +4258,7 @@ class FIMPad(tk.Tk):
                         if kind == "stream_done":
                             self._fim_generation_active = False
                             self._set_busy(False)
+                            self._active_stream_tab_id = None
                             if st:
                                 st["stream_active"] = False
                         continue
@@ -4351,6 +4361,7 @@ class FIMPad(tk.Tk):
                         self._end_stream_undo_group(st)
                         st["stream_active"] = False
                         self._fim_generation_active = False
+                        self._active_stream_tab_id = None
                         self._set_busy(False)
                         self._set_dirty(st, True)
 
