@@ -362,9 +362,7 @@ class FIMPad(tk.Tk):
             "<control-shift-home>",
             "<control-shift-end>",
         }
-        custom_shortcuts = {
-            self._normalize_sequence(seq) for seq, _handler in self._text_shortcut_bindings
-        }
+
         def swallow(_event: tk.Event | None = None) -> str:
             return "break"
         try:
@@ -380,8 +378,6 @@ class FIMPad(tk.Tk):
                 modifier in normalized
                 for modifier in ("<control-", "<alt-", "<meta-", "<command-", "<option-")
             ):
-                continue
-            if normalized in custom_shortcuts:
                 continue
             text.bind(sequence, swallow)
 
