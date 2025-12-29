@@ -3635,6 +3635,17 @@ class FIMPad(tk.Tk):
         st["_stream_follow_job"] = None
         st["_pending_follow_mark"] = None
 
+    def _flush_stream_follow(self, st: dict, mark: str) -> None:
+        if not st or not mark:
+            return
+        job = st.get("_stream_follow_job")
+        if job is not None:
+            with contextlib.suppress(Exception):
+                self.after_cancel(job)
+        st["_stream_follow_job"] = None
+        st["_pending_follow_mark"] = mark
+        self._perform_stream_follow(st.get("frame"))
+
     def _maybe_follow_stream(self, st: dict, mark: str) -> None:
         text: tk.Text | None = st.get("text") if st else None
         if text is None or not mark:
@@ -4327,14 +4338,18 @@ class FIMPad(tk.Tk):
                             self._log_fim_generation(fim_request, generated_text)
                         st["stream_accumulated"] = ""
                         st["stream_stop_event"] = None
+                        appended_mark = None
                         for extra in st.get("post_actions", []):
                             try:
                                 text.insert(mark, extra)
                                 mark = text.index(f"{mark}+{len(extra)}c")
+                                appended_mark = mark
                             except tk.TclError:
                                 continue
                             self._maybe_follow_stream(st, mark)
                         st["post_actions"] = []
+                        if appended_mark:
+                            self._flush_stream_follow(st, appended_mark)
                         self._end_stream_undo_group(st)
                         st["stream_active"] = False
                         self._fim_generation_active = False
