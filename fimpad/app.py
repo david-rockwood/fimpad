@@ -284,6 +284,14 @@ class FIMPad(tk.Tk):
             .lower()
         )
 
+    @staticmethod
+    def _uppercase_keysym_sequence(seq: str) -> str | None:
+        match = re.fullmatch(r"<(.+)-([a-z])>", seq)
+        if not match:
+            return None
+        prefix, key = match.groups()
+        return f"<{prefix}-{key.upper()}>"
+
     def _register_shortcuts(self) -> None:
         self._text_shortcut_bindings.clear()
 
@@ -292,21 +300,31 @@ class FIMPad(tk.Tk):
             callback: Callable[[], None],
             *,
             require_text_focus: bool = False,
+            add_uppercase: bool = False,
         ) -> None:
             handler = self._make_shortcut_handler(
                 callback, require_text_focus=require_text_focus
             )
             self.bind_all(sequence, handler, add="+")
             self._text_shortcut_bindings.append((sequence, handler))
+            if add_uppercase:
+                uppercase = self._uppercase_keysym_sequence(sequence)
+                if uppercase:
+                    self.bind_all(uppercase, handler, add="+")
+                    self._text_shortcut_bindings.append((uppercase, handler))
 
         add("<Control-n>", self._new_tab)
         add("<Control-o>", self._open_file_into_current)
         add("<Control-s>", self._save_file_current)
-        add("<Control-Shift-s>", self._save_file_as_current)
+        add("<Control-Shift-s>", self._save_file_as_current, add_uppercase=True)
         add("<Control-w>", self._close_current_tab)
         add("<Control-q>", self._on_close)
         add("<Control-z>", lambda: self._event_on_current_text("<<Undo>>"))
-        add("<Control-Shift-z>", lambda: self._event_on_current_text("<<Redo>>"))
+        add(
+            "<Control-Shift-z>",
+            lambda: self._event_on_current_text("<<Redo>>"),
+            add_uppercase=True,
+        )
         add("<Control-x>", lambda: self._event_on_current_text("<<Cut>>"))
         add("<Control-c>", lambda: self._event_on_current_text("<<Copy>>"))
         add("<Control-v>", lambda: self._event_on_current_text("<<Paste>>"))
