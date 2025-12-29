@@ -3958,6 +3958,7 @@ class FIMPad(tk.Tk):
         st["post_actions"] = []
 
         stop_event.set()
+        self._finalize_stream_for_tab(frame)
 
         tab_id = str(frame)
         self._result_queue.put({"ok": True, "kind": "stream_done", "tab": tab_id})
@@ -4221,6 +4222,30 @@ class FIMPad(tk.Tk):
 
     # ---------- Queue handling ----------
 
+    def _finalize_stream_for_tab(
+        self,
+        frame: tk.Misc | None,
+        mark: str | None = None,
+    ) -> None:
+        if frame is None:
+            return
+
+        st = self.tabs.get(frame)
+        if not st:
+            return
+
+        text = st.get("text")
+        if text is not None:
+            flush_mark = mark or st.get("stream_mark") or "stream_here"
+            self._force_flush_stream_buffer(frame, flush_mark)
+
+        with contextlib.suppress(Exception):
+            self._end_stream_undo_group(st)
+        st["stream_stop_event"] = None
+        st["stream_active"] = False
+        self._fim_generation_active = False
+        self._set_busy(False)
+
     def _poll_queue(self):
         try:
             while True:
@@ -4358,11 +4383,8 @@ class FIMPad(tk.Tk):
                         st["post_actions"] = []
                         if appended_mark:
                             self._flush_stream_follow(st, appended_mark)
-                        self._end_stream_undo_group(st)
-                        st["stream_active"] = False
-                        self._fim_generation_active = False
+                        self._finalize_stream_for_tab(frame, mark=mark)
                         self._active_stream_tab_id = None
-                        self._set_busy(False)
                         self._set_dirty(st, True)
 
                     elif kind == "spellcheck_now":
