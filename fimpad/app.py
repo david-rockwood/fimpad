@@ -3224,7 +3224,6 @@ class FIMPad(tk.Tk):
         self._configure_editor_styles()
         log_changed = self._apply_log_retention()
         self._persist_config()
-        self._apply_open_maximized(self.cfg.get("open_maximized", False))
         line_numbers_enabled = self.cfg.get("line_numbers_enabled", False)
         follow_enabled = self.cfg.get("follow_stream_enabled", True)
         spell_enabled = self.cfg.get("spellcheck_enabled", True)
