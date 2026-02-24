@@ -573,7 +573,7 @@ def _clamp_tokens(n: int, default_n: int) -> int:
         value = int(n)
     except Exception:
         value = default_n
-    return max(1, min(4096, value))
+    return max(1, min(16384, value))
 
 
 def _dedupe_preserve(items: list[str]) -> list[str]:
