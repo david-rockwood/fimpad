@@ -143,6 +143,15 @@ def test_bare_fim_tag_without_functions():
     assert fim_token.tag.functions == ()
 
 
+def test_parse_fim_request_clamps_max_tokens_to_16384():
+    content = "Before [[[20000]]] After"
+    marker = _collect_tags(content)[0]
+
+    fim_request = parse_fim_request(content, marker.start + 1)
+    assert fim_request is not None
+    assert fim_request.max_tokens == 16384
+
+
 def test_multifunction_tag_collects_stops_chops_and_post_actions():
     content = (
         "AAA [[[4; stop(\"one\"); chop('two'); append('!'); append('more\\n'); "
