@@ -112,7 +112,7 @@ https://huggingface.co/ibm-granite/granite-4.0-h-small-base-GGUF/tree/main
 
 IBM Granite 4.0 H Tiny 7B Base (MoE) is available at:
 ```
-https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF
+https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF/tree/main
 ```
 
 ---
