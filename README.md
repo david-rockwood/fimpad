@@ -99,46 +99,27 @@ Below is an incomplete list of LLMs that use the FIM control tokens that FIMpad 
 
 ---
 
-Qwen 3 Next 80B A3B Instruct (MoE) is available at:
+Qwen 3.5 35B A3B Base (MoE) is available at:
 
 ```
-https://huggingface.co/bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF/tree/main
+https://huggingface.co/mradermacher/Qwen3.5-35B-A3B-Base-GGUF/tree/main
 ```
 
-Qwen 3 Coder 30B A3B Instruct (MoE) is available at:
+IBM Granite 4.0 H Small 32B Base (MoE) is available at:
 ```
-https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/tree/main
-```
-
-IBM Granite 4.0 H Small 32B (MoE) is available at:
-```
-https://huggingface.co/ibm-granite/granite-4.0-h-small-GGUF/tree/main
+https://huggingface.co/ibm-granite/granite-4.0-h-small-base-GGUF/tree/main
 ```
 
-IBM Granite 4.0 H Tiny 7B (MoE) is available at:
+IBM Granite 4.0 H Tiny 7B Base (MoE) is available at:
 ```
-https://huggingface.co/ibm-granite/granite-4.0-h-tiny-GGUF/tree/main
+https://huggingface.co/ibm-granite/granite-4.0-h-tiny-base-GGUF
 ```
 
 ---
 
 ### Using other FIM control tokens
 
-If you’re using a model with different FIM control tokens, you can configure them manually in the FIMpad settings window. Below is a list of models that have the correct control tokens listed in **Library → FIMpad → Model Configs.md**
-
----
-
-zai-org GLM 4.6 V Flash is available at:
-```
-https://huggingface.co/bartowski/zai-org_GLM-4.6V-Flash-GGUF/tree/main
-```
-
----
-
-Mistral Devstral Small 2 24B is available at:
-```
-https://huggingface.co/bartowski/mistralai_Devstral-Small-2-24B-Instruct-2512-GGUF/tree/main
-```
+If you’re using a model with different FIM control tokens, you can configure them manually in the FIMpad settings window. Some commonly used alternative control tokens for FIM are listed in **Library → FIMpad → Model Configs.md**
 
 ---
 ### Using models that aren't set up for FIM
